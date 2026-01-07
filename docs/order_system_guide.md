@@ -1,329 +1,445 @@
-# 扫码点餐系统 - 使用指南
+# 扫码点餐系统使用指南
 
-## 系统概述
+## 概述
 
-本系统实现了完整的扫码点餐功能，顾客可以通过扫描桌号二维码，在手机上浏览菜单、选择菜品、提交订单。
+扫码点餐系统是一个完整的多店铺餐饮管理系统，支持顾客扫码点餐、订单管理、库存管理等功能。本文档将详细介绍系统的使用方法。
 
-## 核心功能
+## 系统架构
 
-### 1. 二维码生成
-为每个桌号生成独立的二维码，扫码后跳转到点餐页面。
+### 技术栈
+- **后端**: Python + FastAPI
+- **前端**: Vue 3 + Element Plus
+- **数据库**: PostgreSQL
+- **对象存储**: S3
+- **大模型**: 豆包大模型（可选，用于智能推荐）
 
-### 2. H5 点餐页面
-响应式设计，支持：
-- 浏览店铺信息
-- 查看分类菜品
-- 添加购物车
-- 提交订单
-- 查看订单状态
-
-### 3. API 接口
-提供完整的 RESTful API 支持点餐流程。
-
-## 文件结构
-
-```
-src/
-├── tools/
-│   └── qrcode_tool.py          # 二维码生成工具
-├── api/
-│   └── customer_api.py         # 顾客端 API 接口
-└── storage/
-    └── database/shared/
-        └── model.py            # 数据库模型
-
-assets/
-└── order.html                 # H5 点餐页面
-
-scripts/
-└── test_order_flow.py         # 测试脚本
-```
+### 核心组件
+1. **顾客端API** (端口8000): 顾客扫码点餐相关接口
+2. **店员端API** (端口8001): 店员订单管理接口
+3. **H5点餐页面**: 顾客使用的移动端网页
+4. **二维码生成工具**: 为桌号生成二维码
 
 ## 快速开始
 
-### 1. 生成二维码
-
-为店铺的所有桌号生成二维码：
-
-```python
-from tools.qrcode_tool import generate_store_qrcodes
-
-# 生成店铺ID为2的所有桌号二维码
-result = generate_store_qrcodes(store_id=2)
-print(result)
-```
-
-输出示例：
-```json
-{
-  "success": true,
-  "store_id": 2,
-  "total": 10,
-  "success_count": 10,
-  "fail_count": 0,
-  "results": [
-    {
-      "table_id": 11,
-      "table_number": "T01",
-      "qrcode_url": "https://..."
-    }
-  ]
-}
-```
-
-### 2. 启动 API 服务
+### 1. 启动API服务
 
 ```bash
-# 方式1：直接启动
-PYTHONPATH=/workspace/projects/src python -m uvicorn src.api.customer_api:app --host 0.0.0.0 --port 8000
+# 设置环境变量
+eval $(python /workspace/projects/scripts/load_env.py)
 
-# 方式2：后台启动
-PYTHONPATH=/workspace/projects/src python -m uvicorn src.api.customer_api:app --host 0.0.0.0 --port 8000 &
+# 启动顾客端API (端口8000)
+PYTHONPATH=/workspace/projects/src python -m uvicorn api.customer_api:app --host 0.0.0.0 --port 8000
+
+# 启动店员端API (端口8001)
+PYTHONPATH=/workspace/projects/src python -m uvicorn api.staff_api:app --host 0.0.0.0 --port 8001
 ```
 
-服务启动后，访问 http://localhost:8000 查看 API 文档。
+或使用启动脚本：
 
-### 3. 使用点餐页面
-
-将 `assets/order.html` 部署到 Web 服务器，或直接在浏览器中打开。
-
-URL 参数：
-- `store_id`: 店铺ID（必需）
-- `table_id`: 桌号ID（必需）
-- `table_number`: 桌号显示名称（可选）
-
-示例：
-```
-http://your-domain.com/order.html?store_id=2&table_id=11&table_number=T01
+```bash
+python /workspace/projects/scripts/start_api_services.py
 ```
 
-## API 接口文档
+### 2. 生成二维码
 
-### 1. 获取店铺信息
+```python
+from tools.qrcode_tool import QRCodeGenerator
 
-**接口：** `GET /api/customer/shop?store_id=2`
+generator = QRCodeGenerator()
 
-**响应：**
+# 为单个桌号生成二维码
+result = generator.generate_qrcode_for_table(
+    table_id=1,
+    base_url="http://your-domain.com/order"
+)
+
+# 为店铺所有桌号生成二维码
+results = generator.generate_qrcodes_for_store(
+    store_id=1,
+    base_url="http://your-domain.com/order"
+)
+```
+
+### 3. 顾客扫码点餐
+
+1. 顾客扫描桌号二维码
+2. 进入H5点餐页面（`assets/order.html`）
+3. 浏览菜品、加入购物车
+4. 提交订单
+
+### 4. 店员管理订单
+
+店员通过店员端API进行订单管理：
+- 查看订单列表
+- 确认订单
+- 更新订单状态
+
+## API接口文档
+
+### 顾客端API (端口8000)
+
+#### 1. 获取店铺信息
+
+```
+GET /api/customer/shop?store_id={store_id}
+```
+
+**响应示例**:
 ```json
 {
-  "id": 2,
-  "name": "示范餐厅",
-  "address": "北京市朝阳区示范路1号",
+  "id": 1,
+  "name": "测试餐厅",
+  "address": "北京市朝阳区",
   "phone": "010-12345678",
-  "opening_hours": {"open": "09:00", "close": "22:00"}
+  "opening_hours": {"start": "09:00", "end": "22:00"}
 }
 ```
 
-### 2. 获取菜品列表
+#### 2. 获取菜品列表
 
-**接口：** `GET /api/customer/menu?store_id=2`
+```
+GET /api/customer/menu?store_id={store_id}
+```
 
-**响应：**
+**响应示例**:
 ```json
 [
   {
     "id": 1,
     "name": "热菜",
-    "description": "热菜系列",
+    "description": "美味的热菜",
     "sort_order": 1,
     "items": [
       {
         "id": 1,
         "name": "宫保鸡丁",
-        "description": "经典川菜，香辣可口",
-        "price": 38.0,
-        "stock": 100,
-        "is_available": true
+        "description": "经典川菜",
+        "price": 38.00,
+        "image_url": "https://...",
+        "stock": 50,
+        "is_available": true,
+        "is_recommended": true
       }
     ]
   }
 ]
 ```
 
-### 3. 创建订单
+#### 3. 创建订单
 
-**接口：** `POST /api/customer/order`
+```
+POST /api/customer/order
+```
 
-**请求体：**
+**请求体**:
 ```json
 {
-  "store_id": 2,
-  "table_id": 11,
+  "store_id": 1,
+  "table_id": 1,
   "customer_name": "张三",
-  "customer_phone": "13800000000",
+  "customer_phone": "13800138000",
   "items": [
     {
       "menu_item_id": 1,
-      "quantity": 2
+      "quantity": 2,
+      "special_instructions": "少放辣"
     }
   ],
-  "special_instructions": "少辣"
+  "special_instructions": "尽快上菜"
 }
 ```
 
-**响应：**
+**响应示例**:
 ```json
 {
-  "id": 100,
-  "order_number": "ORD202601072133457959",
-  "store_id": 2,
-  "table_id": 11,
-  "table_number": "T01",
-  "total_amount": 76.0,
-  "final_amount": 76.0,
+  "id": 1,
+  "order_number": "ORD202601071200001234",
+  "store_id": 1,
+  "table_id": 1,
+  "table_number": "1",
+  "total_amount": 76.00,
+  "final_amount": 76.00,
   "payment_status": "unpaid",
   "order_status": "pending",
-  "created_at": "2024-01-07T21:33:45",
   "items": [...]
 }
 ```
 
-### 4. 查询订单详情
+#### 4. 查询订单详情
 
-**接口：** `GET /api/customer/order/{order_id}`
+```
+GET /api/customer/order/{order_id}
+```
 
-**响应：** 同创建订单响应
+### 店员端API (端口8001)
+
+#### 1. 获取订单列表
+
+```
+GET /api/staff/orders?store_id={store_id}&status={status}&limit={limit}
+```
+
+**参数说明**:
+- `store_id`: 店铺ID（必填）
+- `status`: 订单状态（可选）：pending, confirmed, preparing, ready, serving, completed, cancelled
+- `limit`: 返回数量限制（默认50）
+
+**响应示例**:
+```json
+[
+  {
+    "id": 1,
+    "order_number": "ORD202601071200001234",
+    "table_number": "1",
+    "total_amount": 76.00,
+    "order_status": "pending",
+    "items_count": 2
+  }
+]
+```
+
+#### 2. 获取订单详情
+
+```
+GET /api/staff/order/{order_id}
+```
+
+**响应示例**:
+```json
+{
+  "id": 1,
+  "order_number": "ORD202601071200001234",
+  "table_number": "1",
+  "customer_name": "张三",
+  "customer_phone": "13800138000",
+  "order_status": "pending",
+  "items": [...],
+  "status_logs": [...]
+}
+```
+
+#### 3. 更新订单状态
+
+```
+PUT /api/staff/order/status
+```
+
+**请求体**:
+```json
+{
+  "order_id": 1,
+  "order_status": "confirmed",
+  "notes": "订单确认",
+  "operator_id": 1
+}
+```
+
+**状态流转规则**:
+- `pending` → `confirmed` 或 `cancelled`
+- `confirmed` → `preparing`
+- `preparing` → `ready`
+- `ready` → `serving`
+- `serving` → `completed`
+
+#### 4. 更新订单项状态
+
+```
+PUT /api/staff/order-item/status
+```
+
+**请求体**:
+```json
+{
+  "order_item_id": 1,
+  "status": "ready"
+}
+```
+
+#### 5. 获取店铺桌号列表
+
+```
+GET /api/staff/store/{store_id}/tables
+```
+
+**响应示例**:
+```json
+[
+  {
+    "id": 1,
+    "table_number": "1",
+    "table_name": "1号桌",
+    "seats": 4,
+    "is_active": true,
+    "current_order_id": 1,
+    "current_order_status": "preparing"
+  }
+]
+```
+
+## H5点餐页面
+
+### 页面功能
+
+1. **店铺信息展示**: 显示店铺名称、地址、营业时间
+2. **分类浏览**: 按菜品分类浏览，支持横向滑动
+3. **菜品展示**: 显示菜品图片、名称、描述、价格
+4. **购物车功能**: 
+   - 添加/减少菜品数量
+   - 查看购物车总价
+   - 显示购物车商品数量
+5. **订单提交**: 提交订单并显示订单信息
+6. **订单状态**: 实时查看订单状态
+
+### 页面访问
+
+页面路径: `assets/order.html`
+
+URL参数:
+- `store_id`: 店铺ID（必填）
+- `table_id`: 桌号ID（必填）
+- `table_number`: 桌号（可选）
+
+示例URL:
+```
+http://your-domain.com/order.html?store_id=1&table_id=1&table_number=1
+```
+
+## 二维码生成
+
+### 二维码内容格式
+
+```
+{base_url}?store_id={store_id}&table_id={table_id}
+```
+
+示例:
+```
+http://your-domain.com/order.html?store_id=1&table_id=1
+```
+
+### 二维码存储
+
+二维码图片存储在S3对象存储中，文件命名规则:
+```
+table_qrcode_store{store_id}_table{table_id}.png
+```
+
+### 签名URL
+
+二维码URL使用S3签名URL，有效期默认1小时。
+
+## 数据库表结构
+
+### 核心表
+
+1. **stores**: 店铺表
+2. **tables**: 桌号表（包含二维码URL和内容）
+3. **menu_categories**: 菜品分类表
+4. **menu_items**: 菜品表
+5. **orders**: 订单表
+6. **order_items**: 订单明细表
+7. **order_status_logs**: 订单状态日志表
+
+### 关联关系
+
+- 店铺 (stores) 1 → N 桌号 (tables)
+- 店铺 (stores) 1 → N 菜品分类 (menu_categories)
+- 店铺 (stores) 1 → N 订单 (orders)
+- 桌号 (tables) 1 → N 订单 (orders)
+- 订单 (orders) 1 → N 订单明细 (order_items)
+- 订单 (orders) 1 → N 订单状态日志 (order_status_logs)
 
 ## 订单状态流转
 
+### 状态定义
+
+| 状态 | 说明 |
+|------|------|
+| pending | 待确认 |
+| confirmed | 已确认 |
+| preparing | 准备中 |
+| ready | 已完成（制作完成）|
+| serving | 上菜中 |
+| completed | 已完成（用餐完成）|
+| cancelled | 已取消 |
+
+### 状态流转图
+
 ```
-pending (待确认)
-  ↓
-confirmed (已确认)
-  ↓
-preparing (准备中)
-  ↓
-ready (已完成)
-  ↓
-serving (上菜中)
-  ↓
-completed (已完成)
+pending → confirmed → preparing → ready → serving → completed
+   ↓
+cancelled
 ```
 
 ## 测试
 
-运行完整流程测试：
+### 运行测试
 
 ```bash
-PYTHONPATH=/workspace/projects/src python scripts/test_order_flow.py
+# 启动API服务（在后台）
+eval $(python /workspace/projects/scripts/load_env.py)
+PYTHONPATH=/workspace/projects/src python -m uvicorn api.customer_api:app --host 0.0.0.0 --port 8000 > /tmp/customer_api.log 2>&1 &
+PYTHONPATH=/workspace/projects/src python -m uvicorn api.staff_api:app --host 0.0.0.0 --port 8001 > /tmp/staff_api.log 2>&1 &
+
+# 等待服务启动
+sleep 5
+
+# 运行测试脚本
+PYTHONPATH=/workspace/projects/src python /workspace/projects/scripts/test_order_flow.py
 ```
 
-测试步骤：
-1. ✅ 获取店铺信息
-2. ✅ 获取菜品列表
-3. ✅ 创建订单
-4. ✅ 查询订单详情
+### 测试内容
 
-## 实际使用流程
-
-### 顾客端流程
-
-1. **扫码**
-   - 顾客扫描桌号上的二维码
-   - 跳转到点餐页面
-
-2. **浏览菜单**
-   - 查看店铺信息
-   - 按分类浏览菜品
-   - 查看菜品详情
-
-3. **选择菜品**
-   - 点击"+"添加到购物车
-   - 调整数量
-   - 查看购物车
-
-4. **提交订单**
-   - 确认订单信息
-   - 提交订单
-   - 查看订单状态
-
-5. **等待上菜**
-   - 订单状态更新为"准备中"
-   - 厨师开始制作
-   - 传菜员送菜
-
-### 店员端流程（待开发）
-
-1. 接收订单通知
-2. 确认订单
-3. 打印小票
-4. 传给厨房
-
-### 厨师端流程（待开发）
-
-1. 查看订单列表
-2. 开始制作
-3. 标记完成
-4. 通知传菜员
-
-## 数据库关联
-
-订单创建后：
-- `orders` 表：保存订单主信息
-- `order_items` 表：保存订单项详情
-- `tables` 表：通过 `table_id` 关联桌号
+1. 创建测试数据（店铺、桌号、菜品等）
+2. 生成二维码并上传到S3
+3. 测试顾客端API（获取店铺、菜品、创建订单）
+4. 测试店员端API（订单管理、状态流转）
+5. 验证订单与桌号关联
 
 ## 注意事项
 
-1. **二维码有效期**
-   - 默认1年
-   - 可在生成时调整
-
-2. **库存检查**
-   - 提交订单时会检查库存
-   - 库存不足会提示错误
-
-3. **订单号生成**
-   - 格式：`ORD{YYYYMMDDHHmmss}{4位随机数}`
-   - 保证唯一性
-
-4. **跨域配置**
-   - 生产环境需配置具体的域名
-   - 当前允许所有域名（仅用于测试）
-
-## 后续开发计划
-
-### 高优先级
-- [ ] 店员管理端
-- [ ] 厨房显示端
-- [ ] 支付功能集成
-- [ ] 订单状态实时更新（WebSocket）
-
-### 中优先级
-- [ ] 订单评价功能
-- [ ] 菜品图片上传
-- [ ] 会员积分系统
-- [ ] 优惠券系统
-
-### 低优先级
-- [ ] 外卖功能
-- [ ] 预约点餐
-- [ ] 多语言支持
-- [ ] 数据统计报表
+1. **环境变量**: 确保已加载环境变量（使用 `load_env.py`）
+2. **PYTHONPATH**: 运行Python脚本时需要设置 `PYTHONPATH=/workspace/projects/src`
+3. **数据库连接**: 确保数据库连接正常
+4. **S3存储**: 确保S3对象存储服务可用
+5. **端口占用**: 确保端口8000和8001未被占用
 
 ## 故障排查
 
-### 问题1：二维码无法生成
-**检查：**
-- S3 存储是否正常
-- 环境变量是否正确配置
-- 桌号是否存在
+### API服务无法启动
 
-### 问题2：API 接口返回 404
-**检查：**
-- 服务是否启动
-- 端口是否正确
-- 请求路径是否正确
+检查日志:
+```bash
+tail -100 /tmp/customer_api.log
+tail -100 /tmp/staff_api.log
+```
 
-### 问题3：订单创建失败
-**检查：**
-- 菜品库存是否充足
-- 桌号是否属于该店铺
-- 必填参数是否完整
+常见问题:
+- 模块导入错误: 检查PYTHONPATH设置
+- 数据库连接失败: 检查环境变量和数据库服务
+- 端口被占用: 更换端口或停止占用端口的进程
+
+### 二维码生成失败
+
+- 检查S3存储配置
+- 检查桌号ID是否存在
+- 检查网络连接
+
+### H5页面无法访问
+
+- 检查API服务是否正常运行
+- 检查URL参数是否正确
+- 检查CORS配置
+
+## 后续开发建议
+
+1. **支付集成**: 接入微信支付、支付宝等支付方式
+2. **实时通信**: 使用WebSocket实现订单状态实时推送
+3. **会员系统**: 集成会员积分、优惠券等功能
+4. **数据统计**: 添加营收分析、订单统计等报表功能
+5. **厨房显示**: 开发厨房显示屏，实时显示订单
+6. **移动端APP**: 开发店员和顾客的移动应用
 
 ## 联系支持
 
-如有问题，请查看：
-- API 文档：http://localhost:8000/docs
-- 数据库设计：`docs/database_design.md`
-- 系统架构：`docs/system_architecture.md`
+如有问题，请联系技术支持。

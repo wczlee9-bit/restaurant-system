@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 from storage.database.db import get_session
-from storage.database.shared.model import Store, MenuItem, MenuCategory, Order, OrderItem, Table
+from storage.database.shared.model import Stores, MenuItems, MenuCategories, Orders, OrderItems, Tables
 import random
 import string
 
@@ -140,7 +140,7 @@ def get_shop_info(store_id: int = Query(..., description="店铺ID")):
     """
     db = get_session()
     try:
-        shop = db.query(Store).filter(Store.id == store_id, Store.is_active == True).first()
+        shop = db.query(Stores).filter(Stores.id == store_id, Stores.is_active == True).first()
         if not shop:
             raise HTTPException(status_code=404, detail="店铺不存在或已关闭")
         
@@ -163,18 +163,18 @@ def get_menu(store_id: int = Query(..., description="店铺ID")):
     db = get_session()
     try:
         # 查询店铺的所有分类
-        categories = db.query(MenuCategory).filter(
-            MenuCategory.store_id == store_id,
-            MenuCategory.is_active == True
-        ).order_by(MenuCategory.sort_order).all()
+        categories = db.query(MenuCategories).filter(
+            MenuCategories.store_id == store_id,
+            MenuCategories.is_active == True
+        ).order_by(MenuCategories.sort_order).all()
         
         result = []
         for category in categories:
             # 查询该分类下的菜品
-            items = db.query(MenuItem).filter(
-                MenuItem.category_id == category.id,
-                MenuItem.is_available == True
-            ).order_by(MenuItem.sort_order, MenuItem.id).all()
+            items = db.query(MenuItems).filter(
+                MenuItems.category_id == category.id,
+                MenuItems.is_available == True
+            ).order_by(MenuItems.sort_order, MenuItems.id).all()
             
             menu_items = []
             for item in items:
@@ -213,13 +213,13 @@ def create_order(request: CreateOrderRequest):
     db = get_session()
     try:
         # 验证店铺和桌号
-        shop = db.query(Store).filter(Store.id == request.store_id).first()
+        shop = db.query(Stores).filter(Stores.id == request.store_id).first()
         if not shop:
             raise HTTPException(status_code=404, detail="店铺不存在")
         
-        table = db.query(Table).filter(
-            Table.id == request.table_id,
-            Table.store_id == request.store_id
+        table = db.query(Tables).filter(
+            Tables.id == request.table_id,
+            Tables.store_id == request.store_id
         ).first()
         if not table:
             raise HTTPException(status_code=404, detail="桌号不存在或不属于该店铺")
@@ -232,7 +232,7 @@ def create_order(request: CreateOrderRequest):
         discount_amount = 0.0
         
         # 创建订单
-        order = Order(
+        order = Orders(
             store_id=request.store_id,
             table_id=request.table_id,
             order_number=order_number,
@@ -252,7 +252,7 @@ def create_order(request: CreateOrderRequest):
         order_items = []
         for item_request in request.items:
             # 获取菜品信息（快照）
-            menu_item = db.query(MenuItem).filter(MenuItem.id == item_request.menu_item_id).first()
+            menu_item = db.query(MenuItems).filter(MenuItems.id == item_request.menu_item_id).first()
             if not menu_item:
                 raise HTTPException(status_code=404, detail=f"菜品ID {item_request.menu_item_id} 不存在")
             
@@ -265,7 +265,7 @@ def create_order(request: CreateOrderRequest):
             subtotal = menu_item.price * item_request.quantity
             total_amount += subtotal
             
-            order_item = OrderItem(
+            order_item = OrderItems(
                 order_id=order.id,
                 menu_item_id=menu_item.id,
                 menu_item_name=menu_item.name,
@@ -335,12 +335,12 @@ def get_order(order_id: int):
     """
     db = get_session()
     try:
-        order = db.query(Order).filter(Order.id == order_id).first()
+        order = db.query(Orders).filter(Orders.id == order_id).first()
         if not order:
             raise HTTPException(status_code=404, detail="订单不存在")
         
         # 获取桌号信息
-        table = db.query(Table).filter(Table.id == order.table_id).first()
+        table = db.query(Tables).filter(Tables.id == order.table_id).first()
         table_number = table.table_number if table else ""
         
         # 构建订单项

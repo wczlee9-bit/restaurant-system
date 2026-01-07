@@ -1,191 +1,162 @@
 """
 二维码生成工具
+为每个桌号生成唯一二维码并上传至S3
 """
-import qrcode
-from io import BytesIO
+import io
 import os
 from typing import Optional
-from sqlalchemy.orm import Session
-from storage.database.db import get_session
-from storage.database.shared.model import Table, Store
+import qrcode
+from qrcode.constants import ERROR_CORRECT_L
+
 from storage.s3.s3_storage import S3SyncStorage
-import json
+from storage.database.db import get_session
+from storage.database.shared.model import Tables
 
 
-def generate_qrcode_url(store_id: int, table_id: int, base_url: str = "https://your-domain.com/order") -> str:
-    """
-    生成扫码后的跳转URL
+class QRCodeGenerator:
+    """二维码生成器"""
     
-    Args:
-        store_id: 店铺ID
-        table_id: 桌号ID
-        base_url: 基础URL
-    
-    Returns:
-        完整的跳转URL
-    """
-    return f"{base_url}?store_id={store_id}&table_id={table_id}"
-
-
-def generate_qrcode_image(url: str) -> BytesIO:
-    """
-    生成二维码图片
-    
-    Args:
-        url: 二维码内容（跳转URL）
-    
-    Returns:
-        二维码图片的 BytesIO 对象
-    """
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data(url)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="black", back_color="white")
-    img_io = BytesIO()
-    img.save(img_io, 'PNG')
-    img_io.seek(0)
-    
-    return img_io
-
-
-def generate_table_qrcode(table_id: int, base_url: str = "https://your-domain.com/order") -> dict:
-    """
-    为指定桌号生成二维码并上传到S3
-    
-    Args:
-        table_id: 桌号ID
-        base_url: 基础URL
-    
-    Returns:
-        包含二维码URL的字典
-    """
-    db = get_session()
-    try:
-        # 查询桌号信息
-        table = db.query(Table).filter(Table.id == table_id).first()
-        if not table:
-            return {
-                "success": False,
-                "error": f"桌号ID {table_id} 不存在"
-            }
-        
-        # 生成跳转URL
-        url = generate_qrcode_url(table.store_id, table_id, base_url)
-        
-        # 生成二维码图片
-        img_io = generate_qrcode_image(url)
-        
-        # 上传到S3
-        storage = S3SyncStorage(
+    def __init__(self):
+        """初始化S3存储客户端"""
+        self.storage = S3SyncStorage(
             endpoint_url=os.getenv("COZE_BUCKET_ENDPOINT_URL"),
             access_key="",
             secret_key="",
             bucket_name=os.getenv("COZE_BUCKET_NAME"),
             region="cn-beijing",
         )
-        
-        # 生成文件名：qrcode_table_{table_id}.png
-        file_name = f"qrcode_table_{table_id}.png"
-        key = storage.upload_file(
-            file_content=img_io.getvalue(),
-            file_name=file_name,
-            content_type="image/png"
-        )
-        
-        # 更新桌号表
-        table.qrcode_url = storage.generate_presigned_url(key=key, expire_time=86400 * 365)  # 一年有效期
-        table.qrcode_content = url
-        db.commit()
-        db.refresh(table)
-        
-        return {
-            "success": True,
-            "table_id": table_id,
-            "table_number": table.table_number,
-            "qrcode_url": table.qrcode_url,
-            "qrcode_content": table.qrcode_content,
-            "message": f"桌号 {table.table_number} 的二维码生成成功"
-        }
-        
-    except Exception as e:
-        db.rollback()
-        return {
-            "success": False,
-            "error": str(e)
-        }
-    finally:
-        db.close()
-
-
-def generate_store_qrcodes(store_id: int, base_url: str = "https://your-domain.com/order") -> dict:
-    """
-    为店铺的所有桌号生成二维码
     
-    Args:
-        store_id: 店铺ID
-        base_url: 基础URL
-    
-    Returns:
-        生成结果的汇总
-    """
-    db = get_session()
-    try:
-        # 查询店铺的所有桌号
-        tables = db.query(Table).filter(
-            Table.store_id == store_id,
-            Table.is_active == True
-        ).all()
+    def generate_qrcode_for_table(
+        self, 
+        table_id: int, 
+        base_url: str = "https://order.example.com"
+    ) -> dict:
+        """
+        为指定桌号生成二维码并上传至S3
         
-        if not tables:
-            return {
-                "success": False,
-                "error": f"店铺ID {store_id} 没有激活的桌号"
+        Args:
+            table_id: 桌号ID
+            base_url: 点餐页面的基础URL
+            
+        Returns:
+            dict: 包含二维码URL和二维码内容
+            {
+                "qrcode_url": "https://...",
+                "qrcode_content": "https://order.example.com?table=xxx&store=xxx"
             }
+        """
+        db = get_session()
+        try:
+            # 获取桌号信息
+            table = db.query(Tables).filter(Tables.id == table_id).first()
+            if not table:
+                raise ValueError(f"桌号ID {table_id} 不存在")
+            
+            # 生成二维码内容（包含店铺ID和桌号）
+            qrcode_content = f"{base_url}?store_id={table.store_id}&table_id={table_id}"
+            
+            # 生成二维码图片
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(qrcode_content)
+            qr.make(fit=True)
+            
+            # 将二维码转换为图片
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # 将图片转换为字节流
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            # 生成文件名
+            file_name = f"table_qrcode_store{table.store_id}_table{table.id}.png"
+            
+            # 上传到S3
+            qrcode_key = self.storage.upload_file(
+                file_content=img_byte_arr,
+                file_name=file_name,
+                content_type="image/png"
+            )
+            
+            # 生成签名URL（有效期1小时）
+            qrcode_url = self.storage.generate_presigned_url(
+                key=qrcode_key,
+                expire_time=3600
+            )
+            
+            # 更新数据库
+            table.qrcode_url = qrcode_url
+            table.qrcode_content = qrcode_content
+            db.commit()
+            db.refresh(table)
+            
+            return {
+                "qrcode_url": qrcode_url,
+                "qrcode_content": qrcode_content,
+                "table_id": table_id,
+                "store_id": table.store_id,
+                "table_number": table.table_number
+            }
+            
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
+    
+    def generate_qrcodes_for_store(
+        self, 
+        store_id: int, 
+        base_url: str = "https://order.example.com"
+    ) -> list:
+        """
+        为指定店铺的所有桌号生成二维码
         
-        results = []
-        success_count = 0
-        fail_count = 0
+        Args:
+            store_id: 店铺ID
+            base_url: 点餐页面的基础URL
+            
+        Returns:
+            list: 所有桌号的二维码信息列表
+        """
+        db = get_session()
+        try:
+            # 获取店铺所有活跃的桌号
+            tables = db.query(Tables).filter(
+                Tables.store_id == store_id,
+                Tables.is_active == True
+            ).all()
+            
+            results = []
+            for table in tables:
+                result = self.generate_qrcode_for_table(table.id, base_url)
+                results.append(result)
+            
+            return results
+            
+        finally:
+            db.close()
+    
+    def get_qrcode_url_by_table(self, table_id: int) -> Optional[str]:
+        """
+        获取桌号的二维码URL
         
-        for table in tables:
-            result = generate_table_qrcode(table.id, base_url)
-            if result["success"]:
-                success_count += 1
-                results.append({
-                    "table_id": table.id,
-                    "table_number": table.table_number,
-                    "qrcode_url": result["qrcode_url"],
-                    "status": "success"
-                })
-            else:
-                fail_count += 1
-                results.append({
-                    "table_id": table.id,
-                    "table_number": table.table_number,
-                    "error": result["error"],
-                    "status": "failed"
-                })
-        
-        return {
-            "success": True,
-            "store_id": store_id,
-            "total": len(tables),
-            "success_count": success_count,
-            "fail_count": fail_count,
-            "results": results
-        }
-        
-    finally:
-        db.close()
-
-
-if __name__ == "__main__":
-    # 测试生成二维码
-    print("测试为店铺2的所有桌号生成二维码...")
-    result = generate_store_qrcodes(2)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+        Args:
+            table_id: 桌号ID
+            
+        Returns:
+            str: 二维码URL，如果不存在则返回None
+        """
+        db = get_session()
+        try:
+            table = db.query(Tables).filter(Tables.id == table_id).first()
+            if table and table.qrcode_url:
+                return table.qrcode_url
+            return None
+        finally:
+            db.close()
