@@ -1,0 +1,237 @@
+<!-- 
+  店铺设置页面 - 改进版
+  修复打印二维码功能
+-->
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+<script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+<script>
+// 注意：这是一个包含打印功能改进的版本
+// 需要替换 shop_settings.html 中的打印方法
+
+/**
+ * 改进的打印二维码方法
+ * 替换 shop_settings.html 中的 printQrcode 方法
+ */
+const printQrcodeImproved = (table) => {
+    if (!table.qrcodeUrl) {
+        ElementPlus.ElMessage.warning('请先生成二维码');
+        return;
+    }
+
+    // 创建打印窗口
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+        ElementPlus.ElMessage.error('无法打开打印窗口，请允许浏览器弹出窗口');
+        return;
+    }
+
+    // 写入 HTML
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>${table.number}号桌二维码</title>
+                <style>
+                    body {
+                        font-family: 'Microsoft YaHei', Arial, sans-serif;
+                        text-align: center;
+                        padding: 40px 20px;
+                        margin: 0;
+                    }
+                    h1 {
+                        color: #333;
+                        font-size: 24px;
+                        margin-bottom: 20px;
+                    }
+                    .info {
+                        font-size: 18px;
+                        color: #666;
+                        margin: 10px 0;
+                    }
+                    .qrcode-container {
+                        margin: 30px auto;
+                        padding: 20px;
+                        border: 3px solid #333;
+                        border-radius: 10px;
+                        display: inline-block;
+                    }
+                    .qrcode {
+                        width: 300px;
+                        height: 300px;
+                        display: block;
+                    }
+                    .instruction {
+                        font-size: 14px;
+                        color: #999;
+                        margin-top: 20px;
+                    }
+                    .print-btn {
+                        margin-top: 30px;
+                        padding: 12px 30px;
+                        font-size: 16px;
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                    }
+                    .print-btn:hover {
+                        background: #5568d3;
+                    }
+                    @media print {
+                        .print-btn {
+                            display: none;
+                        }
+                        body {
+                            padding: 20px;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>${table.shop_name || '美味餐厅'}</h1>
+                <div class="info">${table.number}号桌</div>
+                <div class="info">座位数：${table.seats || 4}人</div>
+                
+                <div class="qrcode-container">
+                    <img src="${table.qrcodeUrl}" class="qrcode" alt="二维码" />
+                </div>
+                
+                <p class="instruction">请扫描二维码点餐</p>
+                
+                <button class="print-btn" onclick="window.print()">打印</button>
+            </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    
+    // 显示提示
+    ElementPlus.ElMessage.success('打印窗口已打开，请点击打印按钮');
+};
+
+/**
+ * 改进的批量打印方法
+ */
+const printAllQrcodesImproved = () => {
+    const hasQrcode = tables.value.some(t => t.qrcodeUrl);
+    if (!hasQrcode) {
+        ElementPlus.ElMessage.warning('请先生成二维码');
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=1000,height=800');
+    if (!printWindow) {
+        ElementPlus.ElMessage.error('无法打开打印窗口，请允许浏览器弹出窗口');
+        return;
+    }
+
+    let html = `
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>桌号二维码</title>
+                <style>
+                    body {
+                        font-family: 'Microsoft YaHei', Arial, sans-serif;
+                        padding: 20px;
+                        margin: 0;
+                    }
+                    h1 {
+                        text-align: center;
+                        color: #333;
+                        font-size: 28px;
+                        margin-bottom: 40px;
+                    }
+                    .qrcode-card {
+                        border: 3px solid #333;
+                        padding: 20px;
+                        margin: 30px auto;
+                        display: inline-block;
+                        text-align: center;
+                        width: 300px;
+                        page-break-inside: avoid;
+                    }
+                    .qrcode-title {
+                        font-size: 24px;
+                        font-weight: bold;
+                        margin-bottom: 15px;
+                        color: #333;
+                    }
+                    .qrcode-info {
+                        font-size: 16px;
+                        color: #666;
+                        margin: 5px 0;
+                    }
+                    .qrcode {
+                        width: 200px;
+                        height: 200px;
+                        margin: 20px auto;
+                        display: block;
+                    }
+                    .print-btn {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 15px 40px;
+                        font-size: 18px;
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        z-index: 1000;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                    }
+                    .print-btn:hover {
+                        background: #5568d3;
+                    }
+                    @media print {
+                        .print-btn {
+                            display: none;
+                        }
+                        body {
+                            padding: 10px;
+                        }
+                        h1 {
+                            font-size: 20px;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>${shopInfo.name || '美味餐厅'} - 桌号二维码</h1>
+    `;
+
+    tables.value.forEach(table => {
+        if (table.qrcodeUrl) {
+            html += `
+                <div class="qrcode-card">
+                    <div class="qrcode-title">${table.number}号桌</div>
+                    <div class="qrcode-info">座位数：${table.seats || 4}人</div>
+                    <img src="${table.qrcodeUrl}" class="qrcode" alt="${table.number}号桌二维码" />
+                </div>
+            `;
+        }
+    });
+
+    html += `
+                <button class="print-btn" onclick="window.print()">打印所有二维码</button>
+            </body>
+        </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    ElementPlus.ElMessage.success('打印窗口已打开，请点击打印按钮');
+};
+
+/**
+ * 注意：将 shop_settings.html 中的打印方法替换为上述改进版本
+ */
+</script>

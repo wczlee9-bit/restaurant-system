@@ -1,0 +1,49 @@
+# ========================================
+# 正式上线 - 部署文件清单
+# ========================================
+# 使用说明：从 GitHub 下载项目后，选择以下文件上传
+
+【核心 HTML 文件（8个）】
+portal.html                    - 主门户页面（已更新链接到 v3）
+index.html                     - 默认首页
+login_standalone.html           - 工作人员登录
+customer_order_v3.html          - 顾客点餐（生产版）⭐
+staff_workflow.html             - 工作人员端
+shop_settings.html              - 店铺设置
+api_test.html                   - API 测试
+test.html                       - 基础测试
+
+【配置文件（1个）】
+netlify-production.toml → 重命名为 netlify.toml
+
+【可选文件（3个）】
+menu_management.html            - 菜品管理
+inventory_management.html       - 库存管理
+order_flow_config.html          - 订单流程配置
+
+【不要上传的文件】
+*.bak                           - 所有备份文件
+*.md                            - 文档文件
+customer_order.html             - 旧版
+customer_order_v2.html          - 旧版
+shop_settings_v2.html           - 仅作参考
+
+【文件总数】
+- 必传：8个 HTML + 1个配置 = 9个文件
+- 可选：3个 HTML
+- 总计：约 180KB（必传）/ 280KB（全部）
+
+【部署步骤】
+1. 从 GitHub 下载 ZIP 文件
+2. 解压并选中上述 9 个文件
+3. 拖拽到 Netlify 手动上传
+4. 修改 netlify.toml 中的 API 地址
+5. 测试验证
+
+【测试 URL】
+1. https://your-site.netlify.app/test.html
+2. https://your-site.netlify.app/portal.html
+3. https://your-site.netlify.app/customer_order_v3.html
+4. https://your-site.netlify.app/api_test.html
+
+========================================

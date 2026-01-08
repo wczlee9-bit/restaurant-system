@@ -1,0 +1,179 @@
+# ========================================
+# 生产环境配置 - Netlify
+# ========================================
+# 使用说明：重命名为 netlify.toml 后使用
+
+[build]
+  publish = "assets"
+  command = "# No build command needed - Static site"
+  functions = ""
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[build.processing]
+  skip_processing = false
+  css.bundle = false
+  css.minify = false
+  js.bundle = false
+  js.minify = false
+  html.pretty_urls = true
+  images.compress = true
+
+# ========================================
+# 路由重定向规则
+# ========================================
+
+# 1. 主页重定向到门户页面
+[[redirects]]
+  from = "/"
+  to = "/portal.html"
+  status = 302
+  force = false
+
+# 2. 特殊路径重定向
+[[redirects]]
+  from = "/login"
+  to = "/login_standalone.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/staff-workflow"
+  to = "/staff_workflow.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/shop-settings"
+  to = "/shop_settings.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/customer-order"
+  to = "/customer_order_v3.html"
+  status = 302
+  force = false
+
+# ========================================
+# API 代理配置
+# 注意：修改为实际的后端 API 地址
+# ========================================
+
+# 订单相关接口代理到 customer_api (端口 8001)
+[[redirects]]
+  from = "/api/orders*"
+  to = "http://9.128.251.82:8001/api/orders:splat"
+  status = 200
+  force = true
+
+# WebSocket 代理
+[[redirects]]
+  from = "/ws/*"
+  to = "http://9.128.251.82:8001/ws/:splat"
+  status = 200
+  force = true
+
+# 其他 API 接口代理到 restaurant_api (端口 8000)
+[[redirects]]
+  from = "/api/*"
+  to = "http://9.128.251.82:8000/api/:splat"
+  status = 200
+  force = true
+
+# ========================================
+# SPA 重定向规则（单页应用）
+# ========================================
+
+# 只有当路径不存在时才重定向到 index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  conditions = {Role = ["admin"]}
+
+# ========================================
+# 缓存策略
+# ========================================
+
+# HTML 文件 - 不缓存，确保始终获取最新版本
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
+# JavaScript 文件 - 长期缓存
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# CSS 文件 - 长期缓存
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# JSON 文件 - 短期缓存
+[[headers]]
+  for = "/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+# 图片文件 - 中期缓存
+[[headers]]
+  for = "/*.{jpg,jpeg,png,gif,webp,svg}"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# ========================================
+# 安全头部
+# ========================================
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+# ========================================
+# 自定义错误页面
+# ========================================
+
+# 404 错误页面
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
+
+# ========================================
+# 生产环境说明
+# ========================================
+#
+# 1. 部署前请修改 API 地址：
+#    - 将 http://9.128.251.82 替换为实际的后端服务器地址
+#    - 确保端口正确（8000/8001）
+#
+# 2. HTTPS 支持：
+#    - Netlify 自动提供 HTTPS 证书
+#    - 无需额外配置
+#
+# 3. 域名配置：
+#    - 在 Netlify Dashboard 中添加自定义域名
+#    - 配置 DNS 解析
+#
+# 4. 监控和日志：
+#    - Netlify Dashboard 查看部署日志
+#    - 启用 Analytics 进行流量分析
+#
+# 5. 性能优化：
+#    - 已启用图片压缩
+#    - 已配置静态资源缓存
+#    - 使用 CDN 加速
+#
+# ========================================
