@@ -291,7 +291,6 @@
                     v-model="form.password"
                     :placeholder="texts.passwordPlaceholder"
                     @keyup.enter="handleLogin"
-                    show-password
                 >
             </div>
 
@@ -338,14 +337,12 @@
     </div>
 
     <script>
-        const { createApp, ref, reactive, onMounted } = Vue;
+        const { createApp, ref, reactive, computed, onMounted } = Vue;
 
         createApp({
             setup() {
                 const currentLanguage = ref('zh');
                 const loading = ref(false);
-                const users = ref([]);
-                const apiBase = ref('');
 
                 const form = reactive({
                     username: '',
@@ -394,7 +391,7 @@
                     }
                 };
 
-                // 演示用户
+                // 演示用户（内联数据，不依赖外部文件）
                 const demoUsers = [
                     {
                         username: 'system_admin',
@@ -458,44 +455,8 @@
                     }
                 ];
 
-                // 检测 API 地址
-                const detectApiBase = () => {
-                    if (window.location.hostname.includes('netlify.app')) {
-                        return 'http://9.128.251.82:8000/api';
-                    } else if (window.location.hostname === 'localhost') {
-                        return 'http://localhost:8000/api';
-                    }
-                    return 'http://localhost:8000/api';
-                };
-
-                // 加载用户数据
-                const loadUsers = async () => {
-                    try {
-                        const response = await fetch('config/users.json');
-                        if (response.ok) {
-                            users.value = await response.json();
-                        } else {
-                            // 如果加载失败，使用演示用户
-                            users.value = demoUsers.map(user => ({
-                                username: user.username,
-                                password: user.password,
-                                role: user.role,
-                                name: user.name
-                            }));
-                        }
-                    } catch (error) {
-                        console.log('加载用户数据失败，使用演示账号');
-                        users.value = demoUsers.map(user => ({
-                            username: user.username,
-                            password: user.password,
-                            role: user.role,
-                            name: user.name
-                        }));
-                    }
-                };
-
                 // 计算当前语言文本
-                const texts = Vue.computed(() => textsMap[currentLanguage.value]);
+                const texts = computed(() => textsMap[currentLanguage.value]);
 
                 // 切换语言
                 const switchLanguage = (lang) => {
@@ -519,54 +480,23 @@
                     loading.value = true;
 
                     try {
-                        // 先尝试本地验证
-                        const localUser = users.value.find(
+                        // 本地验证（内联数据）
+                        const user = demoUsers.find(
                             u => u.username === form.username && u.password === form.password
                         );
 
-                        if (localUser) {
-                            // 本地验证成功
+                        if (user) {
+                            // 登录成功
                             localStorage.setItem('currentUser', JSON.stringify({
-                                username: localUser.username,
-                                role: localUser.role,
-                                name: localUser.name?.zh || localUser.username,
+                                username: user.username,
+                                role: user.role,
+                                name: user.name[currentLanguage.value] || user.username,
                                 loginTime: new Date().toISOString()
                             }));
 
                             ElementPlus.ElMessage.success(texts.value.loginSuccess);
 
                             // 延迟跳转
-                            setTimeout(() => {
-                                window.location.href = 'staff_workflow.html';
-                            }, 500);
-                            return;
-                        }
-
-                        // 尝试 API 验证
-                        const response = await fetch(`${apiBase.value}/auth/login`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                username: form.username,
-                                password: form.password
-                            })
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
-
-                            localStorage.setItem('currentUser', JSON.stringify({
-                                username: data.username,
-                                role: data.role,
-                                name: data.name || data.username,
-                                token: data.token,
-                                loginTime: new Date().toISOString()
-                            }));
-
-                            ElementPlus.ElMessage.success(texts.value.loginSuccess);
-
                             setTimeout(() => {
                                 window.location.href = 'staff_workflow.html';
                             }, 500);
@@ -594,17 +524,17 @@
                         currentLanguage.value = savedLanguage;
                     }
 
-                    // 检测 API 地址
-                    apiBase.value = detectApiBase();
-
-                    // 加载用户数据
-                    loadUsers();
-
                     // 检查是否已登录
                     const currentUser = localStorage.getItem('currentUser');
                     if (currentUser) {
                         // 已登录，直接跳转
                         window.location.href = 'staff_workflow.html';
+                    }
+
+                    // 检查 ElementPlus 是否加载成功
+                    if (typeof ElementPlus === 'undefined') {
+                        console.error('ElementPlus 未加载成功');
+                        alert('页面加载失败，请检查网络连接后刷新页面\n\nPage load failed, please check your network connection and refresh');
                     }
                 });
 
