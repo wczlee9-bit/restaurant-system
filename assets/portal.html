@@ -114,6 +114,13 @@
                     <div class="portal-desc">库存管理、采购订单、库存预警</div>
                     <button class="btn" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: white;">物料采购</button>
                 </div>
+
+                <div class="portal-card" @click="goToSettlement">
+                    <div class="portal-icon">💳</div>
+                    <div class="portal-title">跨店铺结算</div>
+                    <div class="portal-desc">积分互通、第三方协议、结算统计</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333;">跨店铺结算</button>
+                </div>
             </div>
 
             <!-- 桌号选择 -->
@@ -167,6 +174,9 @@
                 },
                 goToInventoryManagement() {
                     window.location.href = 'inventory_management.html';
+                },
+                goToSettlement() {
+                    window.location.href = 'settlement_management.html';
                 },
                 selectTable(tableNumber) {
                     // 使用生产版本 customer_order_v3.html

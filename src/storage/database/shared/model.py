@@ -554,3 +554,114 @@ class OrderFlowConfig(Base):
 
 # 更新 Stores 模型添加关系（需要在 Stores 类中添加）
 # Stores.workflow_configs = relationship('WorkflowConfig', back_populates='store', cascade='all, delete-orphan')
+
+
+# ============ 跨店铺结算与第三方积分互通系统 ============
+
+class StorePointSettlements(Base):
+    """店铺积分结算表 - 记录不同店铺之间的积分结算关系"""
+    __tablename__ = 'store_point_settlements'
+    __table_args__ = (
+        ForeignKeyConstraint(['source_store_id'], ['stores.id'], ondelete='CASCADE', name='store_point_settlements_source_store_fkey'),
+        ForeignKeyConstraint(['target_store_id'], ['stores.id'], ondelete='CASCADE', name='store_point_settlements_target_store_fkey'),
+        ForeignKeyConstraint(['member_id'], ['members.id'], ondelete='CASCADE', name='store_point_settlements_member_fkey'),
+        PrimaryKeyConstraint('id', name='store_point_settlements_pkey'),
+        Index('ix_store_point_settlements_source_target', 'source_store_id', 'target_store_id'),
+        Index('ix_store_point_settlements_date', 'settlement_date')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    source_store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='积分来源店铺ID')
+    target_store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='积分目标店铺ID')
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='会员ID')
+    points: Mapped[int] = mapped_column(Integer, nullable=False, comment='积分数量')
+    settlement_date: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, comment='结算日期')
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default='pending', comment='结算状态: pending, completed, cancelled')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    order_id: Mapped[Optional[int]] = mapped_column(Integer, comment='关联订单ID')
+    point_log_id: Mapped[Optional[int]] = mapped_column(Integer, comment='关联积分日志ID')
+    settlement_rate: Mapped[float] = mapped_column(Double(53), nullable=False, default=1.0, comment='结算汇率')
+    settlement_amount: Mapped[Optional[float]] = mapped_column(Double(53), comment='结算金额')
+    completed_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='完成时间')
+    remarks: Mapped[Optional[str]] = mapped_column(Text, comment='备注')
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    source_store: Mapped['Stores'] = relationship('Stores', foreign_keys=[source_store_id])
+    target_store: Mapped['Stores'] = relationship('Stores', foreign_keys=[target_store_id])
+    member: Mapped['Members'] = relationship('Members')
+
+
+class ThirdPartyPointAgreements(Base):
+    """第三方积分协议表 - 记录与第三方公司的积分合作协议"""
+    __tablename__ = 'third_party_point_agreements'
+    __table_args__ = (
+        ForeignKeyConstraint(['store_id'], ['stores.id'], ondelete='CASCADE', name='third_party_agreements_store_fkey'),
+        ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE', name='third_party_agreements_company_fkey'),
+        PrimaryKeyConstraint('id', name='third_party_point_agreements_pkey'),
+        Index('ix_third_party_agreements_store', 'store_id'),
+        Index('ix_third_party_agreements_status', 'status')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='本店铺ID')
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, comment='第三方公司ID（内部公司）')
+    third_party_name: Mapped[str] = mapped_column(String(255), nullable=False, comment='第三方公司名称')
+    third_party_store_id: Mapped[Optional[str]] = mapped_column(String(255), comment='第三方店铺ID（外部系统）')
+    agreement_type: Mapped[str] = mapped_column(String(50), nullable=False, default='bidirectional', comment='协议类型: bidirectional(双向), inbound(只进), outbound(只出)')
+    exchange_rate: Mapped[float] = mapped_column(Double(53), nullable=False, default=1.0, comment='积分兑换比例: 1第三方积分 = 本方积分')
+    max_points_per_day: Mapped[Optional[int]] = mapped_column(Integer, comment='每日最大兑换积分数')
+    max_points_per_order: Mapped[Optional[int]] = mapped_column(Integer, comment='单笔订单最大兑换积分数')
+    settlement_cycle: Mapped[str] = mapped_column(String(50), nullable=False, default='daily', comment='结算周期: daily, weekly, monthly')
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default='active', comment='状态: active, suspended, terminated')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    valid_from: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='生效日期')
+    valid_until: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='到期日期')
+    api_endpoint: Mapped[Optional[str]] = mapped_column(String(500), comment='第三方API地址')
+    api_key: Mapped[Optional[str]] = mapped_column(String(255), comment='第三方API密钥')
+    contact_person: Mapped[Optional[str]] = mapped_column(String(128), comment='联系人')
+    contact_phone: Mapped[Optional[str]] = mapped_column(String(20), comment='联系电话')
+    settlement_balance: Mapped[float] = mapped_column(Double(53), nullable=False, default=0.0, comment='结算余额')
+    last_settlement_date: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='上次结算日期')
+    remarks: Mapped[Optional[str]] = mapped_column(Text, comment='备注')
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    store: Mapped['Stores'] = relationship('Stores')
+    company: Mapped[Optional['Companies']] = relationship('Companies')
+
+
+class PointExchangeLogs(Base):
+    """积分兑换日志表 - 记录第三方积分兑换详情"""
+    __tablename__ = 'point_exchange_logs'
+    __table_args__ = (
+        ForeignKeyConstraint(['member_id'], ['members.id'], ondelete='CASCADE', name='point_exchange_logs_member_fkey'),
+        ForeignKeyConstraint(['store_id'], ['stores.id'], ondelete='CASCADE', name='point_exchange_logs_store_fkey'),
+        ForeignKeyConstraint(['agreement_id'], ['third_party_point_agreements.id'], ondelete='CASCADE', name='point_exchange_logs_agreement_fkey'),
+        ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='SET NULL', name='point_exchange_logs_order_fkey'),
+        PrimaryKeyConstraint('id', name='point_exchange_logs_pkey'),
+        Index('ix_point_exchange_logs_member', 'member_id'),
+        Index('ix_point_exchange_logs_store', 'store_id'),
+        Index('ix_point_exchange_logs_date', 'created_at')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='会员ID')
+    store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='店铺ID')
+    agreement_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='第三方协议ID')
+    exchange_type: Mapped[str] = mapped_column(String(50), nullable=False, comment='兑换类型: inbound(第三方->本方), outbound(本方->第三方)')
+    source_points: Mapped[int] = mapped_column(Integer, nullable=False, comment='源积分数量')
+    target_points: Mapped[int] = mapped_column(Integer, nullable=False, comment='目标积分数量')
+    exchange_rate: Mapped[float] = mapped_column(Double(53), nullable=False, comment='兑换比例')
+    order_id: Mapped[Optional[int]] = mapped_column(Integer, comment='关联订单ID')
+    third_party_order_no: Mapped[Optional[str]] = mapped_column(String(100), comment='第三方订单号')
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default='pending', comment='状态: pending, success, failed, cancelled')
+    error_message: Mapped[Optional[str]] = mapped_column(Text, comment='错误信息')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    completed_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='完成时间')
+    remarks: Mapped[Optional[str]] = mapped_column(Text, comment='备注')
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    member: Mapped['Members'] = relationship('Members')
+    store: Mapped['Stores'] = relationship('Stores')
+    agreement: Mapped['ThirdPartyPointAgreements'] = relationship('ThirdPartyPointAgreements')
+    order: Mapped[Optional['Orders']] = relationship('Orders')
+

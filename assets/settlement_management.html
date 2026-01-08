@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨店铺结算管理</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            padding: 10px 20px;
+            border: none;
+            background: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .tab-button.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .tab-button:hover {
+            background: #5568d3;
+            color: white;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .form-row {
+            margin-bottom: 16px;
+        }
+        
+        .form-row label {
+            display: block;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #2e7d32;
+        }
+        
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #e65100;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .back-link:hover {
+            color: #5568d3;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .data-table td {
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .status-completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status-failed {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #f5f5f5;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination .active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="app-container">
+        <header class="header">
+            <h1>跨店铺结算管理</h1>
+            <p>管理跨店铺积分结算和第三方积分互通</p>
+        </header>
+
+        <main class="main-content">
+            <a href="portal.html" class="back-link">← 返回门户</a>
+
+            <!-- 统计卡片 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>总结算数</h3>
+                    <div class="value">{{ statistics.cross_store_settlements?.total_settlements || 0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>总积分</h3>
+                    <div class="value">{{ statistics.cross_store_settlements?.total_points || 0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>第三方兑换</h3>
+                    <div class="value">{{ statistics.third_party_exchanges?.total_exchanges || 0 }}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>活跃协议</h3>
+                    <div class="value">{{ statistics.agreements?.active_agreements || 0 }}</div>
+                </div>
+            </div>
+
+            <!-- Tab 切换 -->
+            <div class="tab-buttons">
+                <button class="tab-button" :class="{ active: activeTab === 'settlements' }" @click="activeTab = 'settlements'">
+                    跨店铺结算
+                </button>
+                <button class="tab-button" :class="{ active: activeTab === 'agreements' }" @click="activeTab = 'agreements'">
+                    第三方协议
+                </button>
+                <button class="tab-button" :class="{ active: activeTab === 'exchanges' }" @click="activeTab = 'exchanges'">
+                    积分兑换
+                </button>
+            </div>
+
+            <!-- 跨店铺结算 -->
+            <div v-if="activeTab === 'settlements'" class="section">
+                <h2 class="section-title">跨店铺结算</h2>
+                <p class="section-description">
+                    记录会员在一个店铺消费时使用另一个店铺的积分，支持1:1积分结算。
+                </p>
+
+                <div class="info-box">
+                    <strong>功能说明：</strong>会员在店铺A消费时，可以使用店铺B的积分。系统会自动记录结算关系，
+                    支持定期对账和结算统计。
+                </div>
+
+                <h3>创建跨店铺结算</h3>
+                <div class="form-row">
+                    <label>积分来源店铺</label>
+                    <select v-model="settlementForm.source_store_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择店铺</option>
+                        <option v-for="store in stores" :key="store.id" :value="store.id">
+                            {{ store.name }} (ID: {{ store.id }})
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>积分目标店铺（消费店铺）</label>
+                    <select v-model="settlementForm.target_store_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择店铺</option>
+                        <option v-for="store in stores" :key="store.id" :value="store.id">
+                            {{ store.name }} (ID: {{ store.id }})
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>会员手机号</label>
+                    <input 
+                        type="text" 
+                        v-model="settlementForm.member_phone" 
+                        placeholder="请输入会员手机号"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>积分数量</label>
+                    <input 
+                        type="number" 
+                        v-model.number="settlementForm.points" 
+                        placeholder="请输入积分数量"
+                        min="1"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>结算汇率（可选）</label>
+                    <input 
+                        type="number" 
+                        v-model.number="settlementForm.settlement_rate" 
+                        placeholder="默认1.0（1:1结算）"
+                        min="0"
+                        step="0.1"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>备注（可选）</label>
+                    <textarea 
+                        v-model="settlementForm.remarks" 
+                        placeholder="请输入备注信息"
+                        rows="3"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                    ></textarea>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-primary" @click="createSettlement">创建结算</button>
+                    <button class="btn-secondary" @click="resetSettlementForm">重置</button>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+                <h3>结算记录</h3>
+                <div v-if="loading.settlements" class="loading">加载中...</div>
+                <div v-else-if="settlements.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>暂无结算记录</p>
+                </div>
+                <div v-else>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>来源店铺</th>
+                                <th>目标店铺</th>
+                                <th>会员</th>
+                                <th>积分</th>
+                                <th>结算金额</th>
+                                <th>状态</th>
+                                <th>日期</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in settlements" :key="item.id">
+                                <td>{{ item.id }}</td>
+                                <td>{{ item.source_store_name }}</td>
+                                <td>{{ item.target_store_name }}</td>
+                                <td>
+                                    <div>{{ item.member_name || '-' }}</div>
+                                    <div style="font-size: 12px; color: #999;">{{ item.member_phone }}</div>
+                                </td>
+                                <td>{{ item.points }}</td>
+                                <td>{{ item.settlement_amount || '-' }}</td>
+                                <td>
+                                    <span class="status-badge" :class="'status-' + item.status">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(item.settlement_date) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 第三方协议 -->
+            <div v-if="activeTab === 'agreements'" class="section">
+                <h2 class="section-title">第三方积分协议</h2>
+                <p class="section-description">
+                    管理与第三方公司的积分合作协议，支持双向、单向积分互通。
+                </p>
+
+                <div class="info-box">
+                    <strong>功能说明：</strong>创建与第三方公司（如星巴克、肯德基等）的积分合作协议。
+                    可以定义积分兑换比例、每日限额等规则，支持灵活的积分互通配置。
+                </div>
+
+                <h3>创建第三方协议</h3>
+                <div class="form-row">
+                    <label>本店铺</label>
+                    <select v-model="agreementForm.store_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择店铺</option>
+                        <option v-for="store in stores" :key="store.id" :value="store.id">
+                            {{ store.name }} (ID: {{ store.id }})
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>第三方公司名称</label>
+                    <input 
+                        type="text" 
+                        v-model="agreementForm.third_party_name" 
+                        placeholder="例如：星巴克咖啡、肯德基"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>协议类型</label>
+                    <select v-model="agreementForm.agreement_type" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="bidirectional">双向互通（积分可以互相兑换）</option>
+                        <option value="inbound">只进（第三方积分 -> 本方积分）</option>
+                        <option value="outbound">只出（本方积分 -> 第三方积分）</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>积分兑换比例（1第三方积分 = X本方积分）</label>
+                    <input 
+                        type="number" 
+                        v-model.number="agreementForm.exchange_rate" 
+                        placeholder="例如：0.8（1第三方积分 = 0.8本方积分）"
+                        min="0.01"
+                        step="0.1"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>每日最大兑换积分数（可选）</label>
+                    <input 
+                        type="number" 
+                        v-model.number="agreementForm.max_points_per_day" 
+                        placeholder="不填则无限制"
+                        min="0"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>单笔订单最大兑换积分数（可选）</label>
+                    <input 
+                        type="number" 
+                        v-model.number="agreementForm.max_points_per_order" 
+                        placeholder="不填则无限制"
+                        min="0"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>结算周期</label>
+                    <select v-model="agreementForm.settlement_cycle" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="daily">每日结算</option>
+                        <option value="weekly">每周结算</option>
+                        <option value="monthly">每月结算</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>联系人（可选）</label>
+                    <input 
+                        type="text" 
+                        v-model="agreementForm.contact_person" 
+                        placeholder="第三方联系人姓名"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>联系电话（可选）</label>
+                    <input 
+                        type="text" 
+                        v-model="agreementForm.contact_phone" 
+                        placeholder="第三方联系电话"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>备注（可选）</label>
+                    <textarea 
+                        v-model="agreementForm.remarks" 
+                        placeholder="请输入备注信息"
+                        rows="3"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                    ></textarea>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-primary" @click="createAgreement">创建协议</button>
+                    <button class="btn-secondary" @click="resetAgreementForm">重置</button>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+                <h3>协议列表</h3>
+                <div v-if="loading.agreements" class="loading">加载中...</div>
+                <div v-else-if="agreements.length === 0" class="empty-state">
+                    <div class="empty-state-icon">📝</div>
+                    <p>暂无协议记录</p>
+                </div>
+                <div v-else>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>本店铺</th>
+                                <th>第三方公司</th>
+                                <th>协议类型</th>
+                                <th>兑换比例</th>
+                                <th>状态</th>
+                                <th>结算余额</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in agreements" :key="item.id">
+                                <td>{{ item.id }}</td>
+                                <td>{{ item.store_name }}</td>
+                                <td>{{ item.third_party_name }}</td>
+                                <td>{{ getAgreementTypeText(item.agreement_type) }}</td>
+                                <td>{{ item.exchange_rate }}</td>
+                                <td>
+                                    <span class="status-badge" :class="'status-' + (item.status === 'active' ? 'completed' : 'pending')">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td>{{ item.settlement_balance }}</td>
+                                <td>{{ formatDate(item.created_at) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 积分兑换 -->
+            <div v-if="activeTab === 'exchanges'" class="section">
+                <h2 class="section-title">积分兑换</h2>
+                <p class="section-description">
+                    执行第三方积分兑换，支持会员使用第三方积分或兑换第三方积分。
+                </p>
+
+                <div class="info-box">
+                    <strong>功能说明：</strong>会员可以使用第三方公司的积分在本店铺消费，
+                    也可以将本店铺积分兑换为第三方积分。系统会根据协议自动计算兑换比例。
+                </div>
+
+                <h3>积分兑换</h3>
+                <div class="form-row">
+                    <label>第三方协议</label>
+                    <select v-model="exchangeForm.agreement_id" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="">请选择协议</option>
+                        <option v-for="agreement in agreements" :key="agreement.id" :value="agreement.id">
+                            {{ agreement.third_party_name }} ({{ getAgreementTypeText(agreement.agreement_type) }})
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>会员手机号</label>
+                    <input 
+                        type="text" 
+                        v-model="exchangeForm.member_phone" 
+                        placeholder="请输入会员手机号"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>兑换类型</label>
+                    <select v-model="exchangeForm.exchange_type" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <option value="inbound">第三方积分 -> 本方积分（增加会员积分）</option>
+                        <option value="outbound">本方积分 -> 第三方积分（扣除会员积分）</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <label>积分数量</label>
+                    <input 
+                        type="number" 
+                        v-model.number="exchangeForm.points" 
+                        placeholder="请输入积分数量"
+                        min="1"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <label>备注（可选）</label>
+                    <textarea 
+                        v-model="exchangeForm.remarks" 
+                        placeholder="请输入备注信息"
+                        rows="3"
+                        style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"
+                    ></textarea>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn-primary" @click="exchangePoints">执行兑换</button>
+                    <button class="btn-secondary" @click="resetExchangeForm">重置</button>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+
+                <h3>兑换日志</h3>
+                <div v-if="loading.exchanges" class="loading">加载中...</div>
+                <div v-else-if="exchanges.length === 0" class="empty-state">
+                    <div class="empty-state-icon">🔄</div>
+                    <p>暂无兑换记录</p>
+                </div>
+                <div v-else>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>会员</th>
+                                <th>店铺</th>
+                                <th>协议</th>
+                                <th>兑换类型</th>
+                                <th>源积分</th>
+                                <th>目标积分</th>
+                                <th>状态</th>
+                                <th>日期</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in exchanges" :key="item.id">
+                                <td>{{ item.id }}</td>
+                                <td>
+                                    <div>{{ item.member_name || '-' }}</div>
+                                    <div style="font-size: 12px; color: #999;">{{ item.member_phone }}</div>
+                                </td>
+                                <td>{{ item.store_name }}</td>
+                                <td>{{ item.agreement_name }}</td>
+                                <td>
+                                    <span v-if="item.exchange_type === 'inbound'" style="color: #4caf50;">
+                                        ← 第三方
+                                    </span>
+                                    <span v-else style="color: #ff9800;">
+                                        → 第三方
+                                    </span>
+                                </td>
+                                <td>{{ item.source_points }}</td>
+                                <td>{{ item.target_points }}</td>
+                                <td>
+                                    <span class="status-badge" :class="'status-' + item.status">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td>{{ formatDate(item.created_at) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>跨店铺结算管理系统 v1.0.0</p>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'settlements',
+                    API_BASE: '/api/settlement',
+                    
+                    // 统计数据
+                    statistics: {
+                        cross_store_settlements: {},
+                        third_party_exchanges: {},
+                        agreements: {}
+                    },
+                    
+                    // 店铺列表
+                    stores: [],
+                    
+                    // 跨店铺结算表单
+                    settlementForm: {
+                        source_store_id: '',
+                        target_store_id: '',
+                        member_phone: '',
+                        points: '',
+                        settlement_rate: 1.0,
+                        remarks: ''
+                    },
+                    
+                    // 第三方协议表单
+                    agreementForm: {
+                        store_id: '',
+                        third_party_name: '',
+                        agreement_type: 'bidirectional',
+                        exchange_rate: 1.0,
+                        max_points_per_day: '',
+                        max_points_per_order: '',
+                        settlement_cycle: 'daily',
+                        contact_person: '',
+                        contact_phone: '',
+                        remarks: ''
+                    },
+                    
+                    // 积分兑换表单
+                    exchangeForm: {
+                        agreement_id: '',
+                        member_phone: '',
+                        exchange_type: 'inbound',
+                        points: '',
+                        remarks: ''
+                    },
+                    
+                    // 数据列表
+                    settlements: [],
+                    agreements: [],
+                    exchanges: [],
+                    
+                    // 加载状态
+                    loading: {
+                        settlements: false,
+                        agreements: false,
+                        exchanges: false
+                    }
+                };
+            },
+            
+            mounted() {
+                this.loadStatistics();
+                this.loadStores();
+                this.loadSettlements();
+                this.loadAgreements();
+                this.loadExchanges();
+            },
+            
+            methods: {
+                // 加载统计数据
+                async loadStatistics() {
+                    try {
+                        const response = await fetch(`${this.API_BASE}/statistics`);
+                        const data = await response.json();
+                        this.statistics = data;
+                    } catch (error) {
+                        console.error('加载统计数据失败:', error);
+                    }
+                },
+                
+                // 加载店铺列表
+                async loadStores() {
+                    try {
+                        const response = await fetch('/api/stores');
+                        const data = await response.json();
+                        this.stores = data.stores || [];
+                    } catch (error) {
+                        console.error('加载店铺列表失败:', error);
+                    }
+                },
+                
+                // 加载结算记录
+                async loadSettlements() {
+                    this.loading.settlements = true;
+                    try {
+                        const response = await fetch(`${this.API_BASE}/store/list`);
+                        const data = await response.json();
+                        this.settlements = data.data || [];
+                    } catch (error) {
+                        console.error('加载结算记录失败:', error);
+                    } finally {
+                        this.loading.settlements = false;
+                    }
+                },
+                
+                // 加载协议列表
+                async loadAgreements() {
+                    this.loading.agreements = true;
+                    try {
+                        const response = await fetch(`${this.API_BASE}/third-party-agreements`);
+                        const data = await response.json();
+                        this.agreements = data.data || [];
+                    } catch (error) {
+                        console.error('加载协议列表失败:', error);
+                    } finally {
+                        this.loading.agreements = false;
+                    }
+                },
+                
+                // 加载兑换日志
+                async loadExchanges() {
+                    this.loading.exchanges = true;
+                    try {
+                        const response = await fetch(`${this.API_BASE}/exchange-logs`);
+                        const data = await response.json();
+                        this.exchanges = data.data || [];
+                    } catch (error) {
+                        console.error('加载兑换日志失败:', error);
+                    } finally {
+                        this.loading.exchanges = false;
+                    }
+                },
+                
+                // 创建跨店铺结算
+                async createSettlement() {
+                    // 验证表单
+                    if (!this.settlementForm.source_store_id) {
+                        alert('请选择积分来源店铺');
+                        return;
+                    }
+                    if (!this.settlementForm.target_store_id) {
+                        alert('请选择积分目标店铺');
+                        return;
+                    }
+                    if (this.settlementForm.source_store_id === this.settlementForm.target_store_id) {
+                        alert('来源店铺和目标店铺不能相同');
+                        return;
+                    }
+                    if (!this.settlementForm.member_phone) {
+                        alert('请输入会员手机号');
+                        return;
+                    }
+                    if (!this.settlementForm.points || this.settlementForm.points <= 0) {
+                        alert('请输入有效的积分数量');
+                        return;
+                    }
+                    
+                    // 先获取会员ID
+                    try {
+                        const memberResponse = await fetch(`/api/member/phone/${this.settlementForm.member_phone}`);
+                        if (!memberResponse.ok) {
+                            alert('会员不存在，请检查手机号');
+                            return;
+                        }
+                        const memberData = await memberResponse.json();
+                        const member_id = memberData.member.id;
+                        
+                        // 创建结算
+                        const settlementData = {
+                            source_store_id: this.settlementForm.source_store_id,
+                            target_store_id: this.settlementForm.target_store_id,
+                            member_id: member_id,
+                            points: this.settlementForm.points,
+                            settlement_rate: this.settlementForm.settlement_rate || 1.0,
+                            remarks: this.settlementForm.remarks
+                        };
+                        
+                        const response = await fetch(`${this.API_BASE}/store`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(settlementData)
+                        });
+                        
+                        if (response.ok) {
+                            alert('跨店铺结算创建成功！');
+                            this.resetSettlementForm();
+                            this.loadSettlements();
+                            this.loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert('创建失败：' + (error.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('创建结算失败:', error);
+                        alert('创建失败：' + error.message);
+                    }
+                },
+                
+                // 创建第三方协议
+                async createAgreement() {
+                    // 验证表单
+                    if (!this.agreementForm.store_id) {
+                        alert('请选择本店铺');
+                        return;
+                    }
+                    if (!this.agreementForm.third_party_name) {
+                        alert('请输入第三方公司名称');
+                        return;
+                    }
+                    if (!this.agreementForm.exchange_rate || this.agreementForm.exchange_rate <= 0) {
+                        alert('请输入有效的兑换比例');
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`${this.API_BASE}/third-party-agreements`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.agreementForm)
+                        });
+                        
+                        if (response.ok) {
+                            alert('第三方协议创建成功！');
+                            this.resetAgreementForm();
+                            this.loadAgreements();
+                            this.loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert('创建失败：' + (error.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('创建协议失败:', error);
+                        alert('创建失败：' + error.message);
+                    }
+                },
+                
+                // 积分兑换
+                async exchangePoints() {
+                    // 验证表单
+                    if (!this.exchangeForm.agreement_id) {
+                        alert('请选择第三方协议');
+                        return;
+                    }
+                    if (!this.exchangeForm.member_phone) {
+                        alert('请输入会员手机号');
+                        return;
+                    }
+                    if (!this.exchangeForm.points || this.exchangeForm.points <= 0) {
+                        alert('请输入有效的积分数量');
+                        return;
+                    }
+                    
+                    // 先获取会员ID
+                    try {
+                        const memberResponse = await fetch(`/api/member/phone/${this.exchangeForm.member_phone}`);
+                        if (!memberResponse.ok) {
+                            alert('会员不存在，请检查手机号');
+                            return;
+                        }
+                        const memberData = await memberResponse.json();
+                        
+                        // 获取协议信息
+                        const agreement = this.agreements.find(a => a.id === this.exchangeForm.agreement_id);
+                        if (!agreement) {
+                            alert('协议不存在');
+                            return;
+                        }
+                        
+                        // 执行兑换
+                        const exchangeData = {
+                            member_id: memberData.member.id,
+                            store_id: agreement.store_id,
+                            agreement_id: this.exchangeForm.agreement_id,
+                            exchange_type: this.exchangeForm.exchange_type,
+                            points: this.exchangeForm.points,
+                            remarks: this.exchangeForm.remarks
+                        };
+                        
+                        const response = await fetch(`${this.API_BASE}/exchange-points`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(exchangeData)
+                        });
+                        
+                        if (response.ok) {
+                            alert('积分兑换成功！');
+                            this.resetExchangeForm();
+                            this.loadExchanges();
+                            this.loadStatistics();
+                        } else {
+                            const error = await response.json();
+                            alert('兑换失败：' + (error.detail || '未知错误'));
+                        }
+                    } catch (error) {
+                        console.error('积分兑换失败:', error);
+                        alert('兑换失败：' + error.message);
+                    }
+                },
+                
+                // 重置表单
+                resetSettlementForm() {
+                    this.settlementForm = {
+                        source_store_id: '',
+                        target_store_id: '',
+                        member_phone: '',
+                        points: '',
+                        settlement_rate: 1.0,
+                        remarks: ''
+                    };
+                },
+                
+                resetAgreementForm() {
+                    this.agreementForm = {
+                        store_id: '',
+                        third_party_name: '',
+                        agreement_type: 'bidirectional',
+                        exchange_rate: 1.0,
+                        max_points_per_day: '',
+                        max_points_per_order: '',
+                        settlement_cycle: 'daily',
+                        contact_person: '',
+                        contact_phone: '',
+                        remarks: ''
+                    };
+                },
+                
+                resetExchangeForm() {
+                    this.exchangeForm = {
+                        agreement_id: '',
+                        member_phone: '',
+                        exchange_type: 'inbound',
+                        points: '',
+                        remarks: ''
+                    };
+                },
+                
+                // 格式化日期
+                formatDate(dateString) {
+                    if (!dateString) return '-';
+                    const date = new Date(dateString);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                
+                // 获取协议类型文本
+                getAgreementTypeText(type) {
+                    const typeMap = {
+                        'bidirectional': '双向互通',
+                        'inbound': '只进',
+                        'outbound': '只出'
+                    };
+                    return typeMap[type] || type;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
