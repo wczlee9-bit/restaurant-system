@@ -1,12 +1,34 @@
 # 🍽️ 餐饮点餐系统 - 测试入口
 
+## 🚀 新功能：部署到 Netlify（推荐！）
+
+### 为什么选择 Netlify？
+
+✅ **公开访问**：任何人都可以访问您的网站  
+✅ **HTTPS加密**：自动配置SSL证书  
+✅ **CDN加速**：全球快速访问  
+✅ **手机访问**：支持移动设备  
+✅ **易于分享**：可以分享给他人测试  
+
+### 快速部署（3分钟）
+
+**方法一：手动上传**
+```bash
+bash scripts/deploy_netlify.sh
+```
+然后访问 https://app.netlify.com，上传生成的 `restaurant-system.zip` 文件
+
+**详细指南**：请查看 [NETLIFY_QUICKSTART.md](NETLIFY_QUICKSTART.md)
+
+---
+
 ## ⚠️ 重要提示
 
 **外部IP无法访问（502错误），请使用localhost访问！**
 
 ---
 
-## ⚡ 立即开始测试
+## ⚡ 立即开始测试（本地）
 
 **复制这个URL到浏览器打开**：
 
