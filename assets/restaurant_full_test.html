@@ -648,8 +648,18 @@
                 const orders = ref([]);
                 const currentOrder = ref(null);
 
-                // API基础URL
-                const API_BASE = 'http://localhost:8000';
+                // API基础URL - 自动检测
+                let API_BASE = 'http://localhost:8000';
+                try {
+                    const currentHost = window.location.hostname;
+                    const currentPort = window.location.port;
+                    if (currentPort === '8080') {
+                        API_BASE = `http://${currentHost}:8000`;
+                    }
+                    console.log('自动检测到API地址:', API_BASE);
+                } catch (e) {
+                    console.log('使用默认API地址:', API_BASE);
+                }
 
                 // 初始化
                 onMounted(() => {
