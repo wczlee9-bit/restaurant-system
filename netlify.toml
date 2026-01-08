@@ -1,7 +1,21 @@
 [build]
   publish = "assets"
-  command = ""
+  command = "echo 'No build needed'"
   functions = ""
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[build.processing]
+  skip_processing = true
+[build.processing.css]
+  bundle = false
+  minify = false
+[build.processing.js]
+  bundle = false
+  minify = false
+[build.processing.html]
+  pretty_urls = false
 
 [build.processing]
   skip_processing = false
