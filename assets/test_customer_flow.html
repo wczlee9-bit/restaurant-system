@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试顾客扫码点餐流程</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .test-link {
+            display: block;
+            padding: 15px 20px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .test-link:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .test-link.occupied {
+            background: #e6a23c;
+        }
+        .test-link.occupied:hover {
+            background: #d99932;
+        }
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+            line-height: 1.6;
+        }
+        .info-card {
+            background: #e7f3ff;
+            border-left: 4px solid #1890ff;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        .success {
+            color: #67c23a;
+            font-weight: bold;
+        }
+        .warning {
+            color: #e6a23c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 顾客扫码点餐流程测试</h1>
+        <p class="subtitle">
+            这个页面提供了一系列测试链接，模拟不同桌号的扫码场景。
+            点击任意桌号链接，将跳转到点餐页面并自动选择对应的桌号。
+        </p>
+
+        <div class="note">
+            <strong>💡 测试说明：</strong><br>
+            • 空闲桌号（蓝色）可直接点餐<br>
+            • 已占用桌号（橙色）也可选择，但会提示合并订单<br>
+            • 支持多种URL参数格式（table、table_number、table_id）
+        </div>
+
+        <div class="test-section">
+            <h2>📱 模拟扫码测试</h2>
+            <div class="info-card">
+                当前页面地址：<br>
+                <code id="currentUrl"></code>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <strong>点击以下链接模拟扫码：</strong>
+            </div>
+
+            <div class="test-grid">
+                <!-- 这些链接会通过JavaScript动态生成 -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 修复说明</h2>
+            <div class="info-card">
+                <strong>✅ 已修复的问题：</strong><br>
+                1. <strong>允许选择已占用的桌号</strong> - 模拟新顾客到来，不受之前订单影响<br>
+                2. <strong>增强URL参数支持</strong> - 支持多种参数名和格式（如 T01、1 等）<br>
+                3. <strong>自动加载订单</strong> - 选择桌号后自动加载该桌号的现有订单
+            </div>
+
+            <div class="note">
+                <strong>⚠️ 注意事项：</strong><br>
+                • 如果桌号有进行中的订单，会提示"该桌当前有进行中的订单，继续将合并订单"<br>
+                • 新订单会与现有订单合并，不会覆盖<br>
+                • 如果需要清空桌号，请在工作人员端完成订单
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 测试步骤</h2>
+            <ol style="line-height: 2; margin-left: 20px;">
+                <li>点击上方的任意桌号链接（建议先选择一个空闲桌号）</li>
+                <li>系统会自动跳转到点餐页面并选择该桌号</li>
+                <li>应该能看到菜单主页和菜品列表</li>
+                <li>可以选择菜品并添加到购物车</li>
+                <li>提交订单完成测试</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前页面地址
+        document.getElementById('currentUrl').textContent = window.location.href;
+
+        // 模拟桌号数据（从API获取的示例数据）
+        const tables = [
+            { id: 11, table_number: 'T01', is_occupied: true },
+            { id: 12, table_number: 'T02', is_occupied: false },
+            { id: 13, table_number: 'T03', is_occupied: false },
+            { id: 14, table_number: 'T04', is_occupied: false },
+            { id: 15, table_number: 'T05', is_occupied: false },
+            { id: 55, table_number: '8', is_occupied: true },
+        ];
+
+        // 生成测试链接
+        const testGrid = document.querySelector('.test-grid');
+
+        tables.forEach(table => {
+            const link = document.createElement('a');
+            link.className = 'test-link' + (table.is_occupied ? ' occupied' : '');
+            link.href = `restaurant_full_test.html?table=${table.table_number}`;
+            link.innerHTML = `${table.table_number}号桌<br><small>${table.is_occupied ? '已占用' : '空闲'}</small>`;
+            testGrid.appendChild(link);
+        });
+
+        // 添加一些特殊格式的测试链接
+        const specialTests = [
+            { label: '数字格式 (1)', param: '1' },
+            { label: 'table_number参数', param: 'T02', paramName: 'table_number' },
+            { label: 'table_id参数', param: '11', paramName: 'table_id' },
+        ];
+
+        const specialDiv = document.createElement('div');
+        specialDiv.innerHTML = '<strong style="margin-top: 20px; display: block;">特殊格式测试：</strong>';
+        testGrid.parentElement.appendChild(specialDiv);
+
+        const specialGrid = document.createElement('div');
+        specialGrid.className = 'test-grid';
+        testGrid.parentElement.appendChild(specialGrid);
+
+        specialTests.forEach(test => {
+            const link = document.createElement('a');
+            link.className = 'test-link';
+            const paramName = test.paramName || 'table';
+            link.href = `restaurant_full_test.html?${paramName}=${test.param}`;
+            link.innerHTML = test.label;
+            specialGrid.appendChild(link);
+        });
+    </script>
+</body>
+</html>

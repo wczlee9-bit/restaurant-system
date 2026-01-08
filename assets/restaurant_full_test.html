@@ -663,19 +663,36 @@
 
                 // 初始化
                 onMounted(() => {
-                    // 从URL参数读取桌号
+                    // 从URL参数读取桌号（支持多种参数名：table、table_number、table_id）
                     const urlParams = new URLSearchParams(window.location.search);
-                    const tableParam = urlParams.get('table');
+                    let tableParam = urlParams.get('table') || urlParams.get('table_number') || urlParams.get('table_id');
 
                     loadData().then(() => {
                         // 如果URL中有桌号参数，自动选择该桌号
                         if (tableParam) {
-                            const table = tables.value.find(t => t.table_number === tableParam);
+                            // 尝试多种匹配方式：精确匹配、数字匹配、T前缀匹配
+                            let table = tables.value.find(t => t.table_number === tableParam);
+
+                            // 如果没找到，尝试去掉T前缀后的数字匹配
+                            if (!table && tableParam.toLowerCase().startsWith('t')) {
+                                const numPart = tableParam.substring(1);
+                                table = tables.value.find(t => t.table_number === numPart);
+                            }
+
+                            // 如果还是没找到，尝试数字匹配（例如 tableParam 是 '1'，匹配 '1' 或 'T01'）
+                            if (!table && !isNaN(tableParam)) {
+                                const num = parseInt(tableParam);
+                                table = tables.value.find(t =>
+                                    t.table_number === num.toString() ||
+                                    t.table_number === `T${num.toString().padStart(2, '0')}`
+                                );
+                            }
+
                             if (table) {
                                 selectedTable.value = table;
-                                ElMessage.success(`已自动选择${tableParam}号桌`);
+                                ElMessage.success(`已自动选择${table.table_number}号桌`);
                             } else {
-                                ElMessage.warning(`未找到${tableParam}号桌`);
+                                ElMessage.warning(`未找到桌号: ${tableParam}`);
                             }
                         }
                         startAutoRefresh();
@@ -794,10 +811,10 @@
 
                 // 顾客端功能
                 const selectTable = (table) => {
-                    if (!table.is_occupied) {
-                        tempTableId.value = table.id;
-                    } else {
-                        ElMessage.warning('该桌已被占用');
+                    // 允许选择桌号，即使被占用（模拟新顾客到来）
+                    tempTableId.value = table.id;
+                    if (table.is_occupied) {
+                        ElMessage.warning('该桌当前有进行中的订单，继续将合并订单');
                     }
                 };
 
@@ -806,6 +823,8 @@
                     if (table) {
                         selectedTable.value = table;
                         ElMessage.success(`已选择${table.table_number}号桌`);
+                        // 重新加载订单列表，以便显示该桌号的现有订单
+                        await loadOrders();
                     }
                 };
 
