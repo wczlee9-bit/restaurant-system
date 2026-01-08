@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netlify 部署快速参考</title>
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin: 0 0 10px 0;
+            font-size: 32px;
+        }
+
+        .header p {
+            color: #666;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .method-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .method-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .method-card h2 {
+            color: #333;
+            margin: 0 0 16px 0;
+            font-size: 20px;
+        }
+
+        .method-card .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .step {
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 24px;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+
+        .step-content {
+            display: inline-block;
+            vertical-align: top;
+            width: calc(100% - 32px);
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .step-desc {
+            color: #666;
+            font-size: 14px;
+            margin: 0;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .checklist {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+
+        .checklist h3 {
+            margin: 0 0 12px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+
+        .checklist ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .checklist li {
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .success-tip {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+
+        .success-tip h3 {
+            margin: 0 0 8px 0;
+            color: #155724;
+            font-size: 16px;
+        }
+
+        .success-tip p {
+            margin: 0;
+            color: #155724;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Netlify 部署快速参考</h1>
+            <p>扫码点餐系统 - 三种部署方法任你选择</p>
+        </div>
+
+        <!-- 方法一：手动上传 -->
+        <div class="method-card">
+            <h2>方法一：手动上传 <span class="badge">最简单</span></h2>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">准备部署包</div>
+                    <p class="step-desc">在项目目录执行命令打包</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+cd /workspace/projects
+bash scripts/deploy_netlify.sh
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">登录 Netlify</div>
+                    <p class="step-desc">访问 <a href="https://app.netlify.com" target="_blank" class="link">https://app.netlify.com</a> 并登录</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">上传文件</div>
+                    <p class="step-desc">点击 "Add new site" → "Deploy manually" → 上传 restaurant-system.zip</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">等待部署</div>
+                    <p class="step-desc">等待 1-2 分钟，看到绿色 "Deployed!" 标记即成功</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 方法二：Netlify CLI -->
+        <div class="method-card">
+            <h2>方法二：Netlify CLI <span class="badge">推荐开发者</span></h2>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">安装 CLI</div>
+                    <p class="step-desc">需要先安装 Node.js</p>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+npm install -g netlify-cli
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">登录</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+netlify login
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">部署</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+cd /workspace/projects
+netlify deploy --prod --dir=assets
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 方法三：Git 部署 -->
+        <div class="method-card">
+            <h2>方法三：Git 部署 <span class="badge">适合持续更新</span></h2>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">创建 GitHub 仓库</div>
+                    <p class="step-desc">访问 <a href="https://github.com/new" target="_blank" class="link">https://github.com/new</a> 创建仓库（选择 Private）</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">推送代码</div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+cd /workspace/projects
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/你的用户名/restaurant-system.git
+git push -u origin main
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">连接 Netlify</div>
+                    <p class="step-desc">Netlify Dashboard → "Add new site" → "Import an existing project" → 选择 GitHub 仓库</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <div class="step-title">配置构建设置</div>
+                    <div class="code-block">
+Build command: (留空)
+Publish directory: assets
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <div class="step-title">部署</div>
+                    <p class="step-desc">点击 "Deploy site"，等待 1-2 分钟</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 部署后检查清单 -->
+        <div class="checklist">
+            <h3>✅ 部署后检查清单</h3>
+            <ul>
+                <li>访问主页，页面正常显示</li>
+                <li>选择桌号，浏览菜单</li>
+                <li>添加商品到购物车</li>
+                <li>提交订单，查看状态</li>
+                <li>切换角色（顾客→厨师→传菜员→收银员→店长）</li>
+                <li>检查实时通知是否正常</li>
+                <li>在手机上测试访问</li>
+            </ul>
+        </div>
+
+        <!-- 成功提示 -->
+        <div class="success-tip">
+            <h3>🎉 部署成功后，你将获得</h3>
+            <p>✅ 公开可访问的网站 URL（如 https://xxx.netlify.app）</p>
+            <p>✅ 自动 HTTPS 加密</p>
+            <p>✅ 全球 CDN 加速</p>
+            <p>✅ 支持手机、平板、电脑访问</p>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            <p>💡 详细教程请查看 <a href="NETLIFY_STEP_BY_STEP.md" class="link">NETLIFY_STEP_BY_STEP.md</a></p>
+            <p>如有问题，按 F12 打开浏览器控制台查看错误信息</p>
+        </div>
+    </div>
+
+    <script>
+        function copyCode(button) {
+            const codeBlock = button.parentElement;
+            const code = codeBlock.textContent.replace('复制', '').trim();
+            
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.textContent;
+                button.textContent = '已复制';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+    </script>
+</body>
+</html>
