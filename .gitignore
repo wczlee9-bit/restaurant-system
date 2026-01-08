@@ -12,3 +12,6 @@ __pycache__/
 *.egg-info/
 /.env
 .env
+
+# 用户凭据（不要提交到公开仓库）
+USER_CREDENTIALS.md
