@@ -1,96 +1,68 @@
-{
-  "roles": {
-    "customer": {
-      "name": "顾客",
-      "description": "浏览菜单、点餐、支付",
-      "permissions": [
-        "view_menu",
-        "place_order",
-        "view_my_orders",
-        "make_payment"
-      ]
+[
+  {
+    "username": "system_admin",
+    "password": "admin123",
+    "role": "system_admin",
+    "name": {
+      "zh": "系统管理员",
+      "en": "System Admin"
     },
-    "chef": {
-      "name": "厨师",
-      "description": "查看订单、制作菜品",
-      "permissions": [
-        "view_pending_orders",
-        "accept_order",
-        "start_cooking",
-        "complete_cooking"
-      ]
-    },
-    "waiter": {
-      "name": "传菜员",
-      "description": "传菜、确认上桌",
-      "permissions": [
-        "view_ready_orders",
-        "deliver_dish",
-        "confirm_served"
-      ]
-    },
-    "cashier": {
-      "name": "收银员",
-      "description": "处理支付、打印小票",
-      "permissions": [
-        "view_orders",
-        "process_payment",
-        "print_receipt"
-      ]
-    },
-    "manager": {
-      "name": "店长",
-      "description": "管理店铺、查看数据",
-      "permissions": [
-        "view_all_orders",
-        "view_statistics",
-        "manage_menu",
-        "manage_users",
-        "view_revenue"
-      ]
-    }
+    "icon": "👑",
+    "description": "系统管理员 - 拥有最高权限，可以管理所有店铺、所有用户和系统设置"
   },
-  "users": [
-    {
-      "id": "customer_01",
-      "username": "customer",
-      "password": "customer123",
-      "role": "customer",
-      "name": "顾客用户",
-      "enabled": true
+  {
+    "username": "company",
+    "password": "company123",
+    "role": "company",
+    "name": {
+      "zh": "总公司",
+      "en": "Company HQ"
     },
-    {
-      "id": "chef_01",
-      "username": "chef",
-      "password": "chef123",
-      "role": "chef",
-      "name": "厨师",
-      "enabled": true
+    "icon": "🏢",
+    "description": "总公司 - 可以查看所有店铺的营收数据，进行统计分析和决策"
+  },
+  {
+    "username": "admin",
+    "password": "admin123",
+    "role": "manager",
+    "name": {
+      "zh": "店长",
+      "en": "Manager"
     },
-    {
-      "id": "waiter_01",
-      "username": "waiter",
-      "password": "waiter123",
-      "role": "waiter",
-      "name": "传菜员",
-      "enabled": true
+    "icon": "👔",
+    "description": "店长 - 管理店铺日常运营、员工、库存等"
+  },
+  {
+    "username": "chef",
+    "password": "chef123",
+    "role": "chef",
+    "name": {
+      "zh": "厨师",
+      "en": "Chef"
     },
-    {
-      "id": "cashier_01",
-      "username": "cashier",
-      "password": "cashier123",
-      "role": "cashier",
-      "name": "收银员",
-      "enabled": true
+    "icon": "👨‍🍳",
+    "description": "厨师 - 接收订单并制作菜品"
+  },
+  {
+    "username": "waiter",
+    "password": "waiter123",
+    "role": "waiter",
+    "name": {
+      "zh": "传菜员",
+      "en": "Waiter"
     },
-    {
-      "id": "manager_01",
-      "username": "manager",
-      "password": "manager123",
-      "role": "manager",
-      "name": "店长",
-      "enabled": true
-    }
-  ],
-  "note": "重要：请妥善保管用户名和密码，不要在公开场合泄露。此文件仅供内部使用，不要部署到公开仓库。"
-}
+    "icon": "🤵",
+    "description": "传菜员 - 负责上菜和顾客服务"
+  },
+  {
+    "username": "cashier",
+    "password": "cashier123",
+    "role": "cashier",
+    "name": {
+      "zh": "收银员",
+      "en": "Cashier"
+    },
+    "icon": "💰",
+    "description": "收银员 - 负责收银和订单结算"
+  }
+]
