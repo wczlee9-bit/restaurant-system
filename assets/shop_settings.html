@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店铺设置 - 扫码点餐系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .tabs {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .table-card {
+            border: 1px solid #e4e7ed;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .table-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .table-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .table-info {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .qrcode-preview {
+            text-align: center;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f5f7fa;
+            border-radius: 8px;
+        }
+        .qrcode-preview img {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 10px;
+        }
+        .qrcode-url {
+            font-size: 12px;
+            color: #999;
+            word-break: break-all;
+        }
+        .form-item {
+            margin-bottom: 20px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-item .desc {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .back-btn {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .tab-content {
+                box-shadow: none;
+                border: none;
+            }
+            .table-card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🏪 店铺设置</h1>
+                    <p>管理店铺信息、桌号和二维码</p>
+                </div>
+                <div class="no-print">
+                    <a href="index.html" class="back-btn">← 返回首页</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="tabs no-print">
+                <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+                    <el-tab-pane label="店铺信息" name="shop"></el-tab-pane>
+                    <el-tab-pane label="桌号管理" name="tables">
+                        <span>桌号管理</span>
+                        <el-badge :value="tables.length" class="item" v-if="tables.length > 0"></el-badge>
+                    </el-tab-pane>
+                    <el-tab-pane label="二维码管理" name="qrcode"></el-tab-pane>
+                </el-tabs>
+            </div>
+
+            <!-- 店铺信息 -->
+            <div class="tab-content" v-show="activeTab === 'shop'">
+                <div class="section-title">📋 店铺基本信息</div>
+                <el-form :model="shopInfo" label-width="120px">
+                    <el-form-item label="店铺名称">
+                        <el-input v-model="shopInfo.name" placeholder="请输入店铺名称"></el-input>
+                    </el-form-item>
+                    <el-form-item label="店铺地址">
+                        <el-input v-model="shopInfo.address" placeholder="请输入店铺地址"></el-input>
+                    </el-form-item>
+                    <el-form-item label="联系电话">
+                        <el-input v-model="shopInfo.phone" placeholder="请输入联系电话"></el-input>
+                    </el-form-item>
+                    <el-form-item label="营业时间">
+                        <el-time-picker
+                            v-model="shopInfo.openingHours"
+                            is-range
+                            range-separator="至"
+                            start-placeholder="开始时间"
+                            end-placeholder="结束时间"
+                            value-format="HH:mm">
+                        </el-time-picker>
+                    </el-form-item>
+                    <el-form-item label="店铺描述">
+                        <el-input
+                            v-model="shopInfo.description"
+                            type="textarea"
+                            :rows="4"
+                            placeholder="请输入店铺描述">
+                        </el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="saveShopInfo">保存店铺信息</el-button>
+                        <el-button @click="resetShopInfo">重置</el-button>
+                    </el-form-item>
+                </el-form>
+            </div>
+
+            <!-- 桌号管理 -->
+            <div class="tab-content" v-show="activeTab === 'tables'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>🪑 桌号列表</span>
+                    <el-button type="primary" @click="showAddTableDialog = true">+ 添加桌号</el-button>
+                </div>
+
+                <div v-if="tables.length === 0" class="empty-state">
+                    <i class="el-icon-table"></i>
+                    <p>还没有添加桌号</p>
+                    <el-button type="primary" @click="showAddTableDialog = true">立即添加</el-button>
+                </div>
+
+                <div v-else>
+                    <div v-for="table in tables" :key="table.id" class="table-card">
+                        <div class="table-header">
+                            <div class="table-number">{{ table.number }}号桌</div>
+                            <div class="actions no-print">
+                                <el-button size="small" @click="editTable(table)">编辑</el-button>
+                                <el-button size="small" type="primary" @click="generateQrcode(table)">生成二维码</el-button>
+                                <el-button size="small" type="danger" @click="deleteTable(table)">删除</el-button>
+                            </div>
+                        </div>
+                        <div class="table-info">
+                            <div><strong>座位数：</strong>{{ table.seats }}人</div>
+                            <div><strong>状态：</strong>
+                                <el-tag v-if="table.status === 'active'" type="success">可用</el-tag>
+                                <el-tag v-else type="info">禁用</el-tag>
+                            </div>
+                            <div><strong>备注：</strong>{{ table.remark || '无' }}</div>
+                        </div>
+                        <div class="qrcode-preview" v-if="table.qrcodeUrl">
+                            <img :src="table.qrcodeUrl" :alt="table.number + '号桌二维码'">
+                            <div class="qrcode-url">{{ table.qrcodeUrl }}</div>
+                            <div class="actions" style="margin-top: 10px;">
+                                <el-button size="small" @click="downloadQrcode(table)">下载</el-button>
+                                <el-button size="small" @click="printQrcode(table)">打印</el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 二维码管理 -->
+            <div class="tab-content" v-show="activeTab === 'qrcode'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📱 二维码管理</span>
+                    <div class="actions">
+                        <el-button @click="generateAllQrcodes" :loading="generating">批量生成所有二维码</el-button>
+                        <el-button type="success" @click="printAllQrcodes">批量打印</el-button>
+                    </div>
+                </div>
+
+                <el-alert
+                    title="提示"
+                    type="info"
+                    description="二维码生成后会保存到 assets/qrcodes/ 目录。您可以为每个桌号生成独立的二维码，顾客扫码后会自动跳转到对应的点餐页面。"
+                    :closable="false"
+                    style="margin-bottom: 20px;">
+                </el-alert>
+
+                <div v-if="tables.length === 0" class="empty-state">
+                    <i class="el-icon-picture"></i>
+                    <p>还没有添加桌号，无法生成二维码</p>
+                    <el-button type="primary" @click="activeTab = 'tables'">去添加桌号</el-button>
+                </div>
+
+                <div v-else>
+                    <el-table :data="tables" style="width: 100%">
+                        <el-table-column prop="number" label="桌号" width="100">
+                            <template #default="scope">
+                                <strong>{{ scope.row.number }}号</strong>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="seats" label="座位数" width="100"></el-table-column>
+                        <el-table-column label="二维码" width="200">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.qrcodeUrl" type="success">已生成</el-tag>
+                                <el-tag v-else type="info">未生成</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="二维码URL" min-width="300">
+                            <template #default="scope">
+                                <span v-if="scope.row.qrcodeUrl" style="font-size: 12px; color: #666;">
+                                    {{ scope.row.qrcodeUrl }}
+                                </span>
+                                <span v-else style="color: #999;">-</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="200" fixed="right">
+                            <template #default="scope">
+                                <el-button size="small" @click="generateQrcode(scope.row)">
+                                    生成
+                                </el-button>
+                                <el-button size="small" @click="previewQrcode(scope.row)">
+                                    预览
+                                </el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加/编辑桌号对话框 -->
+        <el-dialog
+            v-model="showAddTableDialog"
+            :title="editingTable ? '编辑桌号' : '添加桌号'"
+            width="500px">
+            <el-form :model="tableForm" label-width="80px">
+                <el-form-item label="桌号">
+                    <el-input-number v-model="tableForm.number" :min="1" :max="999" label="桌号"></el-input-number>
+                </el-form-item>
+                <el-form-item label="座位数">
+                    <el-input-number v-model="tableForm.seats" :min="1" :max="20" label="座位数"></el-input-number>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-radio-group v-model="tableForm.status">
+                        <el-radio label="active">可用</el-radio>
+                        <el-radio label="disabled">禁用</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="tableForm.remark" type="textarea" :rows="3"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showAddTableDialog = false">取消</el-button>
+                    <el-button type="primary" @click="saveTable">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 二维码预览对话框 -->
+        <el-dialog v-model="showPreviewDialog" title="二维码预览" width="400px">
+            <div style="text-align: center;">
+                <img :src="previewQrcodeUrl" style="width: 250px; height: 250px; margin-bottom: 20px;">
+                <p style="font-size: 12px; color: #999;">{{ previewQrcodeUrl }}</p>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showPreviewDialog = false">关闭</el-button>
+                    <el-button type="primary" @click="downloadPreviewQrcode">下载</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('tables');
+                const showAddTableDialog = ref(false);
+                const showPreviewDialog = ref(false);
+                const editingTable = ref(null);
+                const generating = ref(false);
+                const previewQrcodeUrl = ref('');
+
+                // 店铺信息
+                const shopInfo = reactive({
+                    name: '美味餐厅',
+                    address: '北京市朝阳区xxx街道xxx号',
+                    phone: '010-12345678',
+                    openingHours: ['09:00', '22:00'],
+                    description: '提供优质的餐饮服务，欢迎光临！'
+                });
+
+                // 桌号列表
+                const tables = ref([
+                    { id: 1, number: 1, seats: 4, status: 'active', remark: '靠窗位置', qrcodeUrl: '' },
+                    { id: 2, number: 2, seats: 4, status: 'active', remark: '', qrcodeUrl: '' },
+                    { id: 3, number: 3, seats: 6, status: 'active', remark: '大桌', qrcodeUrl: '' },
+                    { id: 4, number: 4, seats: 2, status: 'active', remark: '情侣桌', qrcodeUrl: '' },
+                    { id: 5, number: 5, seats: 8, status: 'active', remark: '包厢', qrcodeUrl: '' },
+                    { id: 6, number: 6, seats: 4, status: 'active', remark: '', qrcodeUrl: '' },
+                    { id: 7, number: 7, seats: 4, status: 'active', remark: '', qrcodeUrl: '' },
+                    { id: 8, number: 8, seats: 4, status: 'active', remark: '', qrcodeUrl: '' },
+                    { id: 9, number: 9, seats: 6, status: 'active', remark: '', qrcodeUrl: '' },
+                    { id: 10, number: 10, seats: 4, status: 'active', remark: '', qrcodeUrl: '' }
+                ]);
+
+                // 桌号表单
+                const tableForm = reactive({
+                    number: 1,
+                    seats: 4,
+                    status: 'active',
+                    remark: ''
+                });
+
+                // 获取当前页面的基础URL
+                const getBaseUrl = () => {
+                    const url = window.location.href;
+                    return url.substring(0, url.lastIndexOf('/'));
+                };
+
+                // 生成二维码URL
+                const generateQrcodeUrl = (tableNumber) => {
+                    const baseUrl = getBaseUrl();
+                    return `${baseUrl}/restaurant_full_test.html?table=${tableNumber}`;
+                };
+
+                // 保存店铺信息
+                const saveShopInfo = () => {
+                    // 保存到本地存储
+                    localStorage.setItem('shopInfo', JSON.stringify(shopInfo));
+                    ElementPlus.ElMessage.success('店铺信息已保存');
+                };
+
+                // 重置店铺信息
+                const resetShopInfo = () => {
+                    localStorage.removeItem('shopInfo');
+                    shopInfo.name = '美味餐厅';
+                    shopInfo.address = '北京市朝阳区xxx街道xxx号';
+                    shopInfo.phone = '010-12345678';
+                    shopInfo.openingHours = ['09:00', '22:00'];
+                    shopInfo.description = '提供优质的餐饮服务，欢迎光临！';
+                    ElementPlus.ElMessage.success('已重置店铺信息');
+                };
+
+                // 保存桌号
+                const saveTable = () => {
+                    if (editingTable.value) {
+                        // 编辑
+                        const index = tables.value.findIndex(t => t.id === editingTable.value.id);
+                        if (index !== -1) {
+                            tables.value[index] = {
+                                ...tables.value[index],
+                                number: tableForm.number,
+                                seats: tableForm.seats,
+                                status: tableForm.status,
+                                remark: tableForm.remark
+                            };
+                        }
+                    } else {
+                        // 新增
+                        const newId = Math.max(...tables.value.map(t => t.id)) + 1;
+                        tables.value.push({
+                            id: newId,
+                            number: tableForm.number,
+                            seats: tableForm.seats,
+                            status: tableForm.status,
+                            remark: tableForm.remark,
+                            qrcodeUrl: ''
+                        });
+                    }
+
+                    showAddTableDialog.value = false;
+                    editingTable.value = null;
+                    saveTablesToStorage();
+                    ElementPlus.ElMessage.success(editingTable.value ? '桌号已更新' : '桌号已添加');
+                };
+
+                // 编辑桌号
+                const editTable = (table) => {
+                    editingTable.value = table;
+                    tableForm.number = table.number;
+                    tableForm.seats = table.seats;
+                    tableForm.status = table.status;
+                    tableForm.remark = table.remark;
+                    showAddTableDialog.value = true;
+                };
+
+                // 删除桌号
+                const deleteTable = (table) => {
+                    ElementPlus.ElMessageBox.confirm(
+                        `确定要删除${table.number}号桌吗？`,
+                        '提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    ).then(() => {
+                        const index = tables.value.findIndex(t => t.id === table.id);
+                        if (index !== -1) {
+                            tables.value.splice(index, 1);
+                            saveTablesToStorage();
+                            ElementPlus.ElMessage.success('桌号已删除');
+                        }
+                    }).catch(() => {});
+                };
+
+                // 生成二维码
+                const generateQrcode = (table) => {
+                    const qrcodeUrl = generateQrcodeUrl(table.number);
+                    table.qrcodeUrl = qrcodeUrl;
+                    saveTablesToStorage();
+                    ElementPlus.ElMessage.success(`${table.number}号桌二维码已生成`);
+                };
+
+                // 批量生成所有二维码
+                const generateAllQrcodes = () => {
+                    generating.value = true;
+                    setTimeout(() => {
+                        tables.value.forEach(table => {
+                            if (!table.qrcodeUrl) {
+                                table.qrcodeUrl = generateQrcodeUrl(table.number);
+                            }
+                        });
+                        saveTablesToStorage();
+                        generating.value = false;
+                        ElementPlus.ElMessage.success('所有二维码已生成');
+                    }, 1000);
+                };
+
+                // 预览二维码
+                const previewQrcode = (table) => {
+                    if (!table.qrcodeUrl) {
+                        ElementPlus.ElMessage.warning('请先生成二维码');
+                        return;
+                    }
+                    previewQrcodeUrl.value = table.qrcodeUrl;
+                    showPreviewDialog.value = true;
+                };
+
+                // 下载二维码
+                const downloadQrcode = (table) => {
+                    if (!table.qrcodeUrl) {
+                        ElementPlus.ElMessage.warning('请先生成二维码');
+                        return;
+                    }
+
+                    // 使用QRCode.js生成二维码图片
+                    const qrContainer = document.createElement('div');
+                    new QRCode(qrContainer, {
+                        text: table.qrcodeUrl,
+                        width: 300,
+                        height: 300,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+
+                    setTimeout(() => {
+                        const img = qrContainer.querySelector('img');
+                        const link = document.createElement('a');
+                        link.href = img.src;
+                        link.download = `table_${table.number}_qrcode.png`;
+                        link.click();
+                    }, 100);
+                };
+
+                // 下载预览二维码
+                const downloadPreviewQrcode = () => {
+                    const link = document.createElement('a');
+                    link.href = previewQrcodeUrl.value;
+                    link.download = `qrcode_${Date.now()}.png`;
+                    link.click();
+                };
+
+                // 打印二维码
+                const printQrcode = (table) => {
+                    if (!table.qrcodeUrl) {
+                        ElementPlus.ElMessage.warning('请先生成二维码');
+                        return;
+                    }
+
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                            <head>
+                                <title>${table.number}号桌二维码</title>
+                                <style>
+                                    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                                    .qrcode { width: 300px; height: 300px; margin: 20px auto; }
+                                    .info { font-size: 18px; margin: 10px 0; }
+                                </style>
+                            </head>
+                            <body>
+                                <h1>${shopInfo.name}</h1>
+                                <div class="info">${table.number}号桌</div>
+                                <div class="info">座位数：${table.seats}人</div>
+                                <img src="${table.qrcodeUrl}" class="qrcode" />
+                                <p>请扫描二维码点餐</p>
+                                <script>
+                                    window.onload = function() {
+                                        window.print();
+                                    }
+                                <\/script>
+                            </body>
+                        </html>
+                    `);
+                };
+
+                // 批量打印所有二维码
+                const printAllQrcodes = () => {
+                    const hasQrcode = tables.value.some(t => t.qrcodeUrl);
+                    if (!hasQrcode) {
+                        ElementPlus.ElMessage.warning('请先生成二维码');
+                        return;
+                    }
+
+                    const printWindow = window.open('', '_blank');
+                    let html = `
+                        <html>
+                            <head>
+                                <title>桌号二维码</title>
+                                <style>
+                                    body { font-family: Arial, sans-serif; padding: 20px; }
+                                    .qrcode-card {
+                                        border: 1px solid #ccc;
+                                        padding: 20px;
+                                        margin: 20px;
+                                        display: inline-block;
+                                        text-align: center;
+                                        page-break-inside: avoid;
+                                    }
+                                    .qrcode { width: 200px; height: 200px; }
+                                    .info { font-size: 16px; margin: 10px 0; }
+                                </style>
+                            </head>
+                            <body>
+                                <h1 style="text-align: center;">${shopInfo.name} - 桌号二维码</h1>
+                    `;
+
+                    tables.value.forEach(table => {
+                        if (table.qrcodeUrl) {
+                            html += `
+                                <div class="qrcode-card">
+                                    <h2>${table.number}号桌</h2>
+                                    <div class="info">座位数：${table.seats}人</div>
+                                    <img src="${table.qrcodeUrl}" class="qrcode" />
+                                    <p>请扫描二维码点餐</p>
+                                </div>
+                            `;
+                        }
+                    });
+
+                    html += `
+                                <script>
+                                    window.onload = function() {
+                                        window.print();
+                                    }
+                                <\/script>
+                            </body>
+                        </html>
+                    `;
+
+                    printWindow.document.write(html);
+                };
+
+                // 保存桌号到本地存储
+                const saveTablesToStorage = () => {
+                    localStorage.setItem('tables', JSON.stringify(tables.value));
+                };
+
+                // 从本地存储加载
+                const loadFromStorage = () => {
+                    const savedShopInfo = localStorage.getItem('shopInfo');
+                    if (savedShopInfo) {
+                        Object.assign(shopInfo, JSON.parse(savedShopInfo));
+                    }
+
+                    const savedTables = localStorage.getItem('tables');
+                    if (savedTables) {
+                        tables.value = JSON.parse(savedTables);
+                    }
+                };
+
+                const handleTabChange = () => {
+                    // Tab切换时的处理
+                };
+
+                // 初始化
+                loadFromStorage();
+
+                return {
+                    activeTab,
+                    showAddTableDialog,
+                    showPreviewDialog,
+                    editingTable,
+                    generating,
+                    previewQrcodeUrl,
+                    shopInfo,
+                    tables,
+                    tableForm,
+                    saveShopInfo,
+                    resetShopInfo,
+                    saveTable,
+                    editTable,
+                    deleteTable,
+                    generateQrcode,
+                    generateAllQrcodes,
+                    previewQrcode,
+                    downloadQrcode,
+                    downloadPreviewQrcode,
+                    printQrcode,
+                    printAllQrcodes,
+                    handleTabChange
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

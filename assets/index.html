@@ -92,6 +92,7 @@
                 <div class="quick-actions">
                     <button class="btn btn-primary" @click="openTestPage">🎮 进入测试页面</button>
                     <button class="btn btn-success" @click="viewApiDocs">📖 查看API文档</button>
+                    <button class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;" @click="openShopSettings">🏪 店铺设置</button>
                 </div>
             </div>
 
@@ -206,6 +207,9 @@
                 },
                 viewApiDocs() {
                     window.open('http://9.128.251.82:8000/docs', '_blank');
+                },
+                openShopSettings() {
+                    window.location.href = 'shop_settings.html';
                 }
             }
         }).use(ElementPlus).mount('#app');
