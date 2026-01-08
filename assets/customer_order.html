@@ -599,39 +599,36 @@
                         const orderId = `${dateStr}${timeStr}${randomNum}`; // 例如: 20240108143055001
                         
                         const orderData = {
-                            order_id: orderId,
                             table_id: this.selectedTable.id,
-                            table_number: this.selectedTable.table_number,
                             items: this.cart.map(item => ({
                                 menu_item_id: item.id,
-                                name: item.name,
-                                price: item.price,
-                                quantity: item.qty
+                                quantity: item.qty,
+                                special_instructions: ''
                             })),
-                            total_amount: this.cartTotal,
-                            payment_method: this.paymentMethod, // immediate / counter
-                            payment_status: this.paymentMethod === 'immediate' ? 'paid' : 'unpaid',
-                            status: 'pending'
+                            payment_method: this.paymentMethod // immediate / counter
                         };
                         
-                        // 这里应该调用API，暂时模拟成功
-                        // const response = await axios.post('/api/orders/', orderData);
+                        // 调用后端API创建订单
+                        const response = await axios.post('http://localhost:8000/api/orders/', orderData);
                         
                         this.currentOrder = {
-                            ...orderData,
-                            created_at: now.toISOString()
+                            ...response.data,
+                            status: response.data.status || 'pending',
+                            order_id: response.data.order_number || orderId
                         };
-                        
-                        // 保存订单到本地存储（模拟）
-                        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-                        savedOrders.unshift(this.currentOrder);
-                        localStorage.setItem('orders', JSON.stringify(savedOrders));
                         
                         this.cart = [];
                         this.showCart = false;
                         
                         const paymentText = this.paymentMethod === 'immediate' ? '支付成功' : '订单已提交';
-                        this.$message.success(`${paymentText}！订单号：${orderId}`);
+                        const orderNumber = response.data.order_number || orderId;
+                        this.$message.success(`${paymentText}！订单号：${orderNumber}`);
+                        
+                        // 保存订单到本地存储（用于本地显示）
+                        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+                        savedOrders.unshift(this.currentOrder);
+                        localStorage.setItem('orders', JSON.stringify(savedOrders));
+                        
                         
                         // 连接到订单的WebSocket
                         if (this.ws) {
