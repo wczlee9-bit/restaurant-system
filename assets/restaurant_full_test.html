@@ -663,8 +663,23 @@
 
                 // 初始化
                 onMounted(() => {
-                    loadData();
-                    startAutoRefresh();
+                    // 从URL参数读取桌号
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tableParam = urlParams.get('table');
+
+                    loadData().then(() => {
+                        // 如果URL中有桌号参数，自动选择该桌号
+                        if (tableParam) {
+                            const table = tables.value.find(t => t.table_number === tableParam);
+                            if (table) {
+                                selectedTable.value = table;
+                                ElMessage.success(`已自动选择${tableParam}号桌`);
+                            } else {
+                                ElMessage.warning(`未找到${tableParam}号桌`);
+                            }
+                        }
+                        startAutoRefresh();
+                    });
                 });
 
                 onUnmounted(() => {
