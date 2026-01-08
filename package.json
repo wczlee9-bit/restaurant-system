@@ -1,0 +1,9 @@
+{
+  "name": "restaurant-system",
+  "version": "1.0.0",
+  "description": "Static restaurant ordering system",
+  "private": true,
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}
