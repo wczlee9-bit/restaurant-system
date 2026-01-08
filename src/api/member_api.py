@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from storage.database.db import get_session
-from storage.database.shared.model import Members, PointLogs, MemberLevelRules, Orders
+from storage.database.shared.model import Members, PointLogs, MemberLevelRules, Orders, OrderItems, Stores
 import logging
 
 # 创建 FastAPI 应用
@@ -84,6 +84,31 @@ class DiscountResponse(BaseModel):
     discount_amount: float
     final_amount: float
     discount_rate: float
+
+
+class OrderItemInfo(BaseModel):
+    """订单项信息"""
+    item_name: str
+    quantity: int
+    price: float
+    subtotal: float
+
+
+class OrderInfo(BaseModel):
+    """订单信息"""
+    id: int
+    order_number: str
+    store_name: str
+    table_number: Optional[str] = None
+    total_amount: float
+    discount_amount: float
+    final_amount: float
+    payment_method: Optional[str] = None
+    payment_status: str
+    order_status: str
+    created_at: datetime
+    payment_time: Optional[datetime] = None
+    items: List[OrderItemInfo]
 
 
 # ============ 工具函数 ============
@@ -181,11 +206,37 @@ def root():
             "GET /api/member/{member_id}": "获取会员信息",
             "GET /api/member/phone/{phone}": "通过手机号获取会员",
             "GET /api/member/{member_id}/points-logs": "获取积分日志",
+            "GET /api/member/{member_id}/orders": "获取会员订单列表",
+            "GET /api/member/{member_id}/orders/{order_id}": "获取会员订单详情",
             "POST /api/member/redeem": "积分兑换",
             "POST /api/member/apply-discount": "应用会员折扣",
             "GET /api/member/levels": "获取会员等级列表"
         }
     }
+
+
+@app.get("/api/member/levels")
+def get_member_levels():
+    """
+    获取会员等级列表
+    """
+    db = get_session()
+    try:
+        levels = db.query(MemberLevelRules).order_by(MemberLevelRules.level).all()
+        
+        result = []
+        for level in levels:
+            result.append({
+                "level": level.level,
+                "level_name": level.level_name,
+                "min_points": level.min_points,
+                "discount": level.discount
+            })
+        
+        return result
+        
+    finally:
+        db.close()
 
 
 @app.post("/api/member/register", response_model=MemberInfo)
@@ -418,25 +469,121 @@ def apply_discount(request: ApplyDiscountRequest):
         raise HTTPException(status_code=500, detail=f"应用折扣失败: {str(e)}")
 
 
-@app.get("/api/member/levels")
-def get_member_levels():
+@app.get("/api/member/{member_id}/orders", response_model=List[OrderInfo])
+def get_member_orders(
+    member_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None, description="订单状态筛选")
+):
     """
-    获取会员等级列表
+    获取会员订单列表
     """
     db = get_session()
     try:
-        levels = db.query(MemberLevelRules).order_by(MemberLevelRules.level).all()
+        # 验证会员存在
+        member = db.query(Members).filter(Members.id == member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="会员不存在")
+        
+        # 查询订单（假设订单通过 customer_phone 关联会员）
+        query = db.query(Orders).join(Stores).filter(
+            Orders.customer_phone == member.phone
+        )
+        
+        if status:
+            query = query.filter(Orders.order_status == status)
+        
+        orders = query.order_by(Orders.created_at.desc()).offset(skip).limit(limit).all()
         
         result = []
-        for level in levels:
-            result.append({
-                "level": level.level,
-                "level_name": level.level_name,
-                "min_points": level.min_points,
-                "discount": level.discount
-            })
+        for order in orders:
+            # 获取订单项
+            order_items = db.query(OrderItems).filter(
+                OrderItems.order_id == order.id
+            ).all()
+            
+            items = []
+            for item in order_items:
+                items.append(OrderItemInfo(
+                    item_name=item.item_name,
+                    quantity=item.quantity,
+                    price=item.price,
+                    subtotal=item.price * item.quantity
+                ))
+            
+            result.append(OrderInfo(
+                id=order.id,
+                order_number=order.order_number,
+                store_name=order.store.name if order.store else "未知店铺",
+                table_number=order.table.table_number if order.table else None,
+                total_amount=order.total_amount,
+                discount_amount=order.discount_amount,
+                final_amount=order.final_amount,
+                payment_method=order.payment_method,
+                payment_status=order.payment_status,
+                order_status=order.order_status,
+                created_at=order.created_at,
+                payment_time=order.payment_time,
+                items=items
+            ))
         
         return result
+        
+    finally:
+        db.close()
+
+
+@app.get("/api/member/{member_id}/orders/{order_id}", response_model=OrderInfo)
+def get_member_order_detail(member_id: int, order_id: int):
+    """
+    获取会员订单详情
+    """
+    db = get_session()
+    try:
+        # 验证会员存在
+        member = db.query(Members).filter(Members.id == member_id).first()
+        if not member:
+            raise HTTPException(status_code=404, detail="会员不存在")
+        
+        # 查询订单
+        order = db.query(Orders).join(Stores).filter(
+            Orders.id == order_id,
+            Orders.customer_phone == member.phone
+        ).first()
+        
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
+        
+        # 获取订单项
+        order_items = db.query(OrderItems).filter(
+            OrderItems.order_id == order.id
+        ).all()
+        
+        items = []
+        for item in order_items:
+            items.append(OrderItemInfo(
+                item_name=item.item_name,
+                quantity=item.quantity,
+                price=item.price,
+                subtotal=item.price * item.quantity
+            ))
+        
+        return OrderInfo(
+            id=order.id,
+            order_number=order.order_number,
+            store_name=order.store.name if order.store else "未知店铺",
+            table_number=order.table.table_number if order.table else None,
+            total_amount=order.total_amount,
+            discount_amount=order.discount_amount,
+            final_amount=order.final_amount,
+            payment_method=order.payment_method,
+            payment_status=order.payment_status,
+            order_status=order.order_status,
+            created_at=order.created_at,
+            payment_time=order.payment_time,
+            items=items
+        )
         
     finally:
         db.close()

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>总公司管理后台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/echarts/dist/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stat-label { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: #333; }
+        .stat-card:nth-child(1) .stat-value { color: #667eea; }
+        .stat-card:nth-child(2) .stat-value { color: #f093fb; }
+        .stat-card:nth-child(3) .stat-value { color: #4facfe; }
+        .stat-card:nth-child(4) .stat-value { color: #43e97b; }
+        .stat-card:nth-child(5) .stat-value { color: #fa709a; }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .chart-container {
+            height: 400px;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .ranking-item:last-child { border-bottom: none; }
+        .rank-badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            background: #f0f0f0;
+        }
+        .rank-badge.top1 { background: #ffd700; color: white; }
+        .rank-badge.top2 { background: #c0c0c0; color: white; }
+        .rank-badge.top3 { background: #cd7f32; color: white; }
+        .store-info { flex: 1; }
+        .store-name { font-weight: bold; margin-bottom: 5px; }
+        .store-stats { font-size: 12px; color: #666; }
+        .revenue-value { font-weight: bold; color: #667eea; }
+
+        .table-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .content-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .container { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🏢 总公司管理后台</h1>
+                <p>查看所有店铺的营收情况和人员管理</p>
+            </div>
+
+            <!-- 总体统计 -->
+            <div class="stats-grid">
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">总店铺数</div>
+                    <div class="stat-value">{{ overallStats.total_stores }}</div>
+                </div>
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">活跃店铺</div>
+                    <div class="stat-value">{{ overallStats.active_stores }}</div>
+                </div>
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">总订单数</div>
+                    <div class="stat-value">{{ overallStats.total_orders }}</div>
+                </div>
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">总营收</div>
+                    <div class="stat-value">¥{{ overallStats.total_revenue?.toLocaleString() || 0 }}</div>
+                </div>
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">总会员数</div>
+                    <div class="stat-value">{{ overallStats.total_members }}</div>
+                </div>
+                <div class="stat-card" v-loading="loading">
+                    <div class="stat-label">总员工数</div>
+                    <div class="stat-value">{{ overallStats.total_staff }}</div>
+                </div>
+            </div>
+
+            <!-- 营收趋势和店铺排名 -->
+            <div class="content-grid">
+                <div class="card">
+                    <div class="card-title">📈 营收趋势（近30天）</div>
+                    <div id="revenueChart" class="chart-container"></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🏆 店铺营收排名（近30天）</div>
+                    <div v-loading="loadingRanking">
+                        <div v-if="revenueRanking.length === 0" style="text-align: center; padding: 40px; color: #999;">
+                            暂无数据
+                        </div>
+                        <div v-else>
+                            <div class="ranking-item" v-for="item in revenueRanking" :key="item.store_id">
+                                <div class="rank-badge" :class="{
+                                    'top1': item.rank === 1,
+                                    'top2': item.rank === 2,
+                                    'top3': item.rank === 3
+                                }">
+                                    {{ item.rank }}
+                                </div>
+                                <div class="store-info">
+                                    <div class="store-name">{{ item.store_name }}</div>
+                                    <div class="store-stats">{{ item.total_orders }} 订单</div>
+                                </div>
+                                <div class="revenue-value">
+                                    ¥{{ item.total_revenue?.toLocaleString() || 0 }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 店铺列表 -->
+            <div class="table-section">
+                <div class="card-title">🏪 店铺列表</div>
+                <el-table :data="stores" style="width: 100%" v-loading="loadingStores">
+                    <el-table-column prop="name" label="店铺名称" width="200"></el-table-column>
+                    <el-table-column prop="address" label="地址" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="phone" label="联系电话" width="150"></el-table-column>
+                    <el-table-column prop="manager_name" label="店长" width="120"></el-table-column>
+                    <el-table-column label="状态" width="100">
+                        <template #default="{ row }">
+                            <el-tag :type="row.is_active ? 'success' : 'danger'">
+                                {{ row.is_active ? '营业中' : '已停业' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="created_at" label="创建时间" width="180">
+                        <template #default="{ row }">
+                            {{ formatDate(row.created_at) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="150" fixed="right">
+                        <template #default="{ row }">
+                            <el-button size="small" @click="viewStoreDetail(row)">
+                                查看详情
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 员工列表 -->
+            <div class="table-section">
+                <div class="card-title">👥 员工列表</div>
+                <el-table :data="staffList" style="width: 100%" v-loading="loadingStaff">
+                    <el-table-column prop="name" label="姓名" width="120"></el-table-column>
+                    <el-table-column prop="phone" label="手机号" width="150"></el-table-column>
+                    <el-table-column prop="store_name" label="所属店铺" width="200"></el-table-column>
+                    <el-table-column prop="position" label="职位" width="120"></el-table-column>
+                    <el-table-column label="角色" width="200">
+                        <template #default="{ row }">
+                            <el-tag 
+                                v-for="role in row.roles" 
+                                :key="role" 
+                                size="small"
+                                style="margin-right: 5px;">
+                                {{ role }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="状态" width="100">
+                        <template #default="{ row }">
+                            <el-tag :type="row.is_active ? 'success' : 'danger'">
+                                {{ row.is_active ? '在职' : '离职' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 会员统计 -->
+            <div class="table-section">
+                <div class="card-title">🎁 会员统计</div>
+                <div class="stats-grid" style="margin-bottom: 20px;">
+                    <div class="stat-card" v-loading="loadingMembers">
+                        <div class="stat-label">总会员数</div>
+                        <div class="stat-value">{{ memberStats.total_members }}</div>
+                    </div>
+                    <div class="stat-card" v-loading="loadingMembers">
+                        <div class="stat-label">活跃会员</div>
+                        <div class="stat-value">{{ memberStats.active_members }}</div>
+                    </div>
+                    <div class="stat-card" v-loading="loadingMembers">
+                        <div class="stat-label">总积分</div>
+                        <div class="stat-value">{{ memberStats.total_points }}</div>
+                    </div>
+                    <div class="stat-card" v-loading="loadingMembers">
+                        <div class="stat-label">会员总消费</div>
+                        <div class="stat-value">¥{{ memberStats.total_spent?.toLocaleString() || 0 }}</div>
+                    </div>
+                </div>
+                <el-table :data="memberStats.new_members" style="width: 100%" v-loading="loadingMembers">
+                    <el-table-column prop="phone" label="手机号" width="150"></el-table-column>
+                    <el-table-column prop="name" label="姓名" width="120"></el-table-column>
+                    <el-table-column prop="level" label="等级" width="80"></el-table-column>
+                    <el-table-column prop="points" label="积分" width="100"></el-table-column>
+                    <el-table-column prop="total_spent" label="累计消费" width="150">
+                        <template #default="{ row }">
+                            ¥{{ row.total_spent?.toFixed(2) || 0 }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="total_orders" label="订单数" width="100"></el-table-column>
+                    <el-table-column prop="created_at" label="注册时间" width="180">
+                        <template #default="{ row }">
+                            {{ formatDate(row.created_at) }}
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
+
+        const app = createApp({
+            setup() {
+                const loading = ref(false);
+                const loadingStores = ref(false);
+                const loadingStaff = ref(false);
+                const loadingRanking = ref(false);
+                const loadingMembers = ref(false);
+                
+                const apiBase = ref(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://localhost:8006'
+                    : '/api/headquarters');
+
+                const overallStats = reactive({
+                    total_stores: 0,
+                    active_stores: 0,
+                    total_orders: 0,
+                    total_revenue: 0,
+                    total_members: 0,
+                    total_staff: 0
+                });
+
+                const stores = ref([]);
+                const staffList = ref([]);
+                const revenueRanking = ref([]);
+                const memberStats = reactive({
+                    total_members: 0,
+                    active_members: 0,
+                    new_members_count: 0,
+                    total_points: 0,
+                    total_spent: 0,
+                    level_distribution: [],
+                    new_members: []
+                });
+
+                let chart = null;
+
+                // 加载总体统计
+                const loadOverallStats = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/overall-stats`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            Object.assign(overallStats, data);
+                        }
+                    } catch (error) {
+                        console.error('加载总体统计失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 加载店铺列表
+                const loadStores = async () => {
+                    loadingStores.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/stores?limit=50`);
+                        if (response.ok) {
+                            stores.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载店铺列表失败:', error);
+                    } finally {
+                        loadingStores.value = false;
+                    }
+                };
+
+                // 加载员工列表
+                const loadStaff = async () => {
+                    loadingStaff.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/staff?limit=50`);
+                        if (response.ok) {
+                            staffList.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载员工列表失败:', error);
+                    } finally {
+                        loadingStaff.value = false;
+                    }
+                };
+
+                // 加载营收排名
+                const loadRevenueRanking = async () => {
+                    loadingRanking.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/stores/revenue-ranking?days=30&top=10`);
+                        if (response.ok) {
+                            revenueRanking.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载营收排名失败:', error);
+                    } finally {
+                        loadingRanking.value = false;
+                    }
+                };
+
+                // 加载营收趋势
+                const loadRevenueTrend = async () => {
+                    try {
+                        const response = await fetch(`${apiBase.value}/revenue-trend?days=30`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            renderChart(data);
+                        }
+                    } catch (error) {
+                        console.error('加载营收趋势失败:', error);
+                    }
+                };
+
+                // 加载会员统计
+                const loadMemberStats = async () => {
+                    loadingMembers.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/members?days=30&limit=20`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            Object.assign(memberStats, data);
+                        }
+                    } catch (error) {
+                        console.error('加载会员统计失败:', error);
+                    } finally {
+                        loadingMembers.value = false;
+                    }
+                };
+
+                // 渲染图表
+                const renderChart = (data) => {
+                    if (!chart) {
+                        chart = echarts.init(document.getElementById('revenueChart'));
+                    }
+                    
+                    const dates = data.map(item => item.date);
+                    const revenues = data.map(item => item.total_revenue);
+                    const orders = data.map(item => item.total_orders);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            }
+                        },
+                        legend: {
+                            data: ['营收', '订单数']
+                        },
+                        xAxis: {
+                            type: 'category',
+                            data: dates,
+                            axisLabel: {
+                                rotate: 45,
+                                interval: 3
+                            }
+                        },
+                        yAxis: [
+                            {
+                                type: 'value',
+                                name: '营收',
+                                position: 'left'
+                            },
+                            {
+                                type: 'value',
+                                name: '订单数',
+                                position: 'right'
+                            }
+                        ],
+                        series: [
+                            {
+                                name: '营收',
+                                type: 'line',
+                                data: revenues,
+                                smooth: true,
+                                itemStyle: {
+                                    color: '#667eea'
+                                }
+                            },
+                            {
+                                name: '订单数',
+                                type: 'bar',
+                                yAxisIndex: 1,
+                                data: orders,
+                                itemStyle: {
+                                    color: '#43e97b'
+                                }
+                            }
+                        ]
+                    };
+
+                    chart.setOption(option);
+                };
+
+                // 格式化日期
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                // 查看店铺详情
+                const viewStoreDetail = (store) => {
+                    ElementPlus.ElMessage.info(`查看 ${store.name} 的详细信息`);
+                    // 这里可以跳转到店铺详情页面
+                };
+
+                // 初始化
+                onMounted(() => {
+                    loadOverallStats();
+                    loadStores();
+                    loadStaff();
+                    loadRevenueRanking();
+                    loadRevenueTrend();
+                    loadMemberStats();
+
+                    // 响应窗口大小变化
+                    window.addEventListener('resize', () => {
+                        if (chart) {
+                            chart.resize();
+                        }
+                    });
+                });
+
+                return {
+                    loading,
+                    loadingStores,
+                    loadingStaff,
+                    loadingRanking,
+                    loadingMembers,
+                    overallStats,
+                    stores,
+                    staffList,
+                    revenueRanking,
+                    memberStats,
+                    formatDate,
+                    viewStoreDetail
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

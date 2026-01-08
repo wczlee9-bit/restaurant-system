@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会员中心</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .member-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .member-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            margin-right: 20px;
+        }
+        .member-details h2 { font-size: 24px; margin-bottom: 5px; }
+        .member-details p { color: #666; font-size: 14px; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+
+        .level-progress {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .level-bar {
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .level-progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .tabs {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .order-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .order-number { font-weight: bold; color: #333; }
+        .order-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .order-status.paid { background: #e8f5e9; color: #4caf50; }
+        .order-status.unpaid { background: #fff3e0; color: #ff9800; }
+        .order-details { font-size: 14px; color: #666; }
+        .order-amount {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 10px;
+        }
+
+        .point-log-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .point-log-item:last-child { border-bottom: none; }
+        .point-change { font-weight: bold; }
+        .point-change.positive { color: #4caf50; }
+        .point-change.negative { color: #f44336; }
+
+        .back-btn {
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 10px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .member-card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🎉 会员中心</h1>
+                <p>查看您的消费记录、积分和订单</p>
+            </div>
+
+            <!-- 登录界面 -->
+            <div v-if="!isLoggedIn" class="login-card">
+                <h2 style="margin-bottom: 20px; text-align: center;">会员登录</h2>
+                <el-form :model="loginForm" label-width="80px">
+                    <el-form-item label="手机号">
+                        <el-input 
+                            v-model="loginForm.phone" 
+                            placeholder="请输入手机号"
+                            :maxlength="11"
+                            clearable>
+                        </el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button 
+                            type="primary" 
+                            @click="handleLogin"
+                            :loading="loading"
+                            style="width: 100%;">
+                            登录
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+            </div>
+
+            <!-- 会员信息界面 -->
+            <div v-else>
+                <el-button class="back-btn" @click="handleLogout">
+                    退出登录
+                </el-button>
+
+                <!-- 会员基本信息 -->
+                <div class="member-card">
+                    <div class="member-info">
+                        <div class="member-avatar">
+                            {{ memberInfo.member?.name?.charAt(0) || '会' }}
+                        </div>
+                        <div class="member-details">
+                            <h2>{{ memberInfo.member?.name || '会员' }}</h2>
+                            <p>{{ memberInfo.member?.phone }}</p>
+                            <p style="margin-top: 5px;">
+                                <el-tag type="success">{{ memberInfo.member?.level_name }}</el-tag>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ memberInfo.member?.points || 0 }}</div>
+                            <div class="stat-label">当前积分</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">¥{{ memberInfo.member?.total_spent || 0 }}</div>
+                            <div class="stat-label">累计消费</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ memberInfo.member?.total_orders || 0 }}</div>
+                            <div class="stat-label">订单数量</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ (memberInfo.member?.discount * 10).toFixed(1) }}折</div>
+                            <div class="stat-label">会员折扣</div>
+                        </div>
+                    </div>
+
+                    <!-- 下一等级进度 -->
+                    <div class="level-progress" v-if="memberInfo.next_level">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>距离 {{ memberInfo.next_level.level_name }}</span>
+                            <span>还需 {{ memberInfo.next_level.min_points - memberInfo.member.points }} 积分</span>
+                        </div>
+                        <div class="level-bar">
+                            <div class="level-progress-fill" :style="getProgressWidth()"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 标签页 -->
+                <div class="tabs">
+                    <el-tabs v-model="activeTab">
+                        <el-tab-pane label="订单记录" name="orders">
+                            <div v-loading="loadingOrders">
+                                <div v-if="orders.length === 0" style="text-align: center; padding: 40px; color: #999;">
+                                    暂无订单
+                                </div>
+                                <div v-else>
+                                    <div class="order-card" v-for="order in orders" :key="order.id">
+                                        <div class="order-header">
+                                            <span class="order-number">{{ order.order_number }}</span>
+                                            <span class="order-status" :class="order.payment_status">
+                                                {{ getStatusText(order.payment_status) }}
+                                            </span>
+                                        </div>
+                                        <div class="order-details">
+                                            <p>📍 {{ order.store_name }}</p>
+                                            <p v-if="order.table_number">🪑 {{ order.table_number }}号桌</p>
+                                            <p>📅 {{ formatDate(order.created_at) }}</p>
+                                            <p>🛒 共 {{ order.items?.length || 0 }} 件商品</p>
+                                        </div>
+                                        <div class="order-amount">
+                                            ¥{{ order.final_amount }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-tab-pane>
+
+                        <el-tab-pane label="积分日志" name="points">
+                            <div v-loading="loadingPoints">
+                                <div v-if="pointLogs.length === 0" style="text-align: center; padding: 40px; color: #999;">
+                                    暂无积分记录
+                                </div>
+                                <div v-else>
+                                    <div class="point-log-item" v-for="log in pointLogs" :key="log.id">
+                                        <div>
+                                            <div style="font-weight: bold;">{{ log.reason }}</div>
+                                            <div style="font-size: 12px; color: #666;">
+                                                {{ formatDate(log.created_at) }}
+                                            </div>
+                                            <div v-if="log.order_number" style="font-size: 12px; color: #999;">
+                                                订单号: {{ log.order_number }}
+                                            </div>
+                                        </div>
+                                        <div class="point-change" :class="log.points > 0 ? 'positive' : 'negative'">
+                                            {{ log.points > 0 ? '+' : '' }}{{ log.points }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-tab-pane>
+                    </el-tabs>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                const isLoggedIn = ref(false);
+                const loading = ref(false);
+                const loadingOrders = ref(false);
+                const loadingPoints = ref(false);
+                const activeTab = ref('orders');
+                const apiBase = ref(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://localhost:8004'
+                    : '/api/member');
+
+                const loginForm = reactive({
+                    phone: ''
+                });
+
+                const memberInfo = reactive({
+                    member: null,
+                    next_level: null
+                });
+
+                const orders = ref([]);
+                const pointLogs = ref([]);
+
+                // 获取进度条宽度
+                const getProgressWidth = computed(() => {
+                    if (!memberInfo.member || !memberInfo.next_level) return '0%';
+                    const current = memberInfo.member.points;
+                    const min = 0; // 假设起始为0
+                    const max = memberInfo.next_level.min_points;
+                    const progress = ((current - min) / (max - min)) * 100;
+                    return Math.min(Math.max(progress, 0), 100) + '%';
+                });
+
+                // 登录
+                const handleLogin = async () => {
+                    if (!loginForm.phone) {
+                        ElementPlus.ElMessage.warning('请输入手机号');
+                        return;
+                    }
+
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/phone/${loginForm.phone}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            memberInfo.member = data.member;
+                            memberInfo.next_level = data.next_level;
+                            isLoggedIn.value = true;
+                            localStorage.setItem('memberPhone', loginForm.phone);
+
+                            // 加载订单和积分
+                            await loadOrders();
+                            await loadPoints();
+
+                            ElementPlus.ElMessage.success('登录成功');
+                        } else {
+                            ElementPlus.ElMessage.error('会员不存在，请先注册');
+                        }
+                    } catch (error) {
+                        console.error('登录失败:', error);
+                        ElementPlus.ElMessage.error('登录失败，请稍后重试');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 退出登录
+                const handleLogout = () => {
+                    isLoggedIn.value = false;
+                    memberInfo.member = null;
+                    memberInfo.next_level = null;
+                    orders.value = [];
+                    pointLogs.value = [];
+                    loginForm.phone = '';
+                    localStorage.removeItem('memberPhone');
+                };
+
+                // 加载订单
+                const loadOrders = async () => {
+                    loadingOrders.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/${memberInfo.member.id}/orders?limit=20`);
+                        if (response.ok) {
+                            orders.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载订单失败:', error);
+                    } finally {
+                        loadingOrders.value = false;
+                    }
+                };
+
+                // 加载积分日志
+                const loadPoints = async () => {
+                    loadingPoints.value = true;
+                    try {
+                        const response = await fetch(`${apiBase.value}/${memberInfo.member.id}/points-logs?limit=20`);
+                        if (response.ok) {
+                            pointLogs.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载积分日志失败:', error);
+                    } finally {
+                        loadingPoints.value = false;
+                    }
+                };
+
+                // 格式化日期
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                // 获取状态文本
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'paid': '已支付',
+                        'unpaid': '未支付',
+                        'refunded': '已退款'
+                    };
+                    return statusMap[status] || status;
+                };
+
+                // 自动登录
+                onMounted(() => {
+                    const savedPhone = localStorage.getItem('memberPhone');
+                    if (savedPhone) {
+                        loginForm.phone = savedPhone;
+                        handleLogin();
+                    }
+                });
+
+                return {
+                    isLoggedIn,
+                    loading,
+                    loadingOrders,
+                    loadingPoints,
+                    activeTab,
+                    loginForm,
+                    memberInfo,
+                    orders,
+                    pointLogs,
+                    getProgressWidth,
+                    handleLogin,
+                    handleLogout,
+                    loadOrders,
+                    loadPoints,
+                    formatDate,
+                    getStatusText
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
