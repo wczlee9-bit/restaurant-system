@@ -430,7 +430,7 @@
                 // 获取店铺信息
                 const fetchShopInfo = async () => {
                     try {
-                        const response = await fetch(`http://localhost:8000/api/customer/shop?store_id=${storeId.value}`);
+                        const response = await fetch(`/api/customer/shop?store_id=${storeId.value}`);
                         if (!response.ok) throw new Error('获取店铺信息失败');
                         shop.value = await response.json();
                     } catch (err) {
@@ -442,7 +442,7 @@
                 // 获取菜品列表
                 const fetchMenu = async () => {
                     try {
-                        const response = await fetch(`http://localhost:8000/api/customer/menu?store_id=${storeId.value}`);
+                        const response = await fetch(`/api/customer/menu?store_id=${storeId.value}`);
                         if (!response.ok) throw new Error('获取菜品列表失败');
                         categories.value = await response.json();
                         if (categories.value.length > 0) {
@@ -494,7 +494,7 @@
                             });
                         });
 
-                        const response = await fetch('http://localhost:8000/api/customer/order', {
+                        const response = await fetch('/api/customer/order', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -544,7 +544,7 @@
                 const fetchTableInfo = async () => {
                     if (tableId.value && !tableNumber.value) {
                         try {
-                            const response = await fetch(`http://localhost:8000/api/customer/table/${tableId.value}`);
+                            const response = await fetch(`/api/customer/table/${tableId.value}`);
                             if (response.ok) {
                                 const table = await response.json();
                                 tableNumber.value = table.table_number;

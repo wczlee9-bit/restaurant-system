@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>店铺设置 - 扫码点餐系统</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
     <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
     <style>
@@ -640,7 +640,7 @@
                 const loadWorkflowConfig = async () => {
                     loading.value = true;
                     try {
-                        const response = await fetch('http://localhost:8000/api/workflow-config/');
+                        const response = await fetch('/api/workflow-config/');
                         if (response.ok) {
                             const data = await response.json();
                             workflowConfigs.value = data;
@@ -758,7 +758,7 @@
                             is_enabled: config.is_enabled
                         }));
 
-                        const response = await fetch('http://localhost:8000/api/workflow-config/bulk-update', {
+                        const response = await fetch('/api/workflow-config/bulk-update', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -786,7 +786,7 @@
                     }
 
                     try {
-                        const response = await fetch('http://localhost:8000/api/workflow-config/reset-defaults', {
+                        const response = await fetch('/api/workflow-config/reset-defaults', {
                             method: 'POST'
                         });
 
@@ -903,7 +903,7 @@
                         }
 
                         // 调用后端API
-                        const response = await fetch('http://localhost:8000/api/generate-styled-qrcode', {
+                        const response = await fetch('/api/generate-styled-qrcode', {
                             method: 'POST',
                             body: formData
                         });

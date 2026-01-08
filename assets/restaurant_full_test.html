@@ -649,16 +649,17 @@
                 const currentOrder = ref(null);
 
                 // API基础URL - 自动检测
-                let API_BASE = 'http://localhost:8000';
+                let API_BASE = '';
                 try {
                     const currentHost = window.location.hostname;
                     const currentPort = window.location.port;
-                    if (currentPort === '8080') {
-                        API_BASE = `http://${currentHost}:8000`;
+                    // 只在本地开发时检测端口
+                    if (currentPort && currentPort !== '80') {
+                        API_BASE = ''; // 使用相对路径
                     }
-                    console.log('自动检测到API地址:', API_BASE);
+                    console.log('使用相对路径访问API');
                 } catch (e) {
-                    console.log('使用默认API地址:', API_BASE);
+                    console.log('使用相对路径访问API');
                 }
 
                 // 初始化

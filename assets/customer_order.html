@@ -609,7 +609,7 @@
                         };
                         
                         // 调用后端API创建订单
-                        const response = await axios.post('http://localhost:8000/api/orders/', orderData);
+                        const response = await axios.post('/api/orders/', orderData);
                         
                         this.currentOrder = {
                             ...response.data,
