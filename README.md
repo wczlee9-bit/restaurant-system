@@ -1,85 +1,104 @@
 # 🍽️ 餐饮点餐系统 - 测试入口
 
-## ⚡ 快速开始（30秒测试）
+## ⚠️ 重要提示
 
-### 🎯 测试入口
+**外部IP无法访问（502错误），请使用localhost访问！**
 
-**文件位置**：`assets/index.html`
+---
 
-**打开方式**：
-1. 在左侧文件树中找到 `assets/` 文件夹
-2. 双击打开 `index.html`
-3. 点击页面中的 **"⚡ 立即测试8号桌完整流程"** 按钮
-4. 开始测试！
+## ⚡ 立即开始测试
+
+**复制这个URL到浏览器打开**：
+
+```
+http://localhost:8080/assets/restaurant_full_test.html?table=8
+```
+
+**就这么简单！开始测试吧！** 🎮
 
 ---
 
 ## 📋 核心文件
 
-| 文件 | 位置 | 说明 |
-|------|------|------|
-| **📄 OPEN_FILE_GUIDE.txt** | 项目根目录 | 如何打开文件的详细指南 |
-| **📄 HOW_TO_OPEN_FILES.md** | 项目根目录 | 打开文件的操作说明 |
-| **📄 START_HERE.md** | 项目根目录 | 快速入门指南 |
-| **📄 TESTING_GUIDE.md** | 项目根目录 | 完整测试方案 |
-| **📱 index.html** | assets/ | 测试入口页面 |
+| 文件 | 用途 |
+|------|------|
+| **LOCALHOST_START.md** | ⭐ 使用localhost开始测试 |
+| **LOCALHOST_ACCESS.html** | 可视化访问页面 |
+| **FIXED_ACCESS_GUIDE.md** | 完整的访问指南 |
+| **START_TESTING.md** | 最简单的开始指南 |
 
 ---
 
-## ⚠️ 重要提示
+## 🎯 测试流程
 
-**不要**在搜索引擎中搜索 "assets/index.html"！
-
-- 搜索引擎无法访问沙盒环境
-- 搜索结果与您的测试系统无关
-- 请直接在左侧文件树中打开文件
-
----
-
-## 📂 项目结构
+打开页面后，按照以下顺序切换角色（顶部按钮）：
 
 ```
-/workspace/projects/
-│
-├── 📄 README.md                  ← 你现在看的文件
-├── 📄 OPEN_FILE_GUIDE.txt        ← 如何打开文件（必看）
-├── 📄 HOW_TO_OPEN_FILES.md       ← 详细操作说明
-├── 📄 START_HERE.md              ← 快速入门
-├── 📄 TESTING_GUIDE.md          ← 完整测试方案
-│
-├── 📁 assets/
-│   ├── 📄 index.html  ← 【双击打开这个文件开始测试】
-│   ├── 📄 restaurant_full_test.html
-│   ├── 📄 QUICK_TEST_GUIDE.md
-│   └── 📁 qrcodes/
-│       └── table_1.png ~ table_10.png
-│
-├── 📁 scripts/
-│   ├── generate_qrcodes.py       # 生成二维码
-│   └── quick_test.py             # 快速测试
-│
-└── 📁 src/                       ← 源代码（测试时不需要）
+👤 顾客 → 点餐（添加菜品→提交订单）
+👨‍🍳 厨师 → 制作（开始制作→完成制作）
+🤵 传菜员 → 上菜（确认上菜）
+💰 收银员 → 结账（处理支付→打印小票）
+👔 店长 → 查看数据（订单统计、营收数据）
 ```
 
 ---
 
-## 🎮 测试流程
+## 📱 其他访问方式（localhost）
 
+| 用途 | URL |
+|------|-----|
+| **主入口** | http://localhost:8080/assets/index.html |
+| **测试页面** | http://localhost:8080/assets/restaurant_full_test.html |
+| **API文档** | http://localhost:8000/docs |
+
+---
+
+## 💡 为什么用localhost？
+
+**原因**：
+- 外部IP（9.128.251.82）访问被防火墙阻止（502错误）
+- localhost 访问无需通过网络，直接连接本地服务
+- 速度更快，更稳定
+
+**适用场景**：
+- ✅ 您在沙盒环境中
+- ✅ 浏览器和服务在同一台机器上
+- ✅ 外部IP无法访问
+
+---
+
+## ❓ 如果localhost也无法访问
+
+### 检查服务
+
+```bash
+netstat -tlnp | grep -E ":(8000|8080)"
 ```
-1. 打开 assets/index.html
-2. 点击 "⚡ 立即测试8号桌完整流程"
-3. 按照5个角色顺序测试：
-   👤 顾客 → 👨‍🍳 厨师 → 🤵 传菜员 → 💰 收银员 → 👔 店长
+
+### 重启服务
+
+```bash
+cd /workspace/projects
+python -m http.server 8080 --bind 0.0.0.0 &
+python -m uvicorn src.api.restaurant_api:app --host 0.0.0.0 --port 8000 &
+```
+
+### 使用127.0.0.1
+
+如果localhost不行，尝试：
+```
+http://127.0.0.1:8080/assets/restaurant_full_test.html?table=8
 ```
 
 ---
 
-## 📖 详细文档
+## 🎉 立即开始
 
-- **OPEN_FILE_GUIDE.txt**：如何在沙盒中打开文件（必看）
-- **HOW_TO_OPEN_FILES.md**：打开文件的详细操作说明
-- **START_HERE.md**：快速入门指南
-- **TESTING_GUIDE.md**：完整测试方案和流程
+**复制这个URL到浏览器**：
+
+```
+http://localhost:8080/assets/restaurant_full_test.html?table=8
+```
 
 ---
 
