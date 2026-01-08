@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ 餐饮点餐系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
+        
+        .mobile-container {
+            max-width: 414px; margin: 0 auto; min-height: 100vh; background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; text-align: center; position: sticky;
+            top: 0; z-index: 100;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .header-info { font-size: 14px; opacity: 0.9; }
+        
+        .table-selector {
+            padding: 40px 20px; text-align: center;
+        }
+        .table-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            margin-top: 20px;
+        }
+        .table-cell {
+            padding: 25px 15px; border: 3px solid #eee; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s; font-size: 20px; font-weight: bold;
+            color: #333;
+        }
+        .table-cell:hover { border-color: #667eea; transform: translateY(-3px); }
+        .table-cell.selected { border-color: #667eea; background: #ecf5ff; }
+        .table-cell.occupied { border-color: #f56c6c; background: #fef0f0; color: #f56c6c; }
+        
+        .category-tabs {
+            display: flex; gap: 10px; overflow-x: auto; padding: 15px;
+            border-bottom: 1px solid #eee; position: sticky; top: 80px;
+            background: white; z-index: 90;
+        }
+        .category-tab {
+            padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+            cursor: pointer; transition: all 0.3s; font-size: 14px;
+            border: 1px solid #eee; background: white; flex-shrink: 0;
+        }
+        .category-tab.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        .menu-list { padding: 15px; padding-bottom: 80px; }
+        .menu-item {
+            display: flex; gap: 15px; padding: 15px; margin-bottom: 15px;
+            background: white; border-radius: 12px; border: 1px solid #eee;
+            transition: all 0.3s;
+        }
+        .menu-item:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .menu-item-img {
+            width: 80px; height: 80px; border-radius: 8px; object-fit: cover;
+            flex-shrink: 0; background: #f0f0f0;
+        }
+        .menu-item-info { flex: 1; }
+        .menu-item-name { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+        .menu-item-desc { font-size: 12px; color: #909399; margin-bottom: 8px; }
+        .menu-item-price { color: #f56c6c; font-size: 18px; font-weight: bold; }
+        .menu-item-stock { font-size: 12px; color: #909399; margin-left: 10px; }
+        
+        .menu-item-actions {
+            display: flex; align-items: center; gap: 10px; margin-top: 10px;
+        }
+        .qty-control {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .qty-btn {
+            width: 30px; height: 30px; border-radius: 50%; border: none;
+            background: #f0f0f0; cursor: pointer; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .qty-btn:active { transform: scale(0.95); }
+        .qty-btn.add { background: #667eea; color: white; }
+        .qty-btn.minus { background: #f0f0f0; }
+        .qty-display { font-size: 16px; font-weight: bold; min-width: 30px; text-align: center; }
+        
+        .cart-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 414px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px 20px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 200;
+        }
+        .cart-info { flex: 1; }
+        .cart-count { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .cart-total { font-size: 14px; opacity: 0.9; }
+        .cart-btn {
+            padding: 10px 25px; background: white; color: #667eea;
+            border-radius: 20px; font-weight: bold; border: none; cursor: pointer;
+        }
+        .cart-btn:active { transform: scale(0.95); }
+        .cart-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .cart-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: flex; flex-direction: column;
+            align-items: center; z-index: 1000; animation: slideUp 0.3s;
+        }
+        .cart-content {
+            background: white; width: 100%; max-width: 414px; height: 70vh;
+            display: flex; flex-direction: column; border-radius: 20px 20px 0 0;
+            margin-top: 30vh;
+        }
+        .cart-header {
+            padding: 20px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .cart-body { flex: 1; overflow-y: auto; padding: 20px; }
+        .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+        
+        .cart-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; margin-bottom: 15px; background: #f9f9f9;
+            border-radius: 10px;
+        }
+        .cart-item-info { flex: 1; }
+        .cart-item-name { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+        .cart-item-price { color: #f56c6c; font-weight: bold; }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .empty-cart {
+            text-align: center; padding: 60px 20px; color: #909399;
+        }
+        .empty-icon { font-size: 64px; margin-bottom: 20px; }
+        
+        .loading {
+            text-align: center; padding: 60px 20px; color: #909399;
+        }
+        .loading-spinner {
+            width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea; border-radius: 50%;
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .tag {
+            padding: 3px 8px; border-radius: 4px; font-size: 11px;
+            margin-left: 8px;
+        }
+        .tag-recommend { background: #fef0f0; color: #f56c6c; }
+        
+        .order-status {
+            padding: 15px; background: #f9f9f9; margin-bottom: 15px;
+            border-radius: 10px;
+        }
+        .status-step {
+            display: flex; align-items: center; padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .status-step:last-child { border-bottom: none; }
+        .status-icon {
+            width: 30px; height: 30px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; margin-right: 15px;
+            font-size: 14px; flex-shrink: 0;
+        }
+        .status-icon.active { background: #67c23a; color: white; }
+        .status-icon.inactive { background: #f0f0f0; color: #909399; }
+        .status-icon.current { background: #667eea; color: white; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .status-text { flex: 1; }
+        .status-title { font-weight: bold; font-size: 14px; }
+        .status-time { font-size: 12px; color: #909399; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="mobile-container">
+            <!-- 顶部 -->
+            <div class="header">
+                <h1>🍽️ 美味餐厅</h1>
+                <div class="header-info" v-if="selectedTable">
+                    {{ selectedTable.table_number }}号桌 | {{ selectedTable.seats }}座
+                </div>
+                <div class="header-info" v-else>
+                    请选择桌号
+                </div>
+            </div>
+            
+            <!-- 加载中 -->
+            <div v-if="loading" class="loading">
+                <div class="loading-spinner"></div>
+                <p>加载中...</p>
+            </div>
+            
+            <!-- 桌号选择 -->
+            <div v-else-if="!selectedTable" class="table-selector">
+                <h2 style="margin-bottom: 10px;">📱 扫码成功！</h2>
+                <p style="color: #909399; margin-bottom: 20px;">请选择您的桌号</p>
+                
+                <div class="table-grid">
+                    <div v-for="table in tables" :key="table.id"
+                         class="table-cell"
+                         :class="{selected: tempTableId === table.id, occupied: table.is_occupied}"
+                         @click="selectTable(table)">
+                        {{ table.table_number }}号
+                    </div>
+                </div>
+                
+                <el-button type="primary" size="large" style="width: 100%; margin-top: 30px; height: 50px;"
+                           :disabled="!tempTableId" @click="confirmTable()">
+                    确认桌号，开始点餐
+                </el-button>
+                
+                <p style="margin-top: 20px; font-size: 12px; color: #909399;">
+                    * 已被占用的桌号无法选择
+                </p>
+            </div>
+            
+            <!-- 菜单和订单状态 -->
+            <div v-else>
+                <!-- 当前订单状态 -->
+                <div v-if="currentOrder" class="order-status" style="margin: 15px;">
+                    <h3 style="margin-bottom: 15px; font-size: 16px;">📋 当前订单</h3>
+                    <div class="status-step">
+                        <div class="status-icon" :class="{active: currentOrder.status !== 'pending', current: currentOrder.status === 'pending'}">1</div>
+                        <div class="status-text">
+                            <div class="status-title">提交订单</div>
+                            <div class="status-time">{{ formatTime(currentOrder.created_at) }}</div>
+                        </div>
+                    </div>
+                    <div class="status-step">
+                        <div class="status-icon" :class="{active: ['preparing', 'ready', 'serving', 'completed'].includes(currentOrder.status), current: currentOrder.status === 'preparing'}">2</div>
+                        <div class="status-text">
+                            <div class="status-title">制作中</div>
+                            <div class="status-time">{{ getStatusTime('preparing') }}</div>
+                        </div>
+                    </div>
+                    <div class="status-step">
+                        <div class="status-icon" :class="{active: ['ready', 'serving', 'completed'].includes(currentOrder.status), current: currentOrder.status === 'ready'}">3</div>
+                        <div class="status-text">
+                            <div class="status-title">待传菜</div>
+                            <div class="status-time">{{ getStatusTime('ready') }}</div>
+                        </div>
+                    </div>
+                    <div class="status-step">
+                        <div class="status-icon" :class="{active: ['serving', 'completed'].includes(currentOrder.status), current: currentOrder.status === 'serving'}">4</div>
+                        <div class="status-text">
+                            <div class="status-title">上菜中</div>
+                            <div class="status-time">{{ getStatusTime('serving') }}</div>
+                        </div>
+                    </div>
+                    <div class="status-step">
+                        <div class="status-icon" :class="{active: currentOrder.status === 'completed', current: currentOrder.status === 'completed'}">5</div>
+                        <div class="status-text">
+                            <div class="status-title">已完成</div>
+                            <div class="status-time">{{ getStatusTime('completed') }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分类标签 -->
+                <div class="category-tabs">
+                    <div class="category-tab" :class="{active: selectedCategory === null}"
+                         @click="selectedCategory = null">全部</div>
+                    <div v-for="cat in categories" :key="cat.id"
+                         class="category-tab"
+                         :class="{active: selectedCategory === cat.id}"
+                         @click="selectedCategory = cat.id">
+                        {{ cat.name }}
+                    </div>
+                </div>
+                
+                <!-- 菜品列表 -->
+                <div class="menu-list">
+                    <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
+                        <img :src="item.image_url || 'https://via.placeholder.com/80'" 
+                             class="menu-item-img" :alt="item.name">
+                        <div class="menu-item-info">
+                            <div class="menu-item-name">
+                                {{ item.name }}
+                                <span v-if="item.is_recommended" class="tag tag-recommend">推荐</span>
+                            </div>
+                            <div class="menu-item-desc">{{ item.description || '暂无描述' }}</div>
+                            <div class="menu-item-price">
+                                ¥{{ item.price }}
+                                <span class="menu-item-stock">库存: {{ item.stock }}</span>
+                            </div>
+                            <div class="menu-item-actions">
+                                <div class="qty-control">
+                                    <button v-if="getCartQty(item.id) > 0" 
+                                            class="qty-btn minus" 
+                                            @click="removeFromCart(item)">
+                                        -
+                                    </button>
+                                    <span v-if="getCartQty(item.id) > 0" class="qty-display">
+                                        {{ getCartQty(item.id) }}
+                                    </span>
+                                    <button class="qty-btn add" 
+                                            @click="addToCart(item)"
+                                            :disabled="!item.is_available || item.stock <= getCartQty(item.id)">
+                                        {{ getCartQty(item.id) > 0 ? '+' : '加入购物车' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-if="filteredMenuItems.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                        <div style="font-size: 48px;">📭</div>
+                        <p style="margin-top: 10px;">暂无菜品</p>
+                    </div>
+                </div>
+                
+                <!-- 购物车栏 -->
+                <div class="cart-bar" v-if="cartTotal > 0" @click="showCart = true">
+                    <div class="cart-info">
+                        <div class="cart-count">{{ cartTotalQty }}件商品</div>
+                        <div class="cart-total">¥{{ cartTotal }}</div>
+                    </div>
+                    <button class="cart-btn">去结算</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 购物车弹窗 -->
+        <div class="cart-modal" v-if="showCart" @click.self="showCart = false">
+            <div class="cart-content">
+                <div class="cart-header">
+                    <h3>购物车</h3>
+                    <span style="cursor: pointer; font-size: 24px;" @click="showCart = false">×</span>
+                </div>
+                
+                <div class="cart-body">
+                    <div v-if="cart.length === 0" class="empty-cart">
+                        <div class="empty-icon">🛒</div>
+                        <p>购物车是空的</p>
+                    </div>
+                    
+                    <div v-else>
+                        <div v-for="item in cart" :key="item.id" class="cart-item">
+                            <div class="cart-item-info">
+                                <div class="cart-item-name">{{ item.name }}</div>
+                                <div class="cart-item-price">¥{{ item.price }}</div>
+                            </div>
+                            <div class="qty-control">
+                                <button class="qty-btn minus" @click="removeFromCart(item)">-</button>
+                                <span class="qty-display">{{ item.qty }}</span>
+                                <button class="qty-btn add" @click="addToCart(item)">+</button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed #eee;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                <span>商品数量</span>
+                                <span>{{ cartTotalQty }}件</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold;">
+                                <span>合计</span>
+                                <span style="color: #f56c6c;">¥{{ cartTotal }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="cart-footer">
+                    <el-button type="primary" size="large" style="width: 100%; height: 50px;"
+                               :disabled="cart.length === 0"
+                               @click="submitOrder()">
+                        提交订单 (¥{{ cartTotal }})
+                    </el-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: true,
+                    tables: [],
+                    categories: [],
+                    menuItems: [],
+                    selectedTable: null,
+                    tempTableId: null,
+                    selectedCategory: null,
+                    cart: [],
+                    showCart: false,
+                    currentOrder: null,
+                    ws: null,
+                    wsConnected: false
+                };
+            },
+            computed: {
+                filteredMenuItems() {
+                    let result = [...this.menuItems];
+                    
+                    if (this.selectedCategory) {
+                        result = result.filter(item => item.category_id === this.selectedCategory);
+                    }
+                    
+                    // 只显示可用的菜品
+                    result = result.filter(item => item.is_available);
+                    
+                    return result;
+                },
+                cartTotal() {
+                    return this.cart.reduce((sum, item) => sum + item.price * item.qty, 0).toFixed(2);
+                },
+                cartTotalQty() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                }
+            },
+            async mounted() {
+                await this.initData();
+                this.checkTableFromUrl();
+            },
+            methods: {
+                async initData() {
+                    try {
+                        await Promise.all([
+                            this.loadTables(),
+                            this.loadCategories(),
+                            this.loadMenuItems()
+                        ]);
+                    } catch (error) {
+                        console.error('初始化失败:', error);
+                        this.$message.error('加载失败，请刷新页面');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async loadTables() {
+                    const response = await axios.get('/api/tables/');
+                    this.tables = response.data;
+                },
+                
+                async loadCategories() {
+                    const response = await axios.get('/api/menu-categories/');
+                    this.categories = response.data;
+                },
+                
+                async loadMenuItems() {
+                    const response = await axios.get('/api/menu-items/');
+                    this.menuItems = response.data;
+                },
+                
+                checkTableFromUrl() {
+                    // 从URL参数获取桌号
+                    const params = new URLSearchParams(window.location.search);
+                    const tableNumber = params.get('table');
+                    
+                    if (tableNumber) {
+                        const table = this.tables.find(t => t.table_number === tableNumber);
+                        if (table) {
+                            this.selectTable(table);
+                            this.confirmTable();
+                        }
+                    }
+                },
+                
+                selectTable(table) {
+                    if (table.is_occupied) {
+                        this.$message.warning('该桌号已被占用');
+                        return;
+                    }
+                    this.tempTableId = table.id;
+                },
+                
+                confirmTable() {
+                    const table = this.tables.find(t => t.id === this.tempTableId);
+                    if (table) {
+                        this.selectedTable = table;
+                        this.$message.success(`已选择${table.table_number}号桌`);
+                        
+                        // 连接WebSocket以接收订单状态更新
+                        this.connectWebSocket(table.id);
+                    }
+                },
+                
+                connectWebSocket(tableId) {
+                    const wsUrl = `ws://localhost:8001/ws/table/${tableId}`;
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        this.wsConnected = true;
+                        console.log('WebSocket连接成功');
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'order_status_update') {
+                            this.currentOrder = data.order;
+                            this.$message.success('订单状态已更新');
+                        }
+                    };
+                    
+                    this.ws.onclose = () => {
+                        this.wsConnected = false;
+                        console.log('WebSocket连接断开');
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket错误:', error);
+                    };
+                },
+                
+                addToCart(item) {
+                    const existingItem = this.cart.find(c => c.id === item.id);
+                    if (existingItem) {
+                        existingItem.qty++;
+                    } else {
+                        this.cart.push({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            qty: 1
+                        });
+                    }
+                    
+                    this.$message.success('已加入购物车');
+                },
+                
+                removeFromCart(item) {
+                    const existingItem = this.cart.find(c => c.id === item.id);
+                    if (existingItem) {
+                        if (existingItem.qty > 1) {
+                            existingItem.qty--;
+                        } else {
+                            const index = this.cart.indexOf(existingItem);
+                            this.cart.splice(index, 1);
+                        }
+                    }
+                },
+                
+                getCartQty(itemId) {
+                    const item = this.cart.find(c => c.id === itemId);
+                    return item ? item.qty : 0;
+                },
+                
+                async submitOrder() {
+                    if (this.cart.length === 0) {
+                        this.$message.warning('请先添加商品到购物车');
+                        return;
+                    }
+                    
+                    try {
+                        const orderData = {
+                            table_id: this.selectedTable.id,
+                            items: this.cart.map(item => ({
+                                menu_item_id: item.id,
+                                quantity: item.qty
+                            })),
+                            payment_method: 'wechat'
+                        };
+                        
+                        const response = await axios.post('/api/orders/', orderData);
+                        
+                        this.currentOrder = response.data;
+                        this.cart = [];
+                        this.showCart = false;
+                        
+                        this.$message.success('订单提交成功！');
+                        
+                        // 连接到订单的WebSocket
+                        if (this.ws) {
+                            this.ws.close();
+                        }
+                        this.connectWebSocket(this.selectedTable.id);
+                        
+                    } catch (error) {
+                        console.error('提交订单失败:', error);
+                        this.$message.error('提交订单失败: ' + (error.response?.data?.detail || error.message));
+                    }
+                },
+                
+                getStatusTime(status) {
+                    if (!this.currentOrder || this.currentOrder.status !== status) {
+                        return '-';
+                    }
+                    return this.formatTime(new Date());
+                },
+                
+                formatTime(date) {
+                    const d = new Date(date);
+                    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                }
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

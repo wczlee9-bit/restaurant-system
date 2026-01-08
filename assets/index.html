@@ -93,6 +93,7 @@
                     <button class="btn btn-primary" @click="openTestPage">🎮 进入测试页面</button>
                     <button class="btn btn-success" @click="viewApiDocs">📖 查看API文档</button>
                     <button class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;" @click="openShopSettings">🏪 店铺设置</button>
+                    <button class="btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;" @click="openStaffWorkflow">👨‍🍳 工作人员端</button>
                 </div>
             </div>
 
@@ -197,7 +198,7 @@
             },
             methods: {
                 selectTable(tableNumber) {
-                    window.location.href = `restaurant_full_test.html?table=${tableNumber}`;
+                    window.location.href = `customer_order.html?table=${tableNumber}`;
                 },
                 quickTest() {
                     this.selectTable(8);
@@ -210,6 +211,9 @@
                 },
                 openShopSettings() {
                     window.location.href = 'shop_settings.html';
+                },
+                openStaffWorkflow() {
+                    window.location.href = 'staff_workflow.html';
                 }
             }
         }).use(ElementPlus).mount('#app');
