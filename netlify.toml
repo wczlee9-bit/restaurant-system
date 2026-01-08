@@ -48,6 +48,15 @@
 
 # API 代理配置 - 将 /api/* 请求转发到后端服务器
 # 注意：部署时请修改为实际的后端 API 地址
+
+# 订单相关接口代理到 customer_api (端口 8001)
+[[redirects]]
+  from = "/api/orders*"
+  to = "http://9.128.251.82:8001/api/orders:splat"
+  status = 200
+  force = true
+
+# 其他 API 接口代理到 restaurant_api (端口 8000)
 [[redirects]]
   from = "/api/*"
   to = "http://9.128.251.82:8000/api/:splat"

@@ -364,26 +364,26 @@
                     
                     <div style="margin-top: 20px;">
                         <div style="margin-bottom: 15px; font-weight: bold; color: #333;">请选择支付方式：</div>
-                        
-                        <div class="payment-option" :class="{selected: paymentMethod === 'immediate'}"
-                             @click="paymentMethod = 'immediate'">
-                            <div class="payment-option-header">
-                                <div>
-                                    <div class="payment-title">💳 马上支付</div>
-                                    <div class="payment-desc">使用微信或支付宝在线支付</div>
-                                </div>
-                                <span class="payment-badge badge-immediate">立即支付</span>
-                            </div>
+
+                        <div v-if="shopInfo.paymentMethods.length === 0" style="text-align: center; color: #999; padding: 20px;">
+                            暂无可用的支付方式
                         </div>
-                        
-                        <div class="payment-option" :class="{selected: paymentMethod === 'counter'}"
-                             @click="paymentMethod = 'counter'">
+
+                        <div class="payment-option"
+                             v-for="method in shopInfo.paymentMethods"
+                             :key="method"
+                             :class="{selected: paymentMethod === method}"
+                             @click="paymentMethod = method">
                             <div class="payment-option-header">
                                 <div>
-                                    <div class="payment-title">🏪 用餐后柜台支付</div>
-                                    <div class="payment-desc">先用餐，离店时到收银台支付</div>
+                                    <div class="payment-title" v-if="method === 'immediate'">💳 马上支付</div>
+                                    <div class="payment-title" v-else-if="method === 'counter'">🏪 柜台支付</div>
+
+                                    <div class="payment-desc" v-if="method === 'immediate'">使用微信或支付宝在线支付</div>
+                                    <div class="payment-desc" v-else-if="method === 'counter'">用餐后到收银台支付</div>
                                 </div>
-                                <span class="payment-badge badge-counter">灵活便捷</span>
+                                <span class="payment-badge badge-immediate" v-if="method === 'immediate'">立即支付</span>
+                                <span class="payment-badge badge-counter" v-else-if="method === 'counter'">灵活便捷</span>
                             </div>
                         </div>
                     </div>
@@ -421,7 +421,11 @@
                     currentOrder: null,
                     paymentMethod: '',
                     ws: null,
-                    wsConnected: false
+                    wsConnected: false,
+                    shopInfo: {
+                        name: '',
+                        paymentMethods: ['immediate', 'counter']  // 默认两种支付方式
+                    }
                 };
             },
             computed: {
@@ -446,6 +450,7 @@
                 async initData() {
                     try {
                         await Promise.all([
+                            this.loadShopInfo(),
                             this.loadTables(),
                             this.loadCategories(),
                             this.loadMenuItems()
@@ -455,6 +460,21 @@
                         this.$message.error('加载失败，请刷新页面');
                     } finally {
                         this.loading = false;
+                    }
+                },
+
+                loadShopInfo() {
+                    // 从 localStorage 加载店铺信息
+                    const savedInfo = localStorage.getItem('shopInfo');
+                    if (savedInfo) {
+                        try {
+                            const parsed = JSON.parse(savedInfo);
+                            if (parsed.paymentMethods && parsed.paymentMethods.length > 0) {
+                                this.shopInfo.paymentMethods = parsed.paymentMethods;
+                            }
+                        } catch (error) {
+                            console.error('加载店铺信息失败:', error);
+                        }
                     }
                 },
                 

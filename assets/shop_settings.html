@@ -251,6 +251,27 @@
                             placeholder="请输入店铺描述">
                         </el-input>
                     </el-form-item>
+
+                    <el-form-item label="支付方式">
+                        <div style="margin-bottom: 10px; color: #666; font-size: 12px;">
+                            选择顾客可用的支付方式（可多选）
+                        </div>
+                        <el-checkbox-group v-model="shopInfo.paymentMethods">
+                            <el-checkbox label="immediate" border>
+                                💳 马上支付
+                                <div style="color: #999; font-size: 12px; margin-left: 5px;">
+                                    使用微信或支付宝在线支付
+                                </div>
+                            </el-checkbox>
+                            <el-checkbox label="counter" border style="margin-left: 10px;">
+                                🏪 柜台支付
+                                <div style="color: #999; font-size: 12px; margin-left: 5px;">
+                                    用餐后到收银台支付
+                                </div>
+                            </el-checkbox>
+                        </el-checkbox-group>
+                    </el-form-item>
+
                     <el-form-item>
                         <el-button type="primary" @click="saveShopInfo">保存店铺信息</el-button>
                         <el-button @click="resetShopInfo">重置</el-button>
@@ -555,7 +576,8 @@
                     address: '北京市朝阳区xxx街道xxx号',
                     phone: '010-12345678',
                     openingHours: ['09:00', '22:00'],
-                    description: '提供优质的餐饮服务，欢迎光临！'
+                    description: '提供优质的餐饮服务，欢迎光临！',
+                    paymentMethods: ['immediate', 'counter']  // 默认两种支付方式都支持
                 });
 
                 // 桌号列表
@@ -612,6 +634,19 @@
                     return url.substring(0, url.lastIndexOf('/'));
                 };
 
+                // 加载店铺信息
+                const loadShopInfo = () => {
+                    const savedInfo = localStorage.getItem('shopInfo');
+                    if (savedInfo) {
+                        try {
+                            const parsed = JSON.parse(savedInfo);
+                            Object.assign(shopInfo, parsed);
+                        } catch (error) {
+                            console.error('加载店铺信息失败:', error);
+                        }
+                    }
+                };
+
                 // 生成二维码URL
                 const generateQrcodeUrl = (tableNumber) => {
                     const baseUrl = getBaseUrl();
@@ -633,6 +668,7 @@
                     shopInfo.phone = '010-12345678';
                     shopInfo.openingHours = ['09:00', '22:00'];
                     shopInfo.description = '提供优质的餐饮服务，欢迎光临！';
+                    shopInfo.paymentMethods = ['immediate', 'counter'];
                     ElementPlus.ElMessage.success('已重置店铺信息');
                 };
 
@@ -1106,6 +1142,7 @@
                 // 初始化
                 loadFromStorage();
                 loadQrcodeStyle();
+                loadShopInfo();
 
                 return {
                     activeTab,

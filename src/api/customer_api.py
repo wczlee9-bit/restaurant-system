@@ -75,6 +75,7 @@ class CreateOrderRequest(BaseModel):
     customer_phone: Optional[str] = None
     items: List[OrderItemRequest]
     special_instructions: Optional[str] = None
+    payment_method: Optional[str] = Field(None, description="支付方式：immediate(马上支付) 或 counter(柜台支付)")
 
 
 class OrderItemResponse(BaseModel):
@@ -226,11 +227,19 @@ def create_order(request: CreateOrderRequest):
         
         # 生成订单号
         order_number = generate_order_number()
-        
+
+        # 确定支付状态：如果选择"马上支付"则标记为已支付，"柜台支付"则标记为未支付
+        if request.payment_method == 'immediate':
+            payment_status = 'paid'
+            payment_time = datetime.now()
+        else:
+            payment_status = 'unpaid'
+            payment_time = None
+
         # 计算订单金额
         total_amount = 0.0
         discount_amount = 0.0
-        
+
         # 创建订单
         order = Orders(
             store_id=request.store_id,
@@ -241,7 +250,9 @@ def create_order(request: CreateOrderRequest):
             total_amount=0.0,  # 后面更新
             discount_amount=0.0,
             final_amount=0.0,  # 后面更新
-            payment_status="unpaid",
+            payment_status=payment_status,
+            payment_method=request.payment_method,
+            payment_time=payment_time,
             order_status="pending",
             special_instructions=request.special_instructions
         )
