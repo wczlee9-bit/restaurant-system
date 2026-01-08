@@ -60,13 +60,13 @@
 ### 管理员
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
-| 系统管理员 | admin | admin123 |
-| 总公司账号 | headquarters | hq123456 |
+| 系统管理员 | system_admin | admin123 |
+| 总公司账号 | company | company123 |
 
 ### 工作人员
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
-| 店长 | manager | manager123 |
+| 店长 | admin | admin123 |
 | 厨师 | chef | chef123 |
 | 传菜员 | waiter | waiter123 |
 | 收银员 | cashier | cashier123 |

@@ -118,27 +118,27 @@
                 <div class="section-title">🔐 演示账号</div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #667eea;">
-                        <strong style="color: #667eea;">系统管理员</strong><br>
-                        用户名: admin | 密码: admin123
+                        <strong style="color: #667eea;">👑 系统管理员</strong><br>
+                        用户名: system_admin | 密码: admin123
                     </div>
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #f093fb;">
-                        <strong style="color: #f093fb;">总公司账号</strong><br>
-                        用户名: headquarters | 密码: hq123456
+                        <strong style="color: #f093fb;">🏢 总公司</strong><br>
+                        用户名: company | 密码: company123
                     </div>
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #43e97b;">
-                        <strong style="color: #43e97b;">店长账号</strong><br>
-                        用户名: manager | 密码: manager123
+                        <strong style="color: #43e97b;">👔 店长</strong><br>
+                        用户名: admin | 密码: admin123
                     </div>
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #fa709a;">
-                        <strong style="color: #fa709a;">厨师账号</strong><br>
+                        <strong style="color: #fa709a;">👨‍🍳 厨师</strong><br>
                         用户名: chef | 密码: chef123
                     </div>
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #4facfe;">
-                        <strong style="color: #4facfe;">传菜员账号</strong><br>
+                        <strong style="color: #4facfe;">🤵 传菜员</strong><br>
                         用户名: waiter | 密码: waiter123
                     </div>
                     <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #fee140;">
-                        <strong style="color: #e6a23c;">收银员账号</strong><br>
+                        <strong style="color: #e6a23c;">💰 收银员</strong><br>
                         用户名: cashier | 密码: cashier123
                     </div>
                 </div>
@@ -167,6 +167,11 @@
                 },
                 goToStaffLogin() {
                     window.location.href = 'login_standalone.html';
+                },
+                autoLogin(username, password) {
+                    // 自动登录功能（可选）
+                    const url = `login_standalone.html?username=${username}&password=${password}`;
+                    window.location.href = url;
                 },
                 goToSettings() {
                     window.location.href = 'shop_settings.html';
