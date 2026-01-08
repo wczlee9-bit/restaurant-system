@@ -46,6 +46,14 @@
   status = 200
   force = false
 
+# API 代理配置 - 将 /api/* 请求转发到后端服务器
+# 注意：部署时请修改为实际的后端 API 地址
+[[redirects]]
+  from = "/api/*"
+  to = "http://9.128.251.82:8000/api/:splat"
+  status = 200
+  force = true
+
 # SPA 重定向规则（单页应用）- 放在最后作为默认处理
 # 只对不存在的路径生效
 [[redirects]]

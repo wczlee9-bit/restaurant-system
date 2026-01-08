@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 连接测试</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f5f7fa; padding: 20px; }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 32px; color: #333; margin-bottom: 10px; }
+        .header p { color: #666; }
+
+        .section {
+            background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .section-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333; border-left: 4px solid #667eea; padding-left: 10px; }
+
+        .test-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; border-bottom: 1px solid #eee; flex-wrap: wrap;
+        }
+        .test-item:last-child { border-bottom: none; }
+        .test-info { flex: 1; min-width: 300px; }
+        .test-name { font-weight: bold; color: #333; margin-bottom: 5px; }
+        .test-url { color: #666; font-size: 13px; font-family: monospace; }
+        .test-result { margin-left: 20px; display: flex; align-items: center; gap: 10px; }
+        .status-badge {
+            padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: bold;
+        }
+        .status-success { background: #f0f9eb; color: #67c23a; }
+        .status-error { background: #fef0f0; color: #f56c6c; }
+        .status-loading { background: #f4f4f5; color: #909399; }
+
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; transition: all 0.3s; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; }
+        .btn-success { background: #67c23a; color: white; }
+        .btn-success:hover { background: #5daf34; }
+
+        .result-data {
+            background: #f5f7fa; padding: 10px; border-radius: 6px;
+            margin-top: 10px; font-size: 13px; max-height: 200px; overflow-y: auto;
+            font-family: monospace; white-space: pre-wrap; word-break: break-all;
+        }
+
+        .connection-info {
+            background: #e6f7ff; border: 1px solid #91d5ff; border-radius: 6px;
+            padding: 15px; margin-bottom: 20px;
+        }
+        .connection-info h3 { color: #0050b3; margin-bottom: 10px; }
+        .connection-info p { color: #666; margin-bottom: 5px; }
+
+        @media (max-width: 768px) {
+            .test-item { flex-direction: column; align-items: flex-start; }
+            .test-result { margin-left: 0; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🔧 API 连接测试</h1>
+                <p>测试前端到后端 API 的连接状态</p>
+            </div>
+
+            <!-- 连接信息 -->
+            <div class="connection-info">
+                <h3>📡 当前环境信息</h3>
+                <p><strong>页面域名：</strong>{{ currentHost }}</p>
+                <p><strong>API 基础路径：</strong>{{ apiBaseUrl }}</p>
+                <p><strong>代理配置状态：</strong>{{ proxyStatus }}</p>
+            </div>
+
+            <!-- 测试按钮 -->
+            <div class="section">
+                <div class="section-title">🧪 测试操作</div>
+                <button class="btn btn-primary" @click="runAllTests" :disabled="testing">
+                    {{ testing ? '测试中...' : '▶️ 运行所有测试' }}
+                </button>
+                <button class="btn btn-success" @click="testCustomerFlow" :disabled="testing">
+                    📱 测试顾客端流程
+                </button>
+            </div>
+
+            <!-- API 测试结果 -->
+            <div class="section">
+                <div class="section-title">📊 API 测试结果</div>
+                <div v-for="(test, index) in tests" :key="index" class="test-item">
+                    <div class="test-info">
+                        <div class="test-name">{{ test.name }}</div>
+                        <div class="test-url">{{ test.url }}</div>
+                        <div v-if="test.result" class="result-data">{{ formatResult(test.result) }}</div>
+                    </div>
+                    <div class="test-result">
+                        <span v-if="test.loading" class="status-badge status-loading">测试中...</span>
+                        <span v-else-if="test.success === true" class="status-badge status-success">✅ 成功</span>
+                        <span v-else-if="test.success === false" class="status-badge status-error">❌ 失败</span>
+                        <span v-else class="status-badge status-loading">待测试</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据预览 -->
+            <div class="section" v-if="tables.length > 0 || categories.length > 0 || menuItems.length > 0">
+                <div class="section-title">📋 数据预览</div>
+                <div v-if="tables.length > 0">
+                    <h4>桌号数据 ({{ tables.length }})</h4>
+                    <div class="result-data">{{ JSON.stringify(tables.slice(0, 2), null, 2) }}...</div>
+                </div>
+                <div v-if="categories.length > 0" style="margin-top: 15px;">
+                    <h4>分类数据 ({{ categories.length }})</h4>
+                    <div class="result-data">{{ JSON.stringify(categories.slice(0, 2), null, 2) }}...</div>
+                </div>
+                <div v-if="menuItems.length > 0" style="margin-top: 15px;">
+                    <h4>菜品数据 ({{ menuItems.length }})</h4>
+                    <div class="result-data">{{ JSON.stringify(menuItems.slice(0, 2), null, 2) }}...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const testing = ref(false);
+                const currentHost = ref('');
+                const apiBaseUrl = ref('');
+                const proxyStatus = ref('');
+                const tables = ref([]);
+                const categories = ref([]);
+                const menuItems = ref([]);
+
+                const tests = ref([
+                    { name: '获取桌号列表', url: '/api/tables/', loading: false, success: null, result: null },
+                    { name: '获取菜品分类', url: '/api/menu-categories/', loading: false, success: null, result: null },
+                    { name: '获取菜品列表', url: '/api/menu-items/', loading: false, success: null, result: null },
+                    { name: '获取店铺列表', url: '/api/stores/', loading: false, success: null, result: null }
+                ]);
+
+                // 获取当前环境信息
+                const getEnvInfo = () => {
+                    currentHost.value = window.location.hostname;
+                    apiBaseUrl.value = '';  // 使用相对路径
+
+                    if (currentHost.value.includes('netlify.app')) {
+                        proxyStatus.value = '✅ 已配置 Netlify 代理';
+                    } else if (currentHost.value === 'localhost') {
+                        proxyStatus.value = '⚠️ 本地开发环境，需要后端服务运行在端口 8000';
+                    } else {
+                        proxyStatus.value = '⚠️ 其他环境，请检查代理配置';
+                    }
+                };
+
+                // 格式化结果显示
+                const formatResult = (result) => {
+                    if (result === null || result === undefined) {
+                        return '';
+                    }
+                    if (typeof result === 'string') {
+                        return result;
+                    }
+                    const jsonStr = JSON.stringify(result, null, 2);
+                    if (jsonStr.length > 500) {
+                        return jsonStr.substring(0, 500) + '...';
+                    }
+                    return jsonStr;
+                };
+
+                // 运行单个测试
+                const runTest = async (test) => {
+                    test.loading = true;
+                    test.success = null;
+                    test.result = null;
+
+                    try {
+                        const response = await axios.get(test.url);
+                        test.success = true;
+                        test.result = {
+                            status: response.status,
+                            count: Array.isArray(response.data) ? response.data.length : 'N/A',
+                            sample: Array.isArray(response.data) ? response.data.slice(0, 1) : response.data
+                        };
+
+                        // 保存数据到对应的变量
+                        if (test.url.includes('/api/tables/')) {
+                            tables.value = response.data;
+                        } else if (test.url.includes('/api/menu-categories/')) {
+                            categories.value = response.data;
+                        } else if (test.url.includes('/api/menu-items/')) {
+                            menuItems.value = response.data;
+                        }
+
+                        ElementPlus.ElMessage.success(`${test.name} 测试成功`);
+                    } catch (error) {
+                        test.success = false;
+                        test.result = {
+                            error: error.message,
+                            status: error.response?.status || 'N/A',
+                            detail: error.response?.data || 'No response data'
+                        };
+                        ElementPlus.ElMessage.error(`${test.name} 测试失败: ${error.message}`);
+                    } finally {
+                        test.loading = false;
+                    }
+                };
+
+                // 运行所有测试
+                const runAllTests = async () => {
+                    testing.value = true;
+                    for (const test of tests.value) {
+                        await runTest(test);
+                    }
+                    testing.value = false;
+                };
+
+                // 测试顾客端流程
+                const testCustomerFlow = async () => {
+                    testing.value = true;
+
+                    try {
+                        // 1. 测试获取桌号
+                        await runTest(tests.value[0]);
+                        if (tests.value[0].success && tables.value.length > 0) {
+                            ElementPlus.ElMessage.success(`✅ 桌号加载成功，共 ${tables.value.length} 张桌子`);
+                        }
+
+                        // 2. 测试获取分类
+                        await runTest(tests.value[1]);
+                        if (tests.value[1].success && categories.value.length > 0) {
+                            ElementPlus.ElMessage.success(`✅ 分类加载成功，共 ${categories.value.length} 个分类`);
+                        }
+
+                        // 3. 测试获取菜品
+                        await runTest(tests.value[2]);
+                        if (tests.value[2].success && menuItems.value.length > 0) {
+                            ElementPlus.ElMessage.success(`✅ 菜品加载成功，共 ${menuItems.value.length} 道菜品`);
+                        }
+
+                        // 4. 检查是否所有测试都通过
+                        const allSuccess = tests.value.slice(0, 3).every(t => t.success === true);
+                        if (allSuccess) {
+                            ElementPlus.ElMessage.success('🎉 顾客端流程测试全部通过！可以正常点餐。');
+                        } else {
+                            ElementPlus.ElMessage.warning('⚠️ 部分测试失败，请检查 API 配置');
+                        }
+                    } catch (error) {
+                        ElementPlus.ElMessage.error(`测试失败: ${error.message}`);
+                    } finally {
+                        testing.value = false;
+                    }
+                };
+
+                onMounted(() => {
+                    getEnvInfo();
+                });
+
+                return {
+                    testing,
+                    currentHost,
+                    apiBaseUrl,
+                    proxyStatus,
+                    tests,
+                    tables,
+                    categories,
+                    menuItems,
+                    formatResult,
+                    runAllTests,
+                    testCustomerFlow
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>
