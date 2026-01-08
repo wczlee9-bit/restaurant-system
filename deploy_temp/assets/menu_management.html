@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜品管理 - 扫码点餐系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            color: white; text-decoration: none; padding: 8px 20px;
+            background: rgba(255,255,255,0.2); border-radius: 4px; transition: all 0.3s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        .tabs { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .tab-content { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        
+        .section-title {
+            font-size: 18px; font-weight: bold; margin-bottom: 20px;
+            color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px;
+        }
+        
+        .toolbar {
+            display: flex; gap: 10px; margin-bottom: 20px;
+        }
+        
+        .search-box { width: 300px; }
+        
+        .menu-card {
+            display: flex; gap: 20px; padding: 20px; border: 1px solid #e4e7ed;
+            border-radius: 8px; margin-bottom: 15px; transition: all 0.3s;
+        }
+        .menu-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        
+        .menu-img {
+            width: 120px; height: 120px; border-radius: 8px; object-fit: cover;
+            background: #f5f7fa; flex-shrink: 0;
+        }
+        .menu-info { flex: 1; }
+        .menu-name { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        .menu-category { font-size: 14px; color: #667eea; margin-bottom: 8px; }
+        .menu-desc { font-size: 14px; color: #666; margin-bottom: 8px; }
+        .menu-price { font-size: 20px; font-weight: bold; color: #f56c6c; }
+        .menu-stock { font-size: 14px; color: #909399; margin-left: 10px; }
+        
+        .menu-status { margin-top: 10px; }
+        
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #999;
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 20px; }
+        
+        .upload-area {
+            border: 2px dashed #d9d9d9; border-radius: 6px; padding: 40px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: #667eea; }
+        
+        .preview-img {
+            width: 100%; height: 200px; object-fit: cover; border-radius: 6px; margin-top: 10px;
+        }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .menu-card { flex-direction: column; }
+            .menu-img { width: 100%; height: 200px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>🍽️ 菜品管理</h1>
+                    <p>管理菜品分类、菜品信息和图片</p>
+                </div>
+                <div>
+                    <a href="portal.html" class="back-btn">← 返回门户</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="tabs">
+                <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+                    <el-tab-pane label="菜品分类" name="categories">
+                        <span>菜品分类</span>
+                        <el-badge :value="categories.length" class="item" v-if="categories.length > 0"></el-badge>
+                    </el-tab-pane>
+                    <el-tab-pane label="菜品列表" name="menu">
+                        <span>菜品列表</span>
+                        <el-badge :value="menuItems.length" class="item" v-if="menuItems.length > 0"></el-badge>
+                    </el-tab-pane>
+                </el-tabs>
+            </div>
+
+            <!-- 菜品分类 -->
+            <div class="tab-content" v-show="activeTab === 'categories'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📂 分类管理</span>
+                    <el-button type="primary" @click="showCategoryDialog = true">+ 添加分类</el-button>
+                </div>
+
+                <div v-if="categories.length === 0" class="empty-state">
+                    <div class="empty-icon">📂</div>
+                    <p>还没有添加菜品分类</p>
+                    <el-button type="primary" @click="showCategoryDialog = true">立即添加</el-button>
+                </div>
+
+                <div v-else>
+                    <el-table :data="categories" style="width: 100%">
+                        <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                        <el-table-column prop="name" label="分类名称" min-width="200">
+                            <template #default="scope">
+                                <strong>{{ scope.row.name }}</strong>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="description" label="描述" min-width="200"></el-table-column>
+                        <el-table-column label="菜品数量" width="120">
+                            <template #default="scope">
+                                {{ getCategoryItemCount(scope.row.id) }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="sort_order" label="排序" width="100"></el-table-column>
+                        <el-table-column label="状态" width="100">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.is_active ? 'success' : 'info'">
+                                    {{ scope.row.is_active ? '启用' : '禁用' }}
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="180" fixed="right">
+                            <template #default="scope">
+                                <el-button size="small" @click="editCategory(scope.row)">编辑</el-button>
+                                <el-button size="small" type="danger" @click="deleteCategory(scope.row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+
+            <!-- 菜品列表 -->
+            <div class="tab-content" v-show="activeTab === 'menu'">
+                <div class="toolbar">
+                    <el-input
+                        v-model="searchKeyword"
+                        placeholder="搜索菜品名称..."
+                        class="search-box"
+                        clearable>
+                        <template #prefix>
+                            <el-icon><Search /></el-icon>
+                        </template>
+                    </el-input>
+                    <el-select v-model="filterCategory" placeholder="选择分类" clearable style="width: 150px;">
+                        <el-option label="全部分类" value=""></el-option>
+                        <el-option
+                            v-for="cat in categories"
+                            :key="cat.id"
+                            :label="cat.name"
+                            :value="cat.id">
+                        </el-option>
+                    </el-select>
+                    <el-button type="primary" @click="showMenuDialog = true; isEditing = false; resetMenuForm()">
+                        + 添加菜品
+                    </el-button>
+                </div>
+
+                <div v-if="filteredMenuItems.length === 0" class="empty-state">
+                    <div class="empty-icon">🍽️</div>
+                    <p>暂无菜品</p>
+                    <el-button type="primary" @click="showMenuDialog = true; isEditing = false; resetMenuForm()">
+                        立即添加
+                    </el-button>
+                </div>
+
+                <div v-else>
+                    <div v-for="item in filteredMenuItems" :key="item.id" class="menu-card">
+                        <img :src="item.image_url || 'https://via.placeholder.com/120'" class="menu-img" :alt="item.name">
+                        <div class="menu-info">
+                            <div class="menu-name">{{ item.name }}</div>
+                            <div class="menu-category">{{ getCategoryName(item.category_id) }}</div>
+                            <div class="menu-desc">{{ item.description || '暂无描述' }}</div>
+                            <div class="menu-price">¥{{ item.price }} <span class="menu-stock">库存: {{ item.stock }}</span></div>
+                            <div class="menu-status">
+                                <el-tag v-if="item.is_available" type="success">上架中</el-tag>
+                                <el-tag v-else type="info">已下架</el-tag>
+                                <el-tag v-if="item.is_recommended" type="danger" style="margin-left: 10px;">推荐</el-tag>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <el-button size="small" @click="editMenu(item)">编辑</el-button>
+                            <el-button size="small" type="success" @click="toggleMenuStatus(item)">
+                                {{ item.is_available ? '下架' : '上架' }}
+                            </el-button>
+                            <el-button size="small" type="danger" @click="deleteMenu(item)">删除</el-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分类对话框 -->
+        <el-dialog
+            v-model="showCategoryDialog"
+            :title="editingCategory ? '编辑分类' : '添加分类'"
+            width="500px">
+            <el-form :model="categoryForm" label-width="100px">
+                <el-form-item label="分类名称" required>
+                    <el-input v-model="categoryForm.name" placeholder="请输入分类名称"></el-input>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input v-model="categoryForm.description" type="textarea" :rows="3" placeholder="请输入分类描述"></el-input>
+                </el-form-item>
+                <el-form-item label="排序">
+                    <el-input-number v-model="categoryForm.sort_order" :min="0"></el-input-number>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-switch v-model="categoryForm.is_active" active-text="启用" inactive-text="禁用"></el-switch>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showCategoryDialog = false">取消</el-button>
+                    <el-button type="primary" @click="saveCategory">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 菜品对话框 -->
+        <el-dialog
+            v-model="showMenuDialog"
+            :title="isEditing ? '编辑菜品' : '添加菜品'"
+            width="700px">
+            <el-form :model="menuForm" label-width="100px">
+                <div class="form-grid">
+                    <el-form-item label="菜品名称" required>
+                        <el-input v-model="menuForm.name" placeholder="请输入菜品名称"></el-input>
+                    </el-form-item>
+                    <el-form-item label="分类" required>
+                        <el-select v-model="menuForm.category_id" placeholder="请选择分类" style="width: 100%;">
+                            <el-option
+                                v-for="cat in categories"
+                                :key="cat.id"
+                                :label="cat.name"
+                                :value="cat.id">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                </div>
+                
+                <div class="form-grid">
+                    <el-form-item label="价格" required>
+                        <el-input-number v-model="menuForm.price" :min="0" :precision="2" :step="0.5"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="库存">
+                        <el-input-number v-model="menuForm.stock" :min="0"></el-input-number>
+                    </el-form-item>
+                </div>
+                
+                <el-form-item label="描述">
+                    <el-input v-model="menuForm.description" type="textarea" :rows="3" placeholder="请输入菜品描述"></el-input>
+                </el-form-item>
+                
+                <el-form-item label="图片">
+                    <div class="upload-area" @click="$refs.fileInput.click()">
+                        <input type="file" ref="fileInput" @change="handleImageUpload" accept="image/*" style="display: none;">
+                        <div v-if="!menuForm.image_url">
+                            <div style="font-size: 48px;">📷</div>
+                            <p>点击上传菜品图片</p>
+                            <p style="font-size: 12px; color: #999;">支持 JPG、PNG 格式</p>
+                        </div>
+                        <img v-else :src="menuForm.image_url" class="preview-img">
+                    </div>
+                </el-form-item>
+                
+                <div class="form-grid">
+                    <el-form-item label="上架状态">
+                        <el-switch v-model="menuForm.is_available" active-text="上架" inactive-text="下架"></el-switch>
+                    </el-form-item>
+                    <el-form-item label="推荐">
+                        <el-switch v-model="menuForm.is_recommended" active-text="推荐" inactive-text="不推荐"></el-switch>
+                    </el-form-item>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showMenuDialog = false">取消</el-button>
+                    <el-button type="primary" @click="saveMenu">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('menu');
+                const searchKeyword = ref('');
+                const filterCategory = ref('');
+                const showCategoryDialog = ref(false);
+                const showMenuDialog = ref(false);
+                const editingCategory = ref(null);
+                const isEditing = ref(false);
+
+                // 分类数据
+                const categories = ref([
+                    { id: 1, name: '热菜', description: '招牌热菜系列', sort_order: 1, is_active: true },
+                    { id: 2, name: '凉菜', description: '爽口凉菜系列', sort_order: 2, is_active: true },
+                    { id: 3, name: '主食', description: '米饭、面条等主食', sort_order: 3, is_active: true },
+                    { id: 4, name: '饮品', description: '各类饮料', sort_order: 4, is_active: true },
+                    { id: 5, name: '甜点', description: '精美甜点', sort_order: 5, is_active: true }
+                ]);
+
+                // 菜品数据
+                const menuItems = ref([
+                    { id: 1, name: '宫保鸡丁', category_id: 1, price: 38.00, stock: 50, description: '经典川菜，麻辣鲜香', image_url: '', is_available: true, is_recommended: true },
+                    { id: 2, name: '鱼香肉丝', category_id: 1, price: 32.00, stock: 45, description: '酸甜可口的经典菜', image_url: '', is_available: true, is_recommended: false },
+                    { id: 3, name: '凉拌黄瓜', category_id: 2, price: 12.00, stock: 100, description: '清爽开胃', image_url: '', is_available: true, is_recommended: false },
+                    { id: 4, name: '红烧肉', category_id: 1, price: 48.00, stock: 30, description: '肥而不腻，入口即化', image_url: '', is_available: true, is_recommended: true },
+                    { id: 5, name: '可乐鸡翅', category_id: 1, price: 35.00, stock: 40, description: '老少皆宜', image_url: '', is_available: true, is_recommended: false },
+                    { id: 6, name: '米饭', category_id: 3, price: 2.00, stock: 200, description: '香甜可口', image_url: '', is_available: true, is_recommended: false },
+                    { id: 7, name: '可乐', category_id: 4, price: 5.00, stock: 80, description: '冰镇可乐', image_url: '', is_available: true, is_recommended: false },
+                    { id: 8, name: '西瓜汁', category_id: 4, price: 15.00, stock: 60, description: '新鲜榨汁', image_url: '', is_available: true, is_recommended: true }
+                ]);
+
+                // 分类表单
+                const categoryForm = reactive({
+                    id: null,
+                    name: '',
+                    description: '',
+                    sort_order: 0,
+                    is_active: true
+                });
+
+                // 菜品表单
+                const menuForm = reactive({
+                    id: null,
+                    name: '',
+                    category_id: null,
+                    price: 0,
+                    stock: 0,
+                    description: '',
+                    image_url: '',
+                    is_available: true,
+                    is_recommended: false
+                });
+
+                // 计算属性 - 过滤后的菜品列表
+                const filteredMenuItems = computed(() => {
+                    return menuItems.value.filter(item => {
+                        const matchKeyword = !searchKeyword.value || 
+                            item.name.toLowerCase().includes(searchKeyword.value.toLowerCase());
+                        const matchCategory = !filterCategory.value || 
+                            item.category_id === filterCategory.value;
+                        return matchKeyword && matchCategory;
+                    });
+                });
+
+                // 获取分类名称
+                const getCategoryName = (categoryId) => {
+                    const category = categories.value.find(c => c.id === categoryId);
+                    return category ? category.name : '未分类';
+                };
+
+                // 获取分类下的菜品数量
+                const getCategoryItemCount = (categoryId) => {
+                    return menuItems.value.filter(item => item.category_id === categoryId).length;
+                };
+
+                // 重置菜品表单
+                const resetMenuForm = () => {
+                    menuForm.id = null;
+                    menuForm.name = '';
+                    menuForm.category_id = null;
+                    menuForm.price = 0;
+                    menuForm.stock = 0;
+                    menuForm.description = '';
+                    menuForm.image_url = '';
+                    menuForm.is_available = true;
+                    menuForm.is_recommended = false;
+                };
+
+                // 处理图片上传
+                const handleImageUpload = (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        // 这里应该上传到服务器，暂时使用本地预览
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            menuForm.image_url = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+
+                // 保存分类
+                const saveCategory = () => {
+                    if (!categoryForm.name) {
+                        ElementPlus.ElMessage.warning('请输入分类名称');
+                        return;
+                    }
+
+                    if (editingCategory.value) {
+                        // 编辑
+                        const index = categories.value.findIndex(c => c.id === editingCategory.value.id);
+                        if (index !== -1) {
+                            categories.value[index] = { ...categoryForm, id: editingCategory.value.id };
+                        }
+                    } else {
+                        // 新增
+                        const newId = Math.max(...categories.value.map(c => c.id), 0) + 1;
+                        categories.value.push({
+                            id: newId,
+                            ...categoryForm
+                        });
+                    }
+
+                    saveData();
+                    showCategoryDialog.value = false;
+                    editingCategory.value = null;
+                    ElementPlus.ElMessage.success(editingCategory.value ? '分类已更新' : '分类已添加');
+                };
+
+                // 编辑分类
+                const editCategory = (category) => {
+                    editingCategory.value = category;
+                    Object.assign(categoryForm, category);
+                    showCategoryDialog.value = true;
+                };
+
+                // 删除分类
+                const deleteCategory = (category) => {
+                    const itemCount = getCategoryItemCount(category.id);
+                    if (itemCount > 0) {
+                        ElementPlus.ElMessage.warning(`该分类下还有 ${itemCount} 道菜品，无法删除`);
+                        return;
+                    }
+
+                    ElementPlus.ElMessageBox.confirm(
+                        `确定要删除分类"${category.name}"吗？`,
+                        '提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    ).then(() => {
+                        const index = categories.value.findIndex(c => c.id === category.id);
+                        if (index !== -1) {
+                            categories.value.splice(index, 1);
+                            saveData();
+                            ElementPlus.ElMessage.success('分类已删除');
+                        }
+                    }).catch(() => {});
+                };
+
+                // 保存菜品
+                const saveMenu = () => {
+                    if (!menuForm.name || !menuForm.category_id || menuForm.price <= 0) {
+                        ElementPlus.ElMessage.warning('请填写完整的菜品信息');
+                        return;
+                    }
+
+                    if (isEditing.value) {
+                        // 编辑
+                        const index = menuItems.value.findIndex(m => m.id === menuForm.id);
+                        if (index !== -1) {
+                            menuItems.value[index] = { ...menuForm };
+                        }
+                    } else {
+                        // 新增
+                        const newId = Math.max(...menuItems.value.map(m => m.id), 0) + 1;
+                        menuItems.value.push({
+                            id: newId,
+                            ...menuForm
+                        });
+                    }
+
+                    saveData();
+                    showMenuDialog.value = false;
+                    isEditing.value = false;
+                    ElementPlus.ElMessage.success(isEditing.value ? '菜品已更新' : '菜品已添加');
+                };
+
+                // 编辑菜品
+                const editMenu = (item) => {
+                    isEditing.value = true;
+                    Object.assign(menuForm, item);
+                    showMenuDialog.value = true;
+                };
+
+                // 切换菜品状态
+                const toggleMenuStatus = (item) => {
+                    item.is_available = !item.is_available;
+                    saveData();
+                    ElementPlus.ElMessage.success(item.is_available ? '菜品已上架' : '菜品已下架');
+                };
+
+                // 删除菜品
+                const deleteMenu = (item) => {
+                    ElementPlus.ElMessageBox.confirm(
+                        `确定要删除菜品"${item.name}"吗？`,
+                        '提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    ).then(() => {
+                        const index = menuItems.value.findIndex(m => m.id === item.id);
+                        if (index !== -1) {
+                            menuItems.value.splice(index, 1);
+                            saveData();
+                            ElementPlus.ElMessage.success('菜品已删除');
+                        }
+                    }).catch(() => {});
+                };
+
+                // 保存数据到本地存储
+                const saveData = () => {
+                    localStorage.setItem('menuCategories', JSON.stringify(categories.value));
+                    localStorage.setItem('menuItems', JSON.stringify(menuItems.value));
+                };
+
+                // 从本地存储加载数据
+                const loadData = () => {
+                    const savedCategories = localStorage.getItem('menuCategories');
+                    if (savedCategories) {
+                        categories.value = JSON.parse(savedCategories);
+                    }
+
+                    const savedMenuItems = localStorage.getItem('menuItems');
+                    if (savedMenuItems) {
+                        menuItems.value = JSON.parse(savedMenuItems);
+                    }
+                };
+
+                const handleTabChange = () => {
+                    // Tab 切换处理
+                };
+
+                // 初始化
+                loadData();
+
+                return {
+                    activeTab,
+                    searchKeyword,
+                    filterCategory,
+                    showCategoryDialog,
+                    showMenuDialog,
+                    editingCategory,
+                    isEditing,
+                    categories,
+                    menuItems,
+                    categoryForm,
+                    menuForm,
+                    filteredMenuItems,
+                    getCategoryName,
+                    getCategoryItemCount,
+                    resetMenuForm,
+                    handleImageUpload,
+                    saveCategory,
+                    editCategory,
+                    deleteCategory,
+                    saveMenu,
+                    editMenu,
+                    toggleMenuStatus,
+                    deleteMenu,
+                    handleTabChange
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

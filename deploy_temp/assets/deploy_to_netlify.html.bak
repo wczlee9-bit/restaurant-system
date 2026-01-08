@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>部署到 Netlify - 扫码点餐系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .status-badge {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .deploy-method {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .deploy-method:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+        .deploy-method.selected {
+            border-color: #667eea;
+            background: #f8fafc;
+        }
+        .method-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .method-number {
+            background: #667eea;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.2em;
+        }
+        .method-title {
+            flex: 1;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #334155;
+        }
+        .method-time {
+            background: #e2e8f0;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+        .method-recommended {
+            background: #10b981;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .step-list {
+            margin-top: 15px;
+            padding-left: 20px;
+        }
+        .step-item {
+            margin: 10px 0;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        .step-item strong {
+            color: #334155;
+        }
+        .url-box {
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 1.1em;
+            color: #334155;
+            word-break: break-all;
+        }
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            width: 100%;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        .info-box {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .info-box.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .info-box.success {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+        .info-box.error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        .checklist {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+        .checklist-item.completed {
+            background: #ecfdf5;
+        }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .checkbox.checked {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+        }
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        .faq-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        .faq-question {
+            font-weight: bold;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        .faq-answer {
+            color: #64748b;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container">
+        <div class="header">
+            <h1>🚀 部署到 Netlify</h1>
+            <p>扫码点餐系统 - 云端部署指南</p>
+            <div class="status-badge">✓ 部署包已准备就绪</div>
+        </div>
+
+        <div class="card">
+            <h2>📦 部署包信息</h2>
+            <div class="info-box success">
+                <strong>文件名：</strong> restaurant-system.zip<br>
+                <strong>大小：</strong> 84K<br>
+                <strong>状态：</strong> 包含所有必要文件（HTML、二维码、配置）<br>
+                <strong>位置：</strong> /workspace/projects/restaurant-system.zip
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎯 选择部署方式</h2>
+
+            <div class="deploy-method" :class="{ selected: selectedMethod === 1 }" @click="selectMethod(1)">
+                <div class="method-header">
+                    <div class="method-number">1</div>
+                    <div class="method-title">手动上传</div>
+                    <span class="method-recommended">推荐</span>
+                    <span class="method-time">⏱️ 2分钟</span>
+                </div>
+                <div class="step-list">
+                    <div class="step-item"><strong>步骤 1：</strong> 访问 https://app.netlify.com 并登录</div>
+                    <div class="step-item"><strong>步骤 2：</strong> 点击 "Add new site" → "Deploy manually"</div>
+                    <div class="step-item"><strong>步骤 3：</strong> 上传 restaurant-system.zip 文件</div>
+                    <div class="step-item"><strong>步骤 4：</strong> 等待 1-2 分钟部署完成</div>
+                </div>
+            </div>
+
+            <div class="deploy-method" :class="{ selected: selectedMethod === 2 }" @click="selectMethod(2)">
+                <div class="method-header">
+                    <div class="method-number">2</div>
+                    <div class="method-title">使用 Netlify CLI</div>
+                    <span class="method-time">⏱️ 5分钟</span>
+                </div>
+                <div class="step-list">
+                    <div class="step-item"><strong>步骤 1：</strong> 安装 Netlify CLI：npm install -g netlify-cli</div>
+                    <div class="step-item"><strong>步骤 2：</strong> 登录：netlify login</div>
+                    <div class="step-item"><strong>步骤 3：</strong> 部署：netlify deploy --prod --dir=assets</div>
+                </div>
+            </div>
+
+            <div class="deploy-method" :class="{ selected: selectedMethod === 3 }" @click="selectMethod(3)">
+                <div class="method-header">
+                    <div class="method-number">3</div>
+                    <div class="method-title">Git 部署</div>
+                    <span class="method-time">⏱️ 10分钟</span>
+                </div>
+                <div class="step-list">
+                    <div class="step-item"><strong>步骤 1：</strong> 推送到 GitHub/GitLab</div>
+                    <div class="step-item"><strong>步骤 2：</strong> 在 Netlify 中连接仓库</div>
+                    <div class="step-item"><strong>步骤 3：</strong> 配置构建设置（Build: 空, Publish: assets）</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" v-if="selectedMethod === 1">
+            <h2>📝 详细步骤：手动上传</h2>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: progress + '%' }"></div>
+            </div>
+
+            <div class="step-list">
+                <div class="checklist">
+                    <h3>部署前检查清单</h3>
+                    <div class="checklist-item" :class="{ completed: checklist.login }">
+                        <div class="checkbox" :class="{ checked: checklist.login }" @click="checklist.login = !checklist.login"></div>
+                        <div>已注册/登录 Netlify 账号</div>
+                    </div>
+                    <div class="checklist-item" :class="{ completed: checklist.file }">
+                        <div class="checkbox" :class="{ checked: checklist.file }" @click="checklist.file = !checklist.file"></div>
+                        <div>已找到 restaurant-system.zip 文件</div>
+                    </div>
+                    <div class="checklist-item" :class="{ completed: checklist.network }">
+                        <div class="checkbox" :class="{ checked: checklist.network }" @click="checklist.network = !checklist.network"></div>
+                        <div>网络连接正常</div>
+                    </div>
+                </div>
+
+                <h3>详细步骤</h3>
+                <div class="step-item">
+                    <strong>1. 访问 Netlify</strong><br>
+                    在浏览器中打开：<br>
+                    <div class="url-box">https://app.netlify.com</div>
+                </div>
+
+                <div class="step-item">
+                    <strong>2. 登录或注册</strong><br>
+                    如果没有账号，点击 "Sign up"，可以使用 GitHub、GitLab、Bitbucket 或邮箱注册（免费）。
+                </div>
+
+                <div class="step-item">
+                    <strong>3. 创建新站点</strong><br>
+                    登录后，点击右上角的 "Add new site"，然后选择 "Deploy manually"。
+                </div>
+
+                <div class="step-item">
+                    <strong>4. 上传部署包</strong><br>
+                    在部署页面，点击 "Choose folder" 或直接拖拽 restaurant-system.zip 文件到上传区域。
+                </div>
+
+                <div class="step-item">
+                    <strong>5. 等待部署</strong><br>
+                    部署会自动开始，等待 1-2 分钟即可完成。
+                </div>
+
+                <div class="step-item">
+                    <strong>6. 访问网站</strong><br>
+                    部署完成后，Netlify 会提供一个 URL，例如：<br>
+                    <div class="url-box">https://random-name-12345.netlify.app</div>
+                    点击 "Visit site" 即可访问。
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>⚙️ 部署后配置</h2>
+            <div class="info-box warning">
+                <strong>重要：配置 API 地址</strong><br>
+                您的前端已部署到 Netlify，但 API 服务在云端，需要配置正确的 API 地址。
+            </div>
+            <div class="step-list">
+                <div class="step-item"><strong>API 地址：</strong> http://9.128.251.82:8000/api</div>
+                <div class="step-item"><strong>备用地址：</strong> http://169.254.100.163:8000/api</div>
+                <div class="step-item">
+                    <strong>如何测试：</strong>
+                    <br>1. 访问您的 Netlify 网站
+                    <br>2. 打开浏览器开发者工具（F12）
+                    <br>3. 查看 Network 标签
+                    <br>4. 确认 API 请求返回 200 OK
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🧪 测试清单</h2>
+            <div class="checklist">
+                <div class="checklist-item" :class="{ completed: testList.access }">
+                    <div class="checkbox" :class="{ checked: testList.access }" @click="testList.access = !testList.access"></div>
+                    <div>✓ 访问主页正常显示</div>
+                </div>
+                <div class="checklist-item" :class="{ completed: testList.api }">
+                    <div class="checkbox" :class="{ checked: testList.api }" @click="testList.api = !testList.api"></div>
+                    <div>✓ API 请求成功（200 OK）</div>
+                </div>
+                <div class="checklist-item" :class="{ completed: testList.order }">
+                    <div class="checkbox" :class="{ checked: testList.order }" @click="testList.order = !testList.order"></div>
+                    <div>✓ 点餐流程完整</div>
+                </div>
+                <div class="checklist-item" :class="{ completed: testList.roles }">
+                    <div class="checkbox" :class="{ checked: testList.roles }" @click="testList.roles = !testList.roles"></div>
+                    <div>✓ 所有角色切换正常</div>
+                </div>
+                <div class="checklist-item" :class="{ completed: testList.mobile }">
+                    <div class="checkbox" :class="{ checked: testList.mobile }" @click="testList.mobile = !testList.mobile"></div>
+                    <div>✓ 手机/平板访问正常</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>❓ 常见问题</h2>
+            <div class="faq-item">
+                <div class="faq-question">Q: 部署后页面空白？</div>
+                <div class="faq-answer">A: 打开浏览器控制台（F12）查看错误信息，检查 Network 标签确认文件是否加载成功。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">Q: API 请求失败？</div>
+                <div class="faq-answer">A: 确认 API 地址配置正确，检查 Network 标签查看请求 URL 和响应状态。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">Q: 如何更新网站？</div>
+                <div class="faq-answer">A: 修改文件后，重新上传 zip 包或使用 netlify deploy --prod --dir=assets 命令。</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question">Q: 可以设置自定义域名吗？</div>
+                <div class="faq-answer">A: 可以！在 Netlify Dashboard 的 Site Settings → Domain management 中添加自定义域名。</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎉 部署成功后</h2>
+            <div class="step-list">
+                <div class="step-item">✅ 您的网站已上线，可公开访问</div>
+                <div class="step-item">✅ 自动 HTTPS 加密，安全可靠</div>
+                <div class="step-item">✅ 全球 CDN 加速，访问快速</div>
+                <div class="step-item">✅ 支持 PC、平板、手机访问</div>
+                <div class="step-item">✅ 可以分享 URL 给他人测试</div>
+            </div>
+            <a href="https://app.netlify.com" target="_blank" class="button">
+                立即开始部署
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    selectedMethod: 1,
+                    progress: 0,
+                    checklist: {
+                        login: false,
+                        file: false,
+                        network: false
+                    },
+                    testList: {
+                        access: false,
+                        api: false,
+                        order: false,
+                        roles: false,
+                        mobile: false
+                    }
+                }
+            },
+            methods: {
+                selectMethod(method) {
+                    this.selectedMethod = method;
+                    this.progress = method * 33;
+                },
+                updateProgress() {
+                    const completed = Object.values(this.checklist).filter(v => v).length;
+                    this.progress = (completed / this.checklist.length) * 100;
+                }
+            },
+            watch: {
+                checklist: {
+                    handler() {
+                        this.updateProgress();
+                    },
+                    deep: true
+                }
+            },
+            mounted() {
+                this.progress = 33; // 初始化进度
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

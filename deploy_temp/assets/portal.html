@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ 餐饮点餐系统 - 门户</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+        .header {
+            text-align: center; color: white; margin-bottom: 40px; padding: 40px 20px;
+            background: rgba(255,255,255,0.1); border-radius: 20px; backdrop-filter: blur(10px);
+        }
+        .header h1 { font-size: 36px; margin-bottom: 15px; }
+        .header p { font-size: 16px; opacity: 0.9; }
+
+        .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 40px; }
+
+        .portal-card {
+            background: white; border-radius: 20px; padding: 30px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); transition: all 0.3s; cursor: pointer;
+        }
+        .portal-card:hover { transform: translateY(-10px); box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5); }
+        
+        .portal-icon { font-size: 64px; margin-bottom: 20px; }
+        .portal-title { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; }
+        .portal-desc { color: #666; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+        
+        .btn {
+            padding: 12px 30px; border: none; border-radius: 25px; cursor: pointer;
+            font-size: 16px; transition: all 0.3s; font-weight: bold;
+        }
+
+        .customer-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .staff-btn { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .settings-btn { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .test-btn { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; }
+
+        .table-section {
+            background: white; border-radius: 20px; padding: 30px; margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .section-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+
+        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .table-card {
+            border: 2px solid #eee; border-radius: 12px; padding: 15px; text-align: center;
+            transition: all 0.3s; cursor: pointer; background: #f9f9f9;
+        }
+        .table-card:hover { transform: scale(1.05); border-color: #667eea; box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3); }
+        .table-number { font-size: 28px; font-weight: bold; color: #667eea; }
+        .table-seats { color: #666; font-size: 14px; margin-top: 5px; }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 28px; }
+            .portal-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>🍽️ 餐饮点餐系统</h1>
+                <p>多角色管理平台 - 顾客扫码点餐 | 工作人员高效协作</p>
+            </div>
+
+            <!-- 门户入口 -->
+            <div class="portal-grid">
+                <div class="portal-card" @click="goToCustomer">
+                    <div class="portal-icon">👤</div>
+                    <div class="portal-title">顾客端</div>
+                    <div class="portal-desc">扫码点餐，浏览菜单，查看订单状态</div>
+                    <button class="btn customer-btn">选择桌号点餐</button>
+                </div>
+
+                <div class="portal-card" @click="goToStaffLogin">
+                    <div class="portal-icon">👨‍🍳</div>
+                    <div class="portal-title">工作人员端</div>
+                    <div class="portal-desc">店长、厨师、传菜员、收银员登录</div>
+                    <button class="btn staff-btn">工作人员登录</button>
+                </div>
+
+                <div class="portal-card" @click="goToSettings">
+                    <div class="portal-icon">⚙️</div>
+                    <div class="portal-title">店铺设置</div>
+                    <div class="portal-desc">桌号管理，二维码生成，店铺信息</div>
+                    <button class="btn settings-btn">店铺设置</button>
+                </div>
+
+                <div class="portal-card" @click="goToTest">
+                    <div class="portal-icon">🧪</div>
+                    <div class="portal-title">测试系统</div>
+                    <div class="portal-desc">完整功能测试，API文档，调试工具</div>
+                    <button class="btn test-btn">进入测试</button>
+                </div>
+
+                <div class="portal-card" @click="goToMenuManagement">
+                    <div class="portal-icon">🍽️</div>
+                    <div class="portal-title">菜品管理</div>
+                    <div class="portal-desc">菜品分类、价格管理、图片上传</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: white;">菜品管理</button>
+                </div>
+
+                <div class="portal-card" @click="goToInventoryManagement">
+                    <div class="portal-icon">📦</div>
+                    <div class="portal-title">物料采购</div>
+                    <div class="portal-desc">库存管理、采购订单、库存预警</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: white;">物料采购</button>
+                </div>
+            </div>
+
+            <!-- 桌号选择 -->
+            <div class="table-section">
+                <div class="section-title">🪑 快速选择桌号</div>
+                <div class="table-grid">
+                    <div class="table-card" v-for="table in tables" :key="table.number" @click="selectTable(table.number)">
+                        <div class="table-number">{{ table.number }}号</div>
+                        <div class="table-seats">{{ table.seats }}座</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    tables: Array.from({ length: 10 }, (_, i) => ({
+                        number: i + 1,
+                        seats: [4, 4, 6, 4, 2, 6, 4, 4, 8, 10][i]
+                    }))
+                };
+            },
+            methods: {
+                goToCustomer() {
+                    window.location.href = '#table-selection';
+                    setTimeout(() => {
+                        document.querySelector('.table-section').scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                },
+                goToStaffLogin() {
+                    window.location.href = 'login_standalone.html';
+                },
+                autoLogin(username, password) {
+                    // 自动登录功能（可选）
+                    const url = `login_standalone.html?username=${username}&password=${password}`;
+                    window.location.href = url;
+                },
+                goToSettings() {
+                    window.location.href = 'shop_settings.html';
+                },
+                goToTest() {
+                    window.location.href = 'restaurant_full_test.html';
+                },
+                goToMenuManagement() {
+                    window.location.href = 'menu_management.html';
+                },
+                goToInventoryManagement() {
+                    window.location.href = 'inventory_management.html';
+                },
+                selectTable(tableNumber) {
+                    window.location.href = `customer_order.html?table=${tableNumber}`;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

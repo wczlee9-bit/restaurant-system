@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录测试 - Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+        .log {
+            background: #333;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .account {
+            display: inline-block;
+            padding: 10px 15px;
+            margin: 5px;
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .account:hover { background: #e9ecef; }
+        input {
+            padding: 10px;
+            width: 200px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 登录功能测试</h1>
+
+        <div class="section info">
+            <h3>测试步骤</h3>
+            <ol>
+                <li>点击下面的测试账号，自动填充用户名和密码</li>
+                <li>点击"测试登录"按钮</li>
+                <li>查看下方的测试日志</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h3>📱 选择测试账号</h3>
+            <div id="accounts"></div>
+        </div>
+
+        <div class="section">
+            <h3>⚙️ 登录表单</h3>
+            <div>
+                <label>用户名：</label>
+                <input type="text" id="username" placeholder="输入用户名">
+            </div>
+            <div>
+                <label>密码：</label>
+                <input type="password" id="password" placeholder="输入密码">
+            </div>
+            <button onclick="testLogin()">🔑 测试登录</button>
+            <button onclick="clearLog()">🗑️ 清空日志</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 测试结果</h3>
+            <div id="result"></div>
+        </div>
+
+        <div class="section">
+            <h3>📝 测试日志</h3>
+            <div class="log" id="log">
+                <div>测试日志初始化完成...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试账号
+        const testAccounts = [
+            { username: 'system_admin', password: 'admin123', icon: '👑', name: '系统管理员' },
+            { username: 'company', password: 'company123', icon: '🏢', name: '总公司' },
+            { username: 'admin', password: 'admin123', icon: '👔', name: '店长' },
+            { username: 'chef', password: 'chef123', icon: '👨‍🍳', name: '厨师' },
+            { username: 'waiter', password: 'waiter123', icon: '🤵', name: '传菜员' },
+            { username: 'cashier', password: 'cashier123', icon: '💰', name: '收银员' }
+        ];
+
+        let users = [];
+        let apiBase = '';
+
+        // 初始化
+        function init() {
+            log('正在初始化测试...');
+
+            // 渲染测试账号按钮
+            const accountsDiv = document.getElementById('accounts');
+            testAccounts.forEach(acc => {
+                const div = document.createElement('div');
+                div.className = 'account';
+                div.innerHTML = `${acc.icon} ${acc.name}`;
+                div.onclick = () => {
+                    document.getElementById('username').value = acc.username;
+                    document.getElementById('password').value = acc.password;
+                    log(`已选择账号: ${acc.name} (${acc.username})`);
+                };
+                accountsDiv.appendChild(div);
+            });
+
+            // 检测 API 地址
+            if (window.location.hostname.includes('netlify.app')) {
+                apiBase = 'http://9.128.251.82:8000/api';
+            } else {
+                apiBase = 'http://localhost:8000/api';
+            }
+            log(`API 地址: ${apiBase}`);
+
+            // 加载用户数据
+            loadUsers();
+
+            log('✅ 测试初始化完成');
+        }
+
+        // 加载用户数据
+        async function loadUsers() {
+            log('正在加载用户数据...');
+            try {
+                const response = await fetch('config/users.json');
+                log(`HTTP 状态码: ${response.status}`);
+
+                if (response.ok) {
+                    users = await response.json();
+                    log(`✅ 成功加载 ${users.length} 个用户账号`);
+                    log(`用户列表: ${users.map(u => u.username).join(', ')}`);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ 加载用户数据失败: ${error.message}`);
+                log('📌 使用内置的演示账号');
+                users = testAccounts;
+            }
+        }
+
+        // 测试登录
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                log('❌ 请输入用户名和密码');
+                showResult('error', '用户名和密码不能为空');
+                return;
+            }
+
+            log(`\n=== 开始测试登录 ===`);
+            log(`用户名: ${username}`);
+            log(`密码: ${password}`);
+
+            // 本地验证
+            const localUser = users.find(u => u.username === username && u.password === password);
+            log(`本地验证中...`);
+
+            if (localUser) {
+                log(`✅ 本地验证成功!`);
+                log(`用户信息:`);
+                log(`  - 用户名: ${localUser.username}`);
+                log(`  - 角色: ${localUser.role}`);
+                log(`  - 中文名: ${localUser.name?.zh}`);
+                log(`  - 英文名: ${localUser.name?.en}`);
+
+                // 保存到 localStorage
+                const userData = {
+                    username: localUser.username,
+                    role: localUser.role,
+                    name: localUser.name?.zh || localUser.username,
+                    loginTime: new Date().toISOString()
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userData));
+                log(`✅ 已保存登录信息到 localStorage`);
+
+                showResult('success', `登录成功！<br>角色: ${localUser.name?.zh}<br>用户名: ${localUser.username}`);
+
+                // 测试跳转
+                log(`\n测试跳转到工作人员端...`);
+                setTimeout(() => {
+                    log(`跳转地址: staff_workflow.html`);
+                    window.location.href = 'staff_workflow.html';
+                }, 2000);
+                return;
+            }
+
+            log(`❌ 本地验证失败，用户名或密码错误`);
+
+            // API 验证（如果本地失败）
+            log(`\n尝试 API 验证...`);
+            try {
+                const response = await fetch(`${apiBase}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                log(`API 响应状态: ${response.status}`);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ API 验证成功!`);
+                    log(`响应数据: ${JSON.stringify(data)}`);
+
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        username: data.username,
+                        role: data.role,
+                        name: data.name || data.username,
+                        token: data.token,
+                        loginTime: new Date().toISOString()
+                    }));
+
+                    showResult('success', 'API 登录成功！');
+                } else {
+                    log(`❌ API 验证失败: ${response.status}`);
+                    showResult('error', '用户名或密码错误');
+                }
+            } catch (error) {
+                log(`❌ API 请求失败: ${error.message}`);
+                showResult('error', `登录失败: ${error.message}`);
+            }
+        }
+
+        // 显示结果
+        function showResult(type, message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `section ${type}`;
+            resultDiv.innerHTML = `<h3>${type === 'success' ? '✅' : '❌'} 测试结果</h3><p>${message}</p>`;
+        }
+
+        // 日志
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.textContent = `[${time}] ${message}`;
+            logDiv.appendChild(div);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        // 清空日志
+        function clearLog() {
+            document.getElementById('log').innerHTML = '<div>日志已清空</div>';
+        }
+
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
+</body>
+</html>

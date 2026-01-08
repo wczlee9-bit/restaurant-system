@@ -1,0 +1,68 @@
+[
+  {
+    "username": "system_admin",
+    "password": "admin123",
+    "role": "system_admin",
+    "name": {
+      "zh": "系统管理员",
+      "en": "System Admin"
+    },
+    "icon": "👑",
+    "description": "系统管理员 - 拥有最高权限，可以管理所有店铺、所有用户和系统设置"
+  },
+  {
+    "username": "company",
+    "password": "company123",
+    "role": "company",
+    "name": {
+      "zh": "总公司",
+      "en": "Company HQ"
+    },
+    "icon": "🏢",
+    "description": "总公司 - 可以查看所有店铺的营收数据，进行统计分析和决策"
+  },
+  {
+    "username": "admin",
+    "password": "admin123",
+    "role": "manager",
+    "name": {
+      "zh": "店长",
+      "en": "Manager"
+    },
+    "icon": "👔",
+    "description": "店长 - 管理店铺日常运营、员工、库存等"
+  },
+  {
+    "username": "chef",
+    "password": "chef123",
+    "role": "chef",
+    "name": {
+      "zh": "厨师",
+      "en": "Chef"
+    },
+    "icon": "👨‍🍳",
+    "description": "厨师 - 接收订单并制作菜品"
+  },
+  {
+    "username": "waiter",
+    "password": "waiter123",
+    "role": "waiter",
+    "name": {
+      "zh": "传菜员",
+      "en": "Waiter"
+    },
+    "icon": "🤵",
+    "description": "传菜员 - 负责上菜和顾客服务"
+  },
+  {
+    "username": "cashier",
+    "password": "cashier123",
+    "role": "cashier",
+    "name": {
+      "zh": "收银员",
+      "en": "Cashier"
+    },
+    "icon": "💰",
+    "description": "收银员 - 负责收银和订单结算"
+  }
+]

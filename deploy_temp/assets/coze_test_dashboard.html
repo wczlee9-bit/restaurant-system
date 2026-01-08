@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扫码点餐系统 - 测试控制台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 15px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .system-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .system-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 2px solid transparent;
+        }
+
+        .system-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .system-card.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .system-card h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .system-card p {
+            color: #666;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .system-icon {
+            font-size: 20px;
+        }
+
+        .test-area {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .test-area.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .response-box {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .response-box.success {
+            background: #f0fff4;
+            border: 1px solid #48bb78;
+            color: #2f855a;
+            display: block;
+        }
+
+        .response-box.error {
+            background: #fff5f5;
+            border: 1px solid #f56565;
+            color: #c53030;
+            display: block;
+        }
+
+        .response-box.info {
+            background: #ebf8ff;
+            border: 1px solid #4299e1;
+            color: #2b6cb0;
+            display: block;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .status-badge.online {
+            background: #f0fff4;
+            color: #48bb78;
+        }
+
+        .status-badge.offline {
+            background: #fff5f5;
+            color: #f56565;
+        }
+
+        .config-section {
+            background: #fffaf0;
+            border: 1px solid #ed8936;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .config-section h4 {
+            color: #744210;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 8px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            font-size: 13px;
+            display: none;
+        }
+
+        .toast.success {
+            background: #48bb78;
+        }
+
+        .toast.error {
+            background: #f56565;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 扫码点餐系统 - 测试控制台</h1>
+            <p>快速测试权限管理、支付、小票等核心功能</p>
+        </div>
+
+        <!-- API配置 -->
+        <div class="config-section">
+            <h4>⚙️ API地址配置</h4>
+            <div class="config-grid">
+                <div class="form-group">
+                    <label>权限管理API (8007)</label>
+                    <input type="text" id="api-permission" value="http://localhost:8007">
+                </div>
+                <div class="form-group">
+                    <label>支付API (8002)</label>
+                    <input type="text" id="api-payment" value="http://localhost:8002">
+                </div>
+                <div class="form-group">
+                    <label>小票API (8008)</label>
+                    <input type="text" id="api-receipt" value="http://localhost:8008">
+                </div>
+                <div class="form-group">
+                    <label>顾客端API (8003)</label>
+                    <input type="text" id="api-customer" value="http://localhost:8003">
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统选择 -->
+        <div class="system-grid">
+            <div class="system-card" data-system="permission" onclick="selectSystem('permission')">
+                <h3><span class="system-icon">🔐</span> 权限管理 <span class="status-badge" id="status-permission">待检测</span></h3>
+                <p>角色权限管理、用户权限检查</p>
+            </div>
+            <div class="system-card" data-system="payment" onclick="selectSystem('payment')">
+                <h3><span class="system-icon">💳</span> 支付系统 <span class="status-badge" id="status-payment">待检测</span></h3>
+                <p>多种支付方式、支付记录管理</p>
+            </div>
+            <div class="system-card" data-system="receipt" onclick="selectSystem('receipt')">
+                <h3><span class="system-icon">🧾</span> 小票打印 <span class="status-badge" id="status-receipt">待检测</span></h3>
+                <p>小票打印、模板配置、功能区</p>
+            </div>
+            <div class="system-card" data-system="customer" onclick="selectSystem('customer')">
+                <h3><span class="system-icon">👤</span> 顾客端 <span class="status-badge" id="status-customer">待检测</span></h3>
+                <p>扫码点餐、菜品浏览</p>
+            </div>
+        </div>
+
+        <!-- 权限管理测试区 -->
+        <div class="test-area" id="test-permission">
+            <h2>🔐 权限管理系统测试</h2>
+            
+            <div class="form-group">
+                <button class="btn btn-primary" onclick="testInitRoles()">初始化角色</button>
+                <button class="btn btn-success" onclick="testGetRoles()">获取角色列表</button>
+            </div>
+
+            <div class="form-group">
+                <label>检查用户权限</label>
+                <input type="text" id="check-role-id" placeholder="角色ID（如: admin）">
+                <input type="text" id="check-permission" placeholder="权限（如: order:create）" style="margin-top: 5px;">
+                <button class="btn btn-primary" onclick="testCheckPermission()" style="margin-top: 5px;">检查权限</button>
+            </div>
+
+            <div class="response-box" id="response-permission"></div>
+        </div>
+
+        <!-- 支付系统测试区 -->
+        <div class="test-area" id="test-payment">
+            <h2>💳 支付系统测试</h2>
+            
+            <div class="form-group">
+                <label>创建支付订单</label>
+                <input type="text" id="pay-order-id" placeholder="订单ID">
+                <input type="text" id="pay-amount" placeholder="金额" style="margin-top: 5px;">
+                <select id="pay-method" style="margin-top: 5px;">
+                    <option value="wechat">微信支付</option>
+                    <option value="alipay">支付宝</option>
+                    <option value="cash">现金</option>
+                    <option value="credit_card">信用卡</option>
+                    <option value="debit_card">借记卡</option>
+                    <option value="other">其他</option>
+                </select>
+                <input type="text" id="pay-custom-name" placeholder="自定义支付名称（仅其他类型）" style="margin-top: 5px; display: none;" id="custom-name-input">
+                <button class="btn btn-primary" onclick="testCreatePayment()" style="margin-top: 5px;">创建支付</button>
+            </div>
+
+            <div class="form-group">
+                <label>查询支付状态</label>
+                <input type="text" id="query-payment-id" placeholder="支付ID">
+                <button class="btn btn-success" onclick="testGetPayment()">查询支付</button>
+            </div>
+
+            <div class="response-box" id="response-payment"></div>
+        </div>
+
+        <!-- 小票打印测试区 -->
+        <div class="test-area" id="test-receipt">
+            <h2>🧾 小票打印系统测试</h2>
+            
+            <div class="form-group">
+                <button class="btn btn-primary" onclick="testCreateTemplate()">创建小票模板</button>
+                <button class="btn btn-success" onclick="testGetTemplates()">获取模板列表</button>
+            </div>
+
+            <div class="form-group">
+                <label>打印小票</label>
+                <input type="text" id="receipt-order-id" placeholder="订单ID">
+                <input type="text" id="receipt-template-id" placeholder="模板ID" style="margin-top: 5px;">
+                <button class="btn btn-warning" onclick="testPrintReceipt()" style="margin-top: 5px;">打印小票</button>
+            </div>
+
+            <div class="response-box" id="response-receipt"></div>
+        </div>
+
+        <!-- 顾客端测试区 -->
+        <div class="test-area" id="test-customer">
+            <h2>👤 顾客端系统测试</h2>
+            
+            <div class="form-group">
+                <label>创建订单</label>
+                <input type="text" id="customer-store-id" placeholder="店铺ID">
+                <input type="text" id="customer-table-id" placeholder="桌号" style="margin-top: 5px;">
+                <textarea id="customer-items" placeholder='菜品列表（JSON格式）：[{"dish_id": 1, "quantity": 2}]' style="margin-top: 5px;"></textarea>
+                <button class="btn btn-primary" onclick="testCreateOrder()" style="margin-top: 5px;">创建订单</button>
+            </div>
+
+            <div class="form-group">
+                <label>获取菜单</label>
+                <input type="text" id="menu-store-id" placeholder="店铺ID">
+                <button class="btn btn-success" onclick="testGetMenu()">获取菜单</button>
+            </div>
+
+            <div class="response-box" id="response-customer"></div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        // 全局变量
+        let selectedSystem = null;
+
+        // 选择系统
+        function selectSystem(system) {
+            selectedSystem = system;
+            
+            // 更新卡片样式
+            document.querySelectorAll('.system-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-system="${system}"]`).classList.add('active');
+            
+            // 显示对应测试区域
+            document.querySelectorAll('.test-area').forEach(area => {
+                area.classList.remove('active');
+            });
+            document.getElementById(`test-${system}`).classList.add('active');
+        }
+
+        // 显示Toast
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // 显示响应
+        function showResponse(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `response-box ${type}`;
+            element.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+        }
+
+        // 显示错误响应
+        function showErrorResponse(elementId, error) {
+            showResponse(elementId, `错误: ${error.message || error}`, 'error');
+        }
+
+        // ========== 权限管理测试 ==========
+        async function testInitRoles() {
+            try {
+                const url = document.getElementById('api-permission').value;
+                const response = await fetch(`${url}/api/permission/init-roles`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                showResponse('response-permission', data, 'success');
+                showToast('角色初始化成功');
+            } catch (error) {
+                showErrorResponse('response-permission', error);
+                showToast('角色初始化失败', 'error');
+            }
+        }
+
+        async function testGetRoles() {
+            try {
+                const url = document.getElementById('api-permission').value;
+                const response = await fetch(`${url}/api/permission/roles`);
+                const data = await response.json();
+                showResponse('response-permission', data, 'success');
+            } catch (error) {
+                showErrorResponse('response-permission', error);
+            }
+        }
+
+        async function testCheckPermission() {
+            try {
+                const url = document.getElementById('api-permission').value;
+                const roleId = document.getElementById('check-role-id').value;
+                const permission = document.getElementById('check-permission').value;
+
+                const response = await fetch(`${url}/api/permission/check`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        role_id: roleId,
+                        permission: permission
+                    })
+                });
+                const data = await response.json();
+                showResponse('response-permission', data, 'success');
+            } catch (error) {
+                showErrorResponse('response-permission', error);
+            }
+        }
+
+        // ========== 支付系统测试 ==========
+        async function testCreatePayment() {
+            try {
+                const url = document.getElementById('api-payment').value;
+                const orderId = document.getElementById('pay-order-id').value;
+                const amount = document.getElementById('pay-amount').value;
+                const method = document.getElementById('pay-method').value;
+
+                const response = await fetch(`${url}/api/payment/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        amount: parseFloat(amount),
+                        method: method
+                    })
+                });
+                const data = await response.json();
+                showResponse('response-payment', data, 'success');
+                showToast('支付创建成功');
+            } catch (error) {
+                showErrorResponse('response-payment', error);
+                showToast('支付创建失败', 'error');
+            }
+        }
+
+        async function testGetPayment() {
+            try {
+                const url = document.getElementById('api-payment').value;
+                const paymentId = document.getElementById('query-payment-id').value;
+
+                const response = await fetch(`${url}/api/payment/${paymentId}`);
+                const data = await response.json();
+                showResponse('response-payment', data, 'success');
+            } catch (error) {
+                showErrorResponse('response-payment', error);
+            }
+        }
+
+        // ========== 小票打印测试 ==========
+        async function testCreateTemplate() {
+            try {
+                const url = document.getElementById('api-receipt').value;
+                const response = await fetch(`${url}/api/receipt/template`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: '默认小票模板',
+                        sections: ['header', 'content', 'footer']
+                    })
+                });
+                const data = await response.json();
+                showResponse('response-receipt', data, 'success');
+                showToast('模板创建成功');
+            } catch (error) {
+                showErrorResponse('response-receipt', error);
+                showToast('模板创建失败', 'error');
+            }
+        }
+
+        async function testGetTemplates() {
+            try {
+                const url = document.getElementById('api-receipt').value;
+                const response = await fetch(`${url}/api/receipt/templates`);
+                const data = await response.json();
+                showResponse('response-receipt', data, 'success');
+            } catch (error) {
+                showErrorResponse('response-receipt', error);
+            }
+        }
+
+        async function testPrintReceipt() {
+            try {
+                const url = document.getElementById('api-receipt').value;
+                const orderId = document.getElementById('receipt-order-id').value;
+                const templateId = document.getElementById('receipt-template-id').value;
+
+                const response = await fetch(`${url}/api/receipt/print`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        template_id: templateId
+                    })
+                });
+                const data = await response.json();
+                showResponse('response-receipt', data, 'success');
+                showToast('小票打印成功');
+            } catch (error) {
+                showErrorResponse('response-receipt', error);
+                showToast('小票打印失败', 'error');
+            }
+        }
+
+        // ========== 顾客端测试 ==========
+        async function testCreateOrder() {
+            try {
+                const url = document.getElementById('api-customer').value;
+                const storeId = document.getElementById('customer-store-id').value;
+                const tableId = document.getElementById('customer-table-id').value;
+                const items = document.getElementById('customer-items').value;
+
+                const response = await fetch(`${url}/api/customer/order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        store_id: parseInt(storeId),
+                        table_id: tableId,
+                        items: JSON.parse(items)
+                    })
+                });
+                const data = await response.json();
+                showResponse('response-customer', data, 'success');
+                showToast('订单创建成功');
+            } catch (error) {
+                showErrorResponse('response-customer', error);
+                showToast('订单创建失败', 'error');
+            }
+        }
+
+        async function testGetMenu() {
+            try {
+                const url = document.getElementById('api-customer').value;
+                const storeId = document.getElementById('menu-store-id').value;
+
+                const response = await fetch(`${url}/api/customer/menu/${storeId}`);
+                const data = await response.json();
+                showResponse('response-customer', data, 'success');
+            } catch (error) {
+                showErrorResponse('response-customer', error);
+            }
+        }
+
+        // 默认选择第一个系统
+        selectSystem('permission');
+    </script>
+</body>
+</html>

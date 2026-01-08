@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - Login</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 60px 50px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+        }
+
+        .language-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .language-switch button {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .language-switch button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .language-switch button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .logo p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .forgot-password a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 40px 30px;
+                margin: 20px;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="login-container">
+            <!-- 语言切换 -->
+            <div class="language-switch">
+                <button
+                    :class="{ active: currentLanguage === 'zh' }"
+                    @click="switchLanguage('zh')"
+                >
+                    中文
+                </button>
+                <button
+                    :class="{ active: currentLanguage === 'en' }"
+                    @click="switchLanguage('en')"
+                >
+                    EN
+                </button>
+            </div>
+
+            <!-- Logo -->
+            <div class="logo">
+                <h1>{{ texts.logoTitle }}</h1>
+                <p>{{ texts.logoSubtitle }}</p>
+            </div>
+
+            <!-- 登录表单 -->
+            <div class="form-group">
+                <label>{{ texts.usernameLabel }}</label>
+                <input
+                    type="text"
+                    v-model="form.username"
+                    :placeholder="texts.usernamePlaceholder"
+                    @keyup.enter="handleLogin"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>{{ texts.passwordLabel }}</label>
+                <input
+                    type="password"
+                    v-model="form.password"
+                    :placeholder="texts.passwordPlaceholder"
+                    @keyup.enter="handleLogin"
+                >
+            </div>
+
+            <button
+                class="login-button"
+                @click="handleLogin"
+                :disabled="loading"
+            >
+                {{ loading ? texts.loading : texts.loginButton }}
+            </button>
+
+            <div class="forgot-password">
+                <a href="#" @click.prevent="showForgotPassword">{{ texts.forgotPassword }}</a>
+            </div>
+
+            <!-- 返回首页 -->
+            <div class="back-link">
+                <a href="index.html">← {{ texts.backToHome }}</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentLanguage = ref('zh');
+                const loading = ref(false);
+
+                const form = reactive({
+                    username: '',
+                    password: ''
+                });
+
+                // 中英文文本
+                const textsMap = {
+                    zh: {
+                        logoTitle: '扫码点餐系统',
+                        logoSubtitle: '工作人员登录',
+                        usernameLabel: '用户名',
+                        usernamePlaceholder: '请输入用户名',
+                        passwordLabel: '密码',
+                        passwordPlaceholder: '请输入密码',
+                        loginButton: '登录',
+                        loading: '登录中...',
+                        forgotPassword: '忘记密码？',
+                        divider: '或使用演示账号',
+                        demoAccountsTitle: '演示账号',
+                        username: '用户名',
+                        password: '密码',
+                        backToHome: '返回首页',
+                        loginSuccess: '登录成功',
+                        loginFailed: '用户名或密码错误',
+                        errorOccurred: '登录失败，请稍后重试'
+                    },
+                    en: {
+                        logoTitle: 'Restaurant POS System',
+                        logoSubtitle: 'Staff Login',
+                        usernameLabel: 'Username',
+                        usernamePlaceholder: 'Enter username',
+                        passwordLabel: 'Password',
+                        passwordPlaceholder: 'Enter password',
+                        loginButton: 'Login',
+                        loading: 'Logging in...',
+                        forgotPassword: 'Forgot password?',
+                        divider: 'Or use demo accounts',
+                        demoAccountsTitle: 'Demo Accounts',
+                        username: 'Username',
+                        password: 'Password',
+                        backToHome: 'Back to Home',
+                        loginSuccess: 'Login successful',
+                        loginFailed: 'Invalid username or password',
+                        errorOccurred: 'Login failed, please try again later'
+                    }
+                };
+
+                // 演示用户（内联数据，不依赖外部文件）
+                const demoUsers = [
+                    {
+                        username: 'system_admin',
+                        password: 'admin123',
+                        icon: '👑',
+                        name: {
+                            zh: '系统管理员',
+                            en: 'System Admin'
+                        },
+                        role: 'system_admin'
+                    },
+                    {
+                        username: 'company',
+                        password: 'company123',
+                        icon: '🏢',
+                        name: {
+                            zh: '总公司',
+                            en: 'Company HQ'
+                        },
+                        role: 'company'
+                    },
+                    {
+                        username: 'admin',
+                        password: 'admin123',
+                        icon: '👔',
+                        name: {
+                            zh: '店长',
+                            en: 'Manager'
+                        },
+                        role: 'manager'
+                    },
+                    {
+                        username: 'chef',
+                        password: 'chef123',
+                        icon: '👨‍🍳',
+                        name: {
+                            zh: '厨师',
+                            en: 'Chef'
+                        },
+                        role: 'chef'
+                    },
+                    {
+                        username: 'waiter',
+                        password: 'waiter123',
+                        icon: '🤵',
+                        name: {
+                            zh: '传菜员',
+                            en: 'Waiter'
+                        },
+                        role: 'waiter'
+                    },
+                    {
+                        username: 'cashier',
+                        password: 'cashier123',
+                        icon: '💰',
+                        name: {
+                            zh: '收银员',
+                            en: 'Cashier'
+                        },
+                        role: 'cashier'
+                    }
+                ];
+
+                // 计算当前语言文本
+                const texts = computed(() => textsMap[currentLanguage.value]);
+
+                // 切换语言
+                const switchLanguage = (lang) => {
+                    currentLanguage.value = lang;
+                    localStorage.setItem('language', lang);
+                };
+
+                // 登录处理
+                const handleLogin = async () => {
+                    if (!form.username || !form.password) {
+                        alert(texts.value.usernameLabel + '和' + texts.value.passwordLabel + '不能为空');
+                        return;
+                    }
+
+                    loading.value = true;
+
+                    try {
+                        // 本地验证（内联数据）
+                        const user = demoUsers.find(
+                            u => u.username === form.username && u.password === form.password
+                        );
+
+                        if (user) {
+                            // 登录成功
+                            localStorage.setItem('currentUser', JSON.stringify({
+                                username: user.username,
+                                role: user.role,
+                                name: user.name[currentLanguage.value] || user.username,
+                                loginTime: new Date().toISOString()
+                            }));
+
+                            ElementPlus.ElMessage.success(texts.value.loginSuccess);
+
+                            // 延迟跳转
+                            setTimeout(() => {
+                                window.location.href = 'staff_workflow.html';
+                            }, 500);
+                        } else {
+                            ElementPlus.ElMessage.error(texts.value.loginFailed);
+                        }
+                    } catch (error) {
+                        console.error('登录错误:', error);
+                        ElementPlus.ElMessage.error(texts.value.errorOccurred);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 忘记密码
+                const showForgotPassword = () => {
+                    alert(texts.value.forgotPassword + '\n\n请联系系统管理员重置密码\n\nPlease contact system administrator to reset password');
+                };
+
+                // 初始化
+                onMounted(() => {
+                    // 从本地存储读取语言设置
+                    const savedLanguage = localStorage.getItem('language');
+                    if (savedLanguage) {
+                        currentLanguage.value = savedLanguage;
+                    }
+
+                    // 检查是否已登录
+                    const currentUser = localStorage.getItem('currentUser');
+                    if (currentUser) {
+                        // 已登录，直接跳转
+                        window.location.href = 'staff_workflow.html';
+                    }
+
+                    // 检查 ElementPlus 是否加载成功
+                    if (typeof ElementPlus === 'undefined') {
+                        console.error('ElementPlus 未加载成功');
+                        alert('页面加载失败，请检查网络连接后刷新页面\n\nPage load failed, please check your network connection and refresh');
+                    }
+                });
+
+                return {
+                    currentLanguage,
+                    loading,
+                    texts,
+                    form,
+                    demoUsers,
+                    switchLanguage,
+                    useDemoAccount,
+                    handleLogin,
+                    showForgotPassword
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

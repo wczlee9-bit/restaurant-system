@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扫码点餐系统 - 访问指南</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .status.running {
+            background: #10b981;
+            color: white;
+        }
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+        .info-box {
+            background: #f8fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .info-box.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        .info-box.success {
+            border-left-color: #10b981;
+            background: #ecfdf5;
+        }
+        .url-link {
+            display: block;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 1.1em;
+            text-decoration: none;
+            color: #334155;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s;
+        }
+        .url-link:hover {
+            background: #e2e8f0;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin: 20px 0;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex: 1;
+        }
+        .step-content h3 {
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        .step-content p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .button.secondary {
+            background: #94a3b8;
+        }
+        .button.secondary:hover {
+            background: #64748b;
+        }
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .table-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        .table-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        .table-card .table-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .table-card .table-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .faq-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        .faq-question {
+            font-weight: bold;
+            color: #334155;
+            margin-bottom: 8px;
+        }
+        .faq-answer {
+            color: #64748b;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ 多店铺扫码点餐系统</h1>
+            <p>访问指南与快速测试</p>
+        </div>
+
+        <div class="card">
+            <h2>📊 服务状态</h2>
+            <span class="status running">✓ 服务运行中</span>
+            <div class="info-box success">
+                <strong>当前时间：</strong><span id="currentTime"></span><br>
+                <strong>API 服务：</strong>运行在 8000 端口<br>
+                <strong>Web 服务：</strong>运行在 8080 端口
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🌐 正确的访问方式</h2>
+            <div class="info-box warning">
+                <strong>⚠️ 为什么 localhost 无法访问？</strong><br>
+                localhost 指向您的本地电脑，而服务运行在云端沙盒环境中。您需要使用外部 IP 地址访问。
+            </div>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>选择访问地址</h3>
+                    <p>根据您的网络环境，尝试以下地址：</p>
+                    <a href="http://9.128.251.82:8080/" class="url-link" target="_blank">
+                        http://9.128.251.82:8080/
+                    </a>
+                    <a href="http://169.254.100.163:8080/" class="url-link" target="_blank">
+                        http://169.254.100.163:8080/
+                    </a>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>选择桌号进行测试</h3>
+                    <p>点击下方桌号进入对应桌位的点餐页面：</p>
+                    <div class="table-grid">
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=1" class="table-card">
+                            <div class="table-number">1</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=2" class="table-card">
+                            <div class="table-number">2</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=3" class="table-card">
+                            <div class="table-number">3</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=4" class="table-card">
+                            <div class="table-number">4</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=5" class="table-card">
+                            <div class="table-number">5</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=6" class="table-card">
+                            <div class="table-number">6</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=7" class="table-card">
+                            <div class="table-number">7</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=8" class="table-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                            <div class="table-number">8</div>
+                            <div class="table-label">号桌 (推荐)</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=9" class="table-card">
+                            <div class="table-number">9</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html?table=10" class="table-card">
+                            <div class="table-number">10</div>
+                            <div class="table-label">号桌</div>
+                        </a>
+                    </div>
+                    <p style="text-align: center; margin-top: 15px;">
+                        <a href="http://9.128.251.82:8080/restaurant_full_test.html" class="button">
+                            进入全流程测试平台
+                        </a>
+                        <a href="http://9.128.251.82:8080/index.html" class="button secondary">
+                            查看桌号二维码
+                        </a>
+                    </p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>体验点餐流程</h3>
+                    <p>在点餐页面中，您可以：</p>
+                    <ul style="margin-left: 20px; line-height: 1.8; color: #64748b;">
+                        <li>浏览菜单并添加商品到购物车</li>
+                        <li>选择用餐人数和特殊需求</li>
+                        <li>选择支付方式（微信/支付宝/现金/银行卡）</li>
+                        <li>提交订单并查看订单状态</li>
+                        <li>在测试平台切换角色（顾客、厨师、传菜员、收银员、店长）</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>❓ 常见问题</h2>
+
+            <div class="faq-item">
+                <div class="faq-question">Q: 显示 "HTTP ERROR 502" 怎么办？</div>
+                <div class="faq-answer">
+                    A: 这通常是防火墙限制。请尝试另一个 IP 地址，或者等待几秒后刷新页面重试。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Q: 无法连接到服务器怎么办？</div>
+                <div class="faq-answer">
+                    A: 请检查您的网络连接，确保能够访问外部网络。如果问题持续存在，请联系技术支持。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Q: 页面加载很慢怎么办？</div>
+                <div class="faq-answer">
+                    A: 首次加载可能需要下载一些资源，请耐心等待。如果持续卡顿，可以尝试刷新页面。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Q: 订单提交失败怎么办？</div>
+                <div class="faq-answer">
+                    A: 请检查网络连接，确保 API 服务正常。您可以查看浏览器控制台（F12）查看详细错误信息。
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Q: 如何切换不同角色测试？</div>
+                <div class="faq-answer">
+                    A: 在全流程测试平台顶部有角色切换按钮，点击即可在顾客、厨师、传菜员、收银员、店长之间切换。
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎯 快速测试流程</h2>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>顾客点餐</h3>
+                    <p>选择桌号，浏览菜单，添加商品，选择支付方式，提交订单</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>厨师接单</h3>
+                    <p>切换到厨师角色，查看待烹饪订单，开始烹饪，完成烹饪</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>传菜上桌</h3>
+                    <p>切换到传菜员角色，查看待传菜订单，完成传菜</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>收银结算</h3>
+                    <p>切换到收银员角色，查看订单，确认支付，打印小票</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>店长管理</h3>
+                    <p>切换到店长角色，查看营收数据、订单统计、库存情况</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // 检测当前页面访问地址
+        const currentUrl = window.location.href;
+        if (currentUrl.includes('localhost')) {
+            const warningBox = document.createElement('div');
+            warningBox.className = 'info-box warning';
+            warningBox.innerHTML = `
+                <strong>⚠️ 检测到您正在使用 localhost 访问</strong><br>
+                这不会连接到云端服务！请使用上方的 <strong>外部 IP 地址</strong> 链接访问。
+            `;
+            document.querySelector('.card').insertBefore(warningBox, document.querySelector('.status').nextSibling);
+        }
+    </script>
+</body>
+</html>

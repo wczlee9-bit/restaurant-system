@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多店铺扫码点餐系统 - 全流程测试平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
+        
+        .role-switcher {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px; display: flex; justify-content: space-between;
+            align-items: center; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .role-switcher h1 { color: white; font-size: 20px; margin: 0; }
+        .role-buttons { display: flex; gap: 10px; }
+        .role-btn {
+            padding: 8px 16px; border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.1); color: white; border-radius: 20px;
+            cursor: pointer; transition: all 0.3s; font-size: 14px;
+        }
+        .role-btn:hover, .role-btn.active {
+            background: white; color: #667eea; transform: scale(1.05);
+        }
+        
+        .main-container { padding: 80px 20px 20px; max-width: 1400px; margin: 0 auto; }
+        
+        .customer-mobile {
+            max-width: 375px; margin: 0 auto; background: white;
+            border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .mobile-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; text-align: center;
+        }
+        .mobile-header h2 { font-size: 22px; margin-bottom: 5px; }
+        .mobile-header p { font-size: 14px; opacity: 0.9; }
+        .mobile-body { padding: 15px; }
+        
+        .category-tabs {
+            display: flex; gap: 10px; overflow-x: auto; padding: 10px 0;
+            border-bottom: 1px solid #eee; margin-bottom: 15px;
+        }
+        .category-tab {
+            padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+            cursor: pointer; transition: all 0.3s; font-size: 14px;
+            border: 1px solid #eee; background: white;
+        }
+        .category-tab.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .menu-card {
+            border: 1px solid #eee; border-radius: 10px; overflow: hidden;
+            transition: all 0.3s; background: white;
+        }
+        .menu-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .menu-card img { width: 100%; height: 80px; object-fit: cover; }
+        .menu-card-body { padding: 10px; }
+        .menu-card-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; }
+        .menu-card-price { color: #f56c6c; font-size: 16px; font-weight: bold; }
+        .menu-card-stock { font-size: 12px; color: #909399; }
+        
+        .cart-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 375px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px 20px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; border-radius: 10px 10px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .kitchen-display {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .kitchen-card {
+            border: 2px solid #eee; border-radius: 12px; padding: 20px;
+            margin-bottom: 20px; transition: all 0.3s;
+        }
+        .kitchen-card.urgent { border-color: #f56c6c; background: #fef0f0; }
+        .kitchen-card.normal { border-color: #67c23a; background: #f0f9eb; }
+        .kitchen-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .kitchen-table { font-size: 24px; font-weight: bold; color: #667eea; }
+        .kitchen-time { color: #909399; font-size: 14px; }
+        
+        .kitchen-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; margin: 8px 0; background: white; border-radius: 8px;
+            border-left: 4px solid #67c23a;
+        }
+        .kitchen-item.preparing { border-left-color: #e6a23c; }
+        .kitchen-item.ready { border-left-color: #67c23a; background: #f0f9eb; }
+        .kitchen-item.done { border-left-color: #909399; opacity: 0.6; }
+        
+        .waiter-display {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .waiter-card {
+            border: 2px solid #409eff; border-radius: 12px; padding: 20px;
+            margin-bottom: 20px; background: #ecf5ff;
+        }
+        .waiter-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px; margin: 8px 0; background: white; border-radius: 8px;
+        }
+        .waiter-item.served { background: #f0f9eb; opacity: 0.5; text-decoration: line-through; }
+        
+        .cashier-display {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .payment-methods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .payment-method {
+            padding: 20px; border: 2px solid #eee; border-radius: 10px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+        }
+        .payment-method:hover, .payment-method.selected {
+            border-color: #667eea; background: #ecf5ff;
+        }
+        .payment-icon { font-size: 32px; margin-bottom: 10px; }
+        
+        .manager-dashboard {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card {
+            padding: 20px; border-radius: 10px; text-align: center;
+            color: white; font-weight: bold;
+        }
+        .stat-card.blue { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .stat-card.orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-card.purple { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-number { font-size: 32px; margin-bottom: 5px; }
+        .stat-label { font-size: 14px; opacity: 0.9; }
+        
+        .voice-btn {
+            position: fixed; bottom: 100px; right: 30px;
+            width: 60px; height: 60px; border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; font-size: 28px; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s; z-index: 100;
+        }
+        .voice-btn:hover { transform: scale(1.1); }
+        .voice-btn.recording { animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(102, 126, 234, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+        
+        .notification {
+            position: fixed; top: 80px; right: 20px;
+            padding: 15px 25px; border-radius: 10px; color: white;
+            font-weight: bold; z-index: 9999; animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .tag { padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+        .tag-pending { background: #f0f9eb; color: #67c23a; }
+        .tag-preparing { background: #fdf6ec; color: #e6a23c; }
+        .tag-ready { background: #ecf5ff; color: #409eff; }
+        .tag-served { background: #fef0f0; color: #f56c6c; }
+        
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center;
+            justify-content: center; z-index: 2000;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 15px;
+            max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
+        
+        .table-selector {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;
+        }
+        .table-cell {
+            padding: 25px; text-align: center; border: 3px solid #eee;
+            border-radius: 10px; cursor: pointer; transition: all 0.3s;
+            font-size: 24px; font-weight: bold;
+        }
+        .table-cell:hover { border-color: #667eea; transform: translateY(-3px); }
+        .table-cell.selected { border-color: #667eea; background: #ecf5ff; }
+        .table-cell.occupied { border-color: #f56c6c; background: #fef0f0; }
+        
+        .order-status-bar {
+            height: 4px; background: #eee; border-radius: 2px; margin-top: 15px;
+            overflow: hidden;
+        }
+        .order-status-progress {
+            height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 角色切换器 -->
+        <div class="role-switcher">
+            <h1>🍽️ 餐饮点餐系统 - 测试平台</h1>
+            <div class="role-buttons">
+                <button class="role-btn" :class="{active: currentRole === 'customer'}" @click="switchRole('customer')">
+                    👤 顾客
+                </button>
+                <button class="role-btn" :class="{active: currentRole === 'kitchen'}" @click="switchRole('kitchen')">
+                    👨‍🍳 厨师
+                </button>
+                <button class="role-btn" :class="{active: currentRole === 'waiter'}" @click="switchRole('waiter')">
+                    🤵 传菜员
+                </button>
+                <button class="role-btn" :class="{active: currentRole === 'cashier'}" @click="switchRole('cashier')">
+                    💰 收银员
+                </button>
+                <button class="role-btn" :class="{active: currentRole === 'manager'}" @click="switchRole('manager')">
+                    👔 店长
+                </button>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <!-- 顾客端 -->
+            <div v-if="currentRole === 'customer'" class="customer-mobile">
+                <div class="mobile-header">
+                    <h2>🍽️ 美味餐厅</h2>
+                    <p v-if="selectedTable">当前桌号: {{ selectedTable.table_number }}</p>
+                    <p v-else>请选择桌号</p>
+                </div>
+                <div class="mobile-body">
+                    <!-- 桌号选择 -->
+                    <div v-if="!selectedTable" style="text-align: center; padding: 40px 0;">
+                        <h3 style="margin-bottom: 20px;">📱 扫码成功！请选择桌号</h3>
+                        <div class="table-selector">
+                            <div v-for="table in tables" :key="table.id"
+                                 class="table-cell"
+                                 :class="{selected: tempTableId === table.id, occupied: table.is_occupied}"
+                                 @click="selectTable(table)">
+                                {{ table.table_number }}号
+                            </div>
+                        </div>
+                        <el-button type="primary" size="large" style="width: 100%; margin-top: 20px;"
+                                   :disabled="!tempTableId" @click="confirmTable()">
+                            确认桌号
+                        </el-button>
+                    </div>
+
+                    <!-- 菜单和购物车 -->
+                    <div v-else>
+                        <!-- 分类标签 -->
+                        <div class="category-tabs">
+                            <div class="category-tab" :class="{active: selectedCategory === null}"
+                                 @click="selectedCategory = null">全部</div>
+                            <div v-for="cat in categories" :key="cat.id"
+                                 class="category-tab"
+                                 :class="{active: selectedCategory === cat.id}"
+                                 @click="selectedCategory = cat.id">
+                                {{ cat.name }}
+                            </div>
+                        </div>
+
+                        <!-- 菜品列表 -->
+                        <div class="menu-grid">
+                            <div v-for="item in filteredMenuItems" :key="item.id" class="menu-card"
+                                 @click="addToCart(item)">
+                                <img :src="item.image_url || 'https://via.placeholder.com/150'" alt="">
+                                <div class="menu-card-body">
+                                    <div class="menu-card-title">{{ item.name }}</div>
+                                    <div class="menu-card-price">¥{{ item.price }}</div>
+                                    <div class="menu-card-stock">库存: {{ item.stock }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 购物车栏 -->
+                        <div class="cart-bar" v-if="cart.length > 0" @click="showCart = true">
+                            <div>
+                                <span style="font-size: 18px; font-weight: bold;">{{ cart.length }}件商品</span>
+                                <span style="margin-left: 10px;">¥{{ cartTotal }}</span>
+                            </div>
+                            <div>去结算 →</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 厨师端 -->
+            <div v-if="currentRole === 'kitchen'" class="kitchen-display">
+                <h2 style="margin-bottom: 20px;">👨‍🍳 厨房制作中心</h2>
+                <div v-if="kitchenOrders.length === 0" style="text-align: center; padding: 60px; color: #909399;">
+                    <div style="font-size: 64px;">🍳</div>
+                    <p style="margin-top: 20px; font-size: 18px;">暂无待制作订单</p>
+                </div>
+                <div v-else>
+                    <div v-for="order in kitchenOrders" :key="order.id"
+                         class="kitchen-card"
+                         :class="{urgent: isUrgent(order), normal: !isUrgent(order)}">
+                        <div class="kitchen-header">
+                            <span class="kitchen-table">{{ order.table_number }}号桌</span>
+                            <span class="kitchen-time">{{ formatTime(order.created_at) }}</span>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <el-tag type="info">订单号: {{ order.id }}</el-tag>
+                            <el-tag type="success">共{{ order.items.length }}道菜</el-tag>
+                        </div>
+                        <div v-for="item in order.items" :key="item.id" class="kitchen-item"
+                             :class="getItemClass(item)">
+                            <div>
+                                <div style="font-weight: bold; font-size: 16px;">{{ item.menu_item_name }}</div>
+                                <div style="font-size: 14px; color: #909399; margin-top: 5px;">
+                                    数量: {{ item.quantity }}
+                                    <span v-if="item.special_instructions" style="margin-left: 10px; color: #e6a23c;">
+                                        备注: {{ item.special_instructions }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <el-tag :type="getItemStatusType(item)" size="large">
+                                    {{ getItemStatusText(item) }}
+                                </el-tag>
+                                <el-button v-if="item.item_status === 'pending' || item.item_status === 'preparing'"
+                                           type="primary" size="small"
+                                           style="margin-left: 10px;"
+                                           @click="startCooking(order.id, item.id)">
+                                    开始制作
+                                </el-button>
+                                <el-button v-if="item.item_status === 'preparing'"
+                                           type="success" size="small"
+                                           style="margin-left: 10px;"
+                                           @click="finishCooking(order.id, item.id)">
+                                    完成制作
+                                </el-button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <el-button type="primary" @click="printKitchenOrder(order)">
+                                🖨️ 打印制作单
+                            </el-button>
+                            <el-button type="success" @click="markOrderReady(order.id)"
+                                       v-if="allItemsReady(order)">
+                                ✅ 全部完成
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 语音确认按钮 -->
+                <button class="voice-btn" :class="{recording: isRecording}"
+                        @click="toggleVoiceRecording">
+                    🎤
+                </button>
+                <div v-if="isRecording" style="position: fixed; bottom: 170px; right: 30px;
+                                           background: white; padding: 15px 20px; border-radius: 10px;
+                                           box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;">
+                    <p>正在录音...请说"完成"或"做好"</p>
+                    <div style="font-size: 12px; color: #909399; margin-top: 5px;">
+                        (模拟语音识别功能)
+                    </div>
+                </div>
+            </div>
+
+            <!-- 传菜员端 -->
+            <div v-if="currentRole === 'waiter'" class="waiter-display">
+                <h2 style="margin-bottom: 20px;">🤵 传菜管理中心</h2>
+                <div v-if="waiterOrders.length === 0" style="text-align: center; padding: 60px; color: #909399;">
+                    <div style="font-size: 64px;">🍽️</div>
+                    <p style="margin-top: 20px; font-size: 18px;">暂无待传菜品</p>
+                </div>
+                <div v-else>
+                    <div v-for="order in waiterOrders" :key="order.id" class="waiter-card">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                            <span style="font-size: 24px; font-weight: bold;">{{ order.table_number }}号桌</span>
+                            <el-tag type="info">{{ formatTime(order.created_at) }}</el-tag>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <el-button type="primary" @click="printServingOrder(order)">
+                                🖨️ 打印传菜单
+                            </el-button>
+                        </div>
+                        <p style="margin-bottom: 10px; font-weight: bold;">待传菜品:</p>
+                        <div v-for="item in order.items" :key="item.id" class="waiter-item"
+                             :class="{served: item.item_status === 'served'}">
+                            <div>
+                                <div style="font-weight: bold;">{{ item.menu_item_name }}</div>
+                                <div style="font-size: 14px; color: #909399;">数量: {{ item.quantity }}</div>
+                            </div>
+                            <div>
+                                <el-tag v-if="item.item_status === 'ready'" type="success">
+                                    待传菜
+                                </el-tag>
+                                <el-tag v-else-if="item.item_status === 'served'" type="info">
+                                    已上菜
+                                </el-tag>
+                                <el-button v-if="item.item_status === 'ready'"
+                                           type="primary" size="small"
+                                           @click="serveDish(order.id, item.id, order.table_number)">
+                                    确认上菜
+                                </el-button>
+                            </div>
+                        </div>
+                        <div v-if="allItemsServed(order)" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                            <el-tag type="success">全部菜品已上完</el-tag>
+                            <el-button type="success" style="margin-left: 10px;" @click="completeOrder(order.id)">
+                                完成订单
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 收银员端 -->
+            <div v-if="currentRole === 'cashier'" class="cashier-display">
+                <h2 style="margin-bottom: 20px;">💰 收银台</h2>
+                <div v-if="cashierOrders.length === 0" style="text-align: center; padding: 60px; color: #909399;">
+                    <div style="font-size: 64px;">💵</div>
+                    <p style="margin-top: 20px; font-size: 18px;">暂无待支付订单</p>
+                </div>
+                <div v-else>
+                    <div v-for="order in cashierOrders" :key="order.id" style="border: 2px solid #eee; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                            <div>
+                                <span style="font-size: 20px; font-weight: bold;">{{ order.table_number }}号桌</span>
+                                <el-tag style="margin-left: 10px;">订单号: {{ order.id }}</el-tag>
+                            </div>
+                            <span style="font-size: 24px; font-weight: bold; color: #f56c6c;">¥{{ order.total_amount }}</span>
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <p v-for="item in order.items" :key="item.id" style="padding: 5px 0;">
+                                {{ item.menu_item_name }} × {{ item.quantity }} = ¥{{ item.subtotal }}
+                            </p>
+                        </div>
+                        <div v-if="order.payment_method === 'pending' || !order.payment_method || order.payment_method === 'unpaid'">
+                            <p style="margin-bottom: 10px; font-weight: bold;">请选择支付方式:</p>
+                            <div class="payment-methods">
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'wechat'}"
+                                     @click="selectedPaymentMethod = 'wechat'">
+                                    <div class="payment-icon">💚</div>
+                                    <div>微信支付</div>
+                                </div>
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'alipay'}"
+                                     @click="selectedPaymentMethod = 'alipay'">
+                                    <div class="payment-icon">💙</div>
+                                    <div>支付宝</div>
+                                </div>
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'card'}"
+                                     @click="selectedPaymentMethod = 'card'">
+                                    <div class="payment-icon">💳</div>
+                                    <div>银行卡</div>
+                                </div>
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'cash'}"
+                                     @click="selectedPaymentMethod = 'cash'">
+                                    <div class="payment-icon">💰</div>
+                                    <div>现金</div>
+                                </div>
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'credit'}"
+                                     @click="selectedPaymentMethod = 'credit'">
+                                    <div class="payment-icon">💎</div>
+                                    <div>信用卡</div>
+                                </div>
+                                <div class="payment-method" :class="{selected: selectedPaymentMethod === 'other'}"
+                                     @click="selectedPaymentMethod = 'other'">
+                                    <div class="payment-icon">📝</div>
+                                    <div>其他</div>
+                                </div>
+                            </div>
+                            <el-button type="primary" size="large" style="width: 100%; margin-top: 20px;"
+                                       :disabled="!selectedPaymentMethod"
+                                       @click="processPayment(order.id)">
+                                确认支付
+                            </el-button>
+                        </div>
+                        <div v-else>
+                            <el-tag type="success">已支付 - {{ getPaymentMethodText(order.payment_method) }}</el-tag>
+                            <el-button type="success" style="margin-left: 10px;" @click="printReceipt(order)">
+                                🖨️ 打印小票
+                            </el-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 店长端 -->
+            <div v-if="currentRole === 'manager'" class="manager-dashboard">
+                <h2 style="margin-bottom: 20px;">👔 店长管理后台</h2>
+                
+                <!-- 统计卡片 -->
+                <div class="stat-cards">
+                    <div class="stat-card blue">
+                        <div class="stat-number">{{ stats.totalOrders }}</div>
+                        <div class="stat-label">今日订单</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-number">¥{{ stats.totalRevenue }}</div>
+                        <div class="stat-label">今日营收</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-number">{{ stats.activeTables }}</div>
+                        <div class="stat-label">用餐桌数</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-number">{{ stats.staffCount }}</div>
+                        <div class="stat-label">在线员工</div>
+                    </div>
+                </div>
+
+                <!-- 订单列表 -->
+                <h3 style="margin-bottom: 15px;">所有订单</h3>
+                <el-table :data="allOrders" style="width: 100%" stripe>
+                    <el-table-column prop="id" label="订单号" width="80"></el-table-column>
+                    <el-table-column prop="table_number" label="桌号" width="80"></el-table-column>
+                    <el-table-column prop="total_amount" label="金额" width="100">
+                        <template #default="scope">
+                            ¥{{ scope.row.total_amount }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="status" label="状态" width="100">
+                        <template #default="scope">
+                            <el-tag :type="getOrderStatusType(scope.row.status)">
+                                {{ getOrderStatusText(scope.row.status) }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="payment_method" label="支付方式" width="100">
+                        <template #default="scope">
+                            {{ getPaymentMethodText(scope.row.payment_method) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="created_at" label="下单时间" width="180">
+                        <template #default="scope">
+                            {{ formatTime(scope.row.created_at) }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="150">
+                        <template #default="scope">
+                            <el-button size="small" @click="viewOrderDetail(scope.row)">详情</el-button>
+                            <el-button size="small" type="danger" @click="cancelOrder(scope.row.id)"
+                                       v-if="scope.row.status === 'pending'">
+                                取消
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <!-- 桌位状态 -->
+                <h3 style="margin: 30px 0 15px;">桌位状态</h3>
+                <div class="table-selector">
+                    <div v-for="table in tables" :key="table.id" class="table-cell"
+                         :class="{occupied: table.is_occupied}">
+                        {{ table.table_number }}号
+                        <div style="font-size: 12px; font-weight: normal; margin-top: 5px;">
+                            {{ table.is_occupied ? '用餐中' : '空闲' }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 购物车弹窗 -->
+        <div v-if="showCart" class="modal-overlay" @click.self="showCart = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 20px;">🛒 购物车</h3>
+                <div v-for="(item, index) in cart" :key="index" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                    <div>
+                        <div style="font-weight: bold;">{{ item.name }}</div>
+                        <div style="color: #f56c6c; font-weight: bold;">¥{{ item.price }}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <el-button size="small" @click="updateCartItem(index, -1)">-</el-button>
+                        <span>{{ item.quantity }}</span>
+                        <el-button size="small" @click="updateCartItem(index, 1)">+</el-button>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                        <span>合计:</span>
+                        <span style="color: #f56c6c;">¥{{ cartTotal }}</span>
+                    </div>
+                </div>
+                <el-button type="primary" size="large" style="width: 100%; margin-top: 20px;"
+                           @click="submitOrder()">
+                    提交订单
+                </el-button>
+            </div>
+        </div>
+
+        <!-- 上菜确认弹窗 -->
+        <div v-if="showServingConfirm" class="modal-overlay" @click.self="showServingConfirm = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 20px;">🍽️ 上菜确认</h3>
+                <p style="margin-bottom: 15px; font-size: 16px;">
+                    请确认已将 <strong>{{ servingItem?.menu_item_name }}</strong> 上到 <strong>{{ servingTable }}号桌</strong>
+                </p>
+                <p style="color: #909399; font-size: 14px; margin-bottom: 20px;">
+                    ⚠️ 请在顾客面前确认菜品无误后点击确认
+                </p>
+                <el-button type="primary" size="large" style="width: 100%;" @click="confirmServing()">
+                    确认已上菜
+                </el-button>
+            </div>
+        </div>
+
+        <!-- 通知提示 -->
+        <div v-for="notif in notifications" :key="notif.id" class="notification"
+             :style="{background: notif.type === 'success' ? '#67c23a' : '#409eff', top: (80 + notif.index * 60) + 'px'}">
+            {{ notif.message }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                // 状态
+                const currentRole = ref('customer');
+                const showCart = ref(false);
+                const showServingConfirm = ref(false);
+                const selectedCategory = ref(null);
+                const selectedTable = ref(null);
+                const tempTableId = ref(null);
+                const selectedPaymentMethod = ref(null);
+                const servingItem = ref(null);
+                const servingOrderId = ref(null);
+                const servingTable = ref(null);
+                const isRecording = ref(false);
+                const notifications = ref([]);
+                let notificationId = 0;
+                let autoRefreshInterval = null;
+
+                // 数据
+                const tables = ref([]);
+                const categories = ref([]);
+                const menuItems = ref([]);
+                const cart = ref([]);
+                const orders = ref([]);
+                const currentOrder = ref(null);
+
+                // API基础URL - 自动检测
+                let API_BASE = 'http://localhost:8000';
+                try {
+                    const currentHost = window.location.hostname;
+                    const currentPort = window.location.port;
+                    if (currentPort === '8080') {
+                        API_BASE = `http://${currentHost}:8000`;
+                    }
+                    console.log('自动检测到API地址:', API_BASE);
+                } catch (e) {
+                    console.log('使用默认API地址:', API_BASE);
+                }
+
+                // 初始化
+                onMounted(() => {
+                    // 从URL参数读取桌号
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tableParam = urlParams.get('table');
+
+                    loadData().then(() => {
+                        // 如果URL中有桌号参数，自动选择该桌号
+                        if (tableParam) {
+                            const table = tables.value.find(t => t.table_number === tableParam);
+                            if (table) {
+                                selectedTable.value = table;
+                                ElMessage.success(`已自动选择${tableParam}号桌`);
+                            } else {
+                                ElMessage.warning(`未找到${tableParam}号桌`);
+                            }
+                        }
+                        startAutoRefresh();
+                    });
+                });
+
+                onUnmounted(() => {
+                    stopAutoRefresh();
+                });
+
+                // 数据加载
+                const loadData = async () => {
+                    try {
+                        await Promise.all([
+                            loadTables(),
+                            loadCategories(),
+                            loadMenuItems(),
+                            loadOrders()
+                        ]);
+                    } catch (error) {
+                        console.error('加载数据失败:', error);
+                    }
+                };
+
+                const loadTables = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/tables/`);
+                        tables.value = response.data;
+                    } catch (error) {
+                        console.error('加载桌号失败:', error);
+                        // 创建默认桌号
+                        tables.value = Array.from({length: 12}, (_, i) => ({
+                            id: i + 1,
+                            table_number: (i + 1).toString(),
+                            seats: 4,
+                            is_active: true,
+                            is_occupied: false
+                        }));
+                    }
+                };
+
+                const loadCategories = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/menu-categories/`);
+                        categories.value = response.data;
+                    } catch (error) {
+                        console.error('加载分类失败:', error);
+                        categories.value = [
+                            { id: 1, name: '热菜' },
+                            { id: 2, name: '凉菜' },
+                            { id: 3, name: '主食' },
+                            { id: 4, name: '饮品' }
+                        ];
+                    }
+                };
+
+                const loadMenuItems = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/menu-items/`);
+                        menuItems.value = response.data;
+                    } catch (error) {
+                        console.error('加载菜品失败:', error);
+                        menuItems.value = [
+                            { id: 1, name: '宫保鸡丁', price: 38, stock: 100, is_available: true, category_id: 1 },
+                            { id: 2, name: '鱼香肉丝', price: 35, stock: 100, is_available: true, category_id: 1 },
+                            { id: 3, name: '凉拌黄瓜', price: 18, stock: 100, is_available: true, category_id: 2 },
+                            { id: 4, name: '米饭', price: 2, stock: 200, is_available: true, category_id: 3 },
+                            { id: 5, name: '可乐', price: 6, stock: 100, is_available: true, category_id: 4 },
+                            { id: 6, name: '雪碧', price: 6, stock: 100, is_available: true, category_id: 4 },
+                            { id: 7, name: '糖醋排骨', price: 48, stock: 80, is_available: true, category_id: 1 },
+                            { id: 8, name: '麻婆豆腐', price: 28, stock: 100, is_available: true, category_id: 1 }
+                        ];
+                    }
+                };
+
+                const loadOrders = async () => {
+                    try {
+                        const response = await axios.get(`${API_BASE}/api/orders/`);
+                        orders.value = response.data;
+                    } catch (error) {
+                        console.error('加载订单失败:', error);
+                    }
+                };
+
+                // 自动刷新
+                const startAutoRefresh = () => {
+                    autoRefreshInterval = setInterval(() => {
+                        loadOrders();
+                        loadTables();
+                    }, 3000);
+                };
+
+                const stopAutoRefresh = () => {
+                    if (autoRefreshInterval) {
+                        clearInterval(autoRefreshInterval);
+                        autoRefreshInterval = null;
+                    }
+                };
+
+                // 角色切换
+                const switchRole = (role) => {
+                    currentRole.value = role;
+                    showNotification(`切换到${getRoleName(role)}模式`, 'info');
+                };
+
+                const getRoleName = (role) => {
+                    const names = {
+                        'customer': '顾客',
+                        'kitchen': '厨师',
+                        'waiter': '传菜员',
+                        'cashier': '收银员',
+                        'manager': '店长'
+                    };
+                    return names[role] || role;
+                };
+
+                // 顾客端功能
+                const selectTable = (table) => {
+                    if (!table.is_occupied) {
+                        tempTableId.value = table.id;
+                    } else {
+                        ElMessage.warning('该桌已被占用');
+                    }
+                };
+
+                const confirmTable = async () => {
+                    const table = tables.value.find(t => t.id === tempTableId.value);
+                    if (table) {
+                        selectedTable.value = table;
+                        ElMessage.success(`已选择${table.table_number}号桌`);
+                    }
+                };
+
+                const addToCart = (item) => {
+                    if (!item.is_available) {
+                        ElMessage.warning('该菜品已下架');
+                        return;
+                    }
+                    if (item.stock <= 0) {
+                        ElMessage.warning('该菜品库存不足');
+                        return;
+                    }
+                    const existingItem = cart.value.find(c => c.id === item.id);
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        cart.value.push({ ...item, quantity: 1 });
+                    }
+                };
+
+                const updateCartItem = (index, delta) => {
+                    cart.value[index].quantity += delta;
+                    if (cart.value[index].quantity <= 0) {
+                        cart.value.splice(index, 1);
+                    }
+                };
+
+                const cartTotal = computed(() => {
+                    return cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2);
+                });
+
+                const submitOrder = async () => {
+                    try {
+                        const orderData = {
+                            table_id: selectedTable.value.id,
+                            items: cart.value.map(item => ({
+                                menu_item_id: item.id,
+                                quantity: item.quantity
+                            })),
+                            payment_method: 'wechat'
+                        };
+
+                        const response = await axios.post(`${API_BASE}/api/orders/`, orderData);
+                        currentOrder.value = response.data;
+                        cart.value = [];
+                        showCart.value = false;
+                        ElMessage.success('订单提交成功！');
+                        showNotification('新订单已提交，厨房正在准备', 'success');
+                        await loadOrders();
+                        await loadTables();
+                    } catch (error) {
+                        console.error('提交订单失败:', error);
+                        ElMessage.error('订单提交失败，请重试');
+                    }
+                };
+
+                // 厨师端功能
+                const kitchenOrders = computed(() => {
+                    return orders.value.filter(order => 
+                        ['pending', 'confirmed', 'preparing'].includes(order.status) &&
+                        order.items.some(item => ['pending', 'preparing'].includes(item.item_status))
+                    );
+                });
+
+                const isUrgent = (order) => {
+                    const orderTime = new Date(order.created_at);
+                    const now = new Date();
+                    const diff = (now - orderTime) / 1000 / 60;
+                    return diff > 15;
+                };
+
+                const getItemClass = (item) => {
+                    return item.item_status;
+                };
+
+                const getItemStatusType = (item) => {
+                    const types = {
+                        'pending': 'warning',
+                        'preparing': 'primary',
+                        'ready': 'success',
+                        'served': 'info'
+                    };
+                    return types[item.item_status] || 'info';
+                };
+
+                const getItemStatusText = (item) => {
+                    const texts = {
+                        'pending': '待制作',
+                        'preparing': '制作中',
+                        'ready': '已完成',
+                        'served': '已上菜'
+                    };
+                    return texts[item.item_status] || item.item_status;
+                };
+
+                const startCooking = async (orderId, itemId) => {
+                    try {
+                        await axios.patch(`${API_BASE}/api/orders/${orderId}/items/${itemId}/status`, {
+                            item_status: 'preparing'
+                        });
+                        ElMessage.success('开始制作');
+                        await loadOrders();
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElMessage.error('更新失败');
+                    }
+                };
+
+                const finishCooking = async (orderId, itemId) => {
+                    try {
+                        await axios.patch(`${API_BASE}/api/orders/${orderId}/items/${itemId}/status`, {
+                            item_status: 'ready'
+                        });
+                        ElMessage.success('制作完成');
+                        showNotification('菜品制作完成，请传菜', 'success');
+                        await loadOrders();
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElMessage.error('更新失败');
+                    }
+                };
+
+                const allItemsReady = (order) => {
+                    return order.items.every(item => item.item_status === 'ready');
+                };
+
+                const markOrderReady = async (orderId) => {
+                    try {
+                        await axios.patch(`${API_BASE}/api/orders/${orderId}/status`, {
+                            status: 'ready'
+                        });
+                        ElMessage.success('订单准备完成');
+                        await loadOrders();
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElMessage.error('更新失败');
+                    }
+                };
+
+                const printKitchenOrder = (order) => {
+                    let content = `=== 厨房制作单 ===\n`;
+                    content += `桌号: ${order.table_number}\n`;
+                    content += `订单号: ${order.id}\n`;
+                    content += `时间: ${formatTime(order.created_at)}\n`;
+                    content += `-------------------\n`;
+                    order.items.forEach(item => {
+                        content += `${item.menu_item_name} x${item.quantity}\n`;
+                        if (item.special_instructions) {
+                            content += `备注: ${item.special_instructions}\n`;
+                        }
+                    });
+                    content += `===================\n`;
+                    console.log(content);
+                    ElMessage.success('制作单已打印');
+                };
+
+                // 语音识别
+                const toggleVoiceRecording = () => {
+                    isRecording.value = !isRecording.value;
+                    if (isRecording.value) {
+                        ElMessage.info('正在录音...');
+                        setTimeout(() => {
+                            if (isRecording.value) {
+                                isRecording.value = false;
+                                ElMessage.success('语音识别: "完成"');
+                                const firstPreparingItem = kitchenOrders.value[0]?.items.find(
+                                    item => item.item_status === 'preparing'
+                                );
+                                if (firstPreparingItem) {
+                                    finishCooking(kitchenOrders.value[0].id, firstPreparingItem.id);
+                                }
+                            }
+                        }, 2000);
+                    }
+                };
+
+                // 传菜员端功能
+                const waiterOrders = computed(() => {
+                    return orders.value.filter(order => 
+                        ['preparing', 'ready', 'serving'].includes(order.status) &&
+                        order.items.some(item => ['ready'].includes(item.item_status))
+                    );
+                });
+
+                const printServingOrder = (order) => {
+                    let content = `=== 传菜单 ===\n`;
+                    content += `桌号: ${order.table_number}\n`;
+                    content += `订单号: ${order.id}\n`;
+                    content += `-------------------\n`;
+                    order.items.forEach(item => {
+                        if (item.item_status === 'ready') {
+                            content += `${item.menu_item_name} x${item.quantity}\n`;
+                        }
+                    });
+                    content += `===================\n`;
+                    console.log(content);
+                    ElMessage.success('传菜单已打印');
+                };
+
+                const serveDish = (orderId, itemId, tableNumber) => {
+                    const order = orders.value.find(o => o.id === orderId);
+                    const item = order?.items.find(i => i.id === itemId);
+                    servingItem.value = item;
+                    servingOrderId.value = orderId;
+                    servingTable.value = tableNumber;
+                    showServingConfirm.value = true;
+                };
+
+                const confirmServing = async () => {
+                    try {
+                        await axios.patch(`${API_BASE}/api/orders/${servingOrderId.value}/items/${servingItem.value.id}/status`, {
+                            item_status: 'served'
+                        });
+                        showServingConfirm.value = false;
+                        ElMessage.success('上菜确认成功');
+                        await loadOrders();
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElMessage.error('更新失败');
+                    }
+                };
+
+                const allItemsServed = (order) => {
+                    return order.items.every(item => item.item_status === 'served');
+                };
+
+                const completeOrder = async (orderId) => {
+                    try {
+                        await axios.patch(`${API_BASE}/api/orders/${orderId}/status`, {
+                            status: 'completed'
+                        });
+                        ElMessage.success('订单完成');
+                        await loadOrders();
+                        await loadTables();
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElMessage.error('更新失败');
+                    }
+                };
+
+                // 收银员端功能
+                const cashierOrders = computed(() => {
+                    return orders.value.filter(order => 
+                        ['pending', 'paid', 'completed'].includes(order.status) || 
+                        !['paid', 'completed'].includes(order.payment_status)
+                    );
+                });
+
+                const getPaymentMethodText = (method) => {
+                    const texts = {
+                        'wechat': '微信支付',
+                        'alipay': '支付宝',
+                        'card': '银行卡',
+                        'cash': '现金',
+                        'credit': '信用卡',
+                        'other': '其他'
+                    };
+                    return texts[method] || method;
+                };
+
+                const processPayment = async (orderId) => {
+                    try {
+                        const order = cashierOrders.value.find(o => o.id === orderId);
+                        if (order) {
+                            await axios.patch(`${API_BASE}/api/orders/${orderId}/status`, {
+                                status: 'paid'
+                            });
+                            selectedPaymentMethod.value = null;
+                            ElMessage.success('支付成功');
+                            showNotification('支付成功', 'success');
+                            await loadOrders();
+                        }
+                    } catch (error) {
+                        console.error('支付失败:', error);
+                        ElMessage.error('支付失败');
+                    }
+                };
+
+                const printReceipt = (order) => {
+                    let content = `=== 小票 ===\n`;
+                    content += `桌号: ${order.table_number}\n`;
+                    content += `订单号: ${order.id}\n`;
+                    content += `时间: ${formatTime(order.created_at)}\n`;
+                    content += `支付方式: ${getPaymentMethodText(order.payment_method)}\n`;
+                    content += `-------------------\n`;
+                    order.items.forEach(item => {
+                        content += `${item.menu_item_name} x${item.quantity} = ¥${item.subtotal}\n`;
+                    });
+                    content += `-------------------\n`;
+                    content += `合计: ¥${order.total_amount}\n`;
+                    content += `===================\n`;
+                    console.log(content);
+                    ElMessage.success('小票已打印');
+                };
+
+                // 店长端功能
+                const allOrders = computed(() => {
+                    return orders.value;
+                });
+
+                const stats = computed(() => {
+                    const today = new Date().toDateString();
+                    const todayOrders = orders.value.filter(o => 
+                        new Date(o.created_at).toDateString() === today
+                    );
+                    return {
+                        totalOrders: todayOrders.length,
+                        totalRevenue: todayOrders.reduce((sum, o) => sum + parseFloat(o.total_amount), 0).toFixed(2),
+                        activeTables: tables.value.filter(t => t.is_occupied).length,
+                        staffCount: 5
+                    };
+                });
+
+                const getOrderStatusType = (status) => {
+                    const types = {
+                        'pending': 'warning',
+                        'confirmed': 'primary',
+                        'preparing': 'primary',
+                        'ready': 'success',
+                        'serving': 'info',
+                        'completed': 'success',
+                        'cancelled': 'danger'
+                    };
+                    return types[status] || 'info';
+                };
+
+                const getOrderStatusText = (status) => {
+                    const texts = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'preparing': '准备中',
+                        'ready': '已完成',
+                        'serving': '上菜中',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return texts[status] || status;
+                };
+
+                const viewOrderDetail = (order) => {
+                    let detail = `订单详情:\n`;
+                    detail += `桌号: ${order.table_number}\n`;
+                    detail += `订单号: ${order.id}\n`;
+                    detail += `状态: ${getOrderStatusText(order.status)}\n`;
+                    detail += `支付: ${getPaymentMethodText(order.payment_method)}\n`;
+                    detail += `-------------------\n`;
+                    order.items.forEach(item => {
+                        detail += `${item.menu_item_name} x${item.quantity} = ¥${item.subtotal}\n`;
+                    });
+                    detail += `-------------------\n`;
+                    detail += `合计: ¥${order.total_amount}\n`;
+                    ElMessageBox.alert(detail, '订单详情');
+                };
+
+                const cancelOrder = async (orderId) => {
+                    try {
+                        await ElMessageBox.confirm('确定要取消这个订单吗？', '确认取消', {
+                            type: 'warning'
+                        });
+                        await axios.patch(`${API_BASE}/api/orders/${orderId}/status`, {
+                            status: 'cancelled'
+                        });
+                        ElMessage.success('订单已取消');
+                        await loadOrders();
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('取消订单失败:', error);
+                        }
+                    }
+                };
+
+                // 工具函数
+                const filteredMenuItems = computed(() => {
+                    if (selectedCategory.value === null) {
+                        return menuItems.value.filter(item => item.is_available);
+                    }
+                    return menuItems.value.filter(item => 
+                        item.is_available && item.category_id === selectedCategory.value
+                    );
+                });
+
+                const formatTime = (timeStr) => {
+                    if (!timeStr) return '';
+                    const date = new Date(timeStr);
+                    return date.toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                const showNotification = (message, type = 'info') => {
+                    const id = notificationId++;
+                    notifications.value.push({ id, message, type, index: notifications.value.length });
+                    setTimeout(() => {
+                        const idx = notifications.value.findIndex(n => n.id === id);
+                        if (idx !== -1) {
+                            notifications.value.splice(idx, 1);
+                        }
+                    }, 3000);
+                };
+
+                return {
+                    // 状态
+                    currentRole,
+                    showCart,
+                    showServingConfirm,
+                    selectedCategory,
+                    selectedTable,
+                    tempTableId,
+                    selectedPaymentMethod,
+                    servingItem,
+                    servingOrderId,
+                    servingTable,
+                    isRecording,
+                    notifications,
+
+                    // 数据
+                    tables,
+                    categories,
+                    menuItems,
+                    cart,
+                    orders,
+                    currentOrder,
+
+                    // 计算属性
+                    filteredMenuItems,
+                    cartTotal,
+                    kitchenOrders,
+                    waiterOrders,
+                    cashierOrders,
+                    allOrders,
+                    stats,
+
+                    // 方法
+                    switchRole,
+                    selectTable,
+                    confirmTable,
+                    addToCart,
+                    updateCartItem,
+                    submitOrder,
+                    isUrgent,
+                    getItemClass,
+                    getItemStatusType,
+                    getItemStatusText,
+                    startCooking,
+                    finishCooking,
+                    allItemsReady,
+                    markOrderReady,
+                    printKitchenOrder,
+                    toggleVoiceRecording,
+                    printServingOrder,
+                    serveDish,
+                    confirmServing,
+                    allItemsServed,
+                    completeOrder,
+                    getPaymentMethodText,
+                    processPayment,
+                    printReceipt,
+                    getOrderStatusType,
+                    getOrderStatusText,
+                    viewOrderDetail,
+                    cancelOrder,
+                    formatTime
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

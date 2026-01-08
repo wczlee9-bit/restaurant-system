@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多店铺扫码点餐系统 - 完整测试平台</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f5f7fa; }
+        #app { padding: 20px; }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 { font-size: 24px; margin: 0; }
+        .api-status { font-size: 14px; }
+        .api-status .online { color: #67C23A; }
+        .api-status .offline { color: #F56C6C; }
+        
+        .card { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .card h3 { margin-bottom: 15px; color: #303133; border-bottom: 2px solid #409EFF; padding-bottom: 10px; }
+        
+        .menu-item { 
+            display: inline-block; width: 200px; margin: 10px; 
+            border: 1px solid #EBEEF5; border-radius: 8px; overflow: hidden;
+            vertical-align: top; transition: all 0.3s;
+        }
+        .menu-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-2px); }
+        .menu-item img { width: 100%; height: 120px; object-fit: cover; }
+        .menu-item-info { padding: 10px; }
+        .menu-item-name { font-weight: bold; margin-bottom: 5px; }
+        .menu-item-price { color: #F56C6C; font-size: 18px; font-weight: bold; }
+        .menu-item-desc { font-size: 12px; color: #909399; margin-top: 5px; }
+        
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #EBEEF5; }
+        .cart-item:last-child { border-bottom: none; }
+        
+        .order-status { padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .status-pending { background: #FDF6EC; color: #E6A23C; }
+        .status-confirmed { background: #ECF5FF; color: #409EFF; }
+        .status-preparing { background: #F0F9FF; color: #67C23A; }
+        .status-ready { background: #F4F4F5; color: #909399; }
+        .status-serving { background: #FEF0F0; color: #F56C6C; }
+        .status-completed { background: #F0F9EB; color: #67C23A; }
+        .status-cancelled { background: #FEF0F0; color: #909399; }
+        
+        .receipt {
+            background: white; padding: 20px; font-family: monospace;
+            border: 1px dashed #DCDFE6; max-width: 320px; margin: 0 auto;
+        }
+        .receipt h2 { text-align: center; margin-bottom: 10px; }
+        .receipt-line { display: flex; justify-content: space-between; padding: 5px 0; }
+        .receipt-divider { border-top: 1px dashed #DCDFE6; margin: 10px 0; }
+        .receipt-total { font-weight: bold; font-size: 18px; }
+        
+        .kitchen-item { padding: 15px; margin: 10px 0; border: 1px solid #EBEEF5; border-radius: 8px; }
+        .kitchen-item.cooking { border-left: 4px solid #E6A23C; }
+        .kitchen-item.ready { border-left: 4px solid #67C23A; }
+        
+        .table-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+        .table-card { 
+            padding: 15px; text-align: center; border: 2px solid #DCDFE6; 
+            border-radius: 10px; cursor: pointer; transition: all 0.3s;
+        }
+        .table-card:hover { border-color: #409EFF; }
+        .table-card.selected { border-color: #409EFF; background: #ECF5FF; }
+        .table-card.occupied { border-color: #F56C6C; background: #FEF0F0; }
+        
+        .step-indicator { display: flex; justify-content: space-between; margin: 20px 0; }
+        .step { 
+            flex: 1; text-align: center; padding: 10px; 
+            border-bottom: 3px solid #DCDFE6; color: #909399;
+        }
+        .step.active { border-color: #409EFF; color: #409EFF; font-weight: bold; }
+        .step.completed { border-color: #67C23A; color: #67C23A; }
+        
+        .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        
+        .serving-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; margin: 5px 0; background: #F5F7FA; border-radius: 5px;
+        }
+        .serving-item.served { opacity: 0.5; text-decoration: line-through; }
+        
+        .print-preview { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; 
+            align-items: center; z-index: 1000;
+        }
+        .print-modal { background: white; padding: 20px; border-radius: 10px; max-width: 400px; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            .print-content, .print-content * { visibility: visible; }
+            .print-content { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <h1>🍽️ 多店铺扫码点餐系统 - 完整测试平台</h1>
+            <div class="api-status">
+                API状态: <span :class="apiConnected ? 'online' : 'offline'">{{ apiConnected ? '● 在线' : '● 离线' }}</span>
+                <span style="margin-left: 20px;">当前店铺: {{ currentStore ? currentStore.name : '未选择' }}</span>
+            </div>
+        </div>
+
+        <el-tabs v-model="activeTab" type="border-card" @tab-change="handleTabChange">
+            <!-- 顾客端 - 扫码点餐 -->
+            <el-tab-pane label="📱 顾客端" name="customer">
+                <div class="card">
+                    <h3>选择桌号</h3>
+                    <div class="table-selector">
+                        <div v-for="table in tables" :key="table.id" 
+                             class="table-card" 
+                             :class="{ selected: selectedTable && selectedTable.id === table.id, occupied: table.is_occupied }"
+                             @click="selectTable(table)">
+                            <div style="font-size: 24px;">{{ table.table_number }}</div>
+                            <div style="font-size: 12px;">{{ table.seats }}人桌</div>
+                            <div v-if="table.is_occupied" style="color: #F56C6C; font-size: 12px;">已占用</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="selectedTable" class="card">
+                    <div class="step-indicator">
+                        <div class="step" :class="{ active: currentStep === 1, completed: currentStep > 1 }">1. 选菜</div>
+                        <div class="step" :class="{ active: currentStep === 2, completed: currentStep > 2 }">2. 购物车</div>
+                        <div class="step" :class="{ active: currentStep === 3, completed: currentStep > 3 }">3. 支付</div>
+                    </div>
+
+                    <!-- 步骤1: 选菜 -->
+                    <div v-if="currentStep === 1">
+                        <div style="margin-bottom: 15px;">
+                            <el-radio-group v-model="selectedCategory">
+                                <el-radio-button label="">全部</el-radio-button>
+                                <el-radio-button v-for="cat in categories" :key="cat.id" :label="cat.id">
+                                    {{ cat.name }}
+                                </el-radio-button>
+                            </el-radio-group>
+                        </div>
+                        
+                        <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
+                            <img :src="item.image_url || 'https://via.placeholder.com/200x120?text=菜品图片'" :alt="item.name">
+                            <div class="menu-item-info">
+                                <div class="menu-item-name">{{ item.name }}</div>
+                                <div class="menu-item-price">¥{{ item.price.toFixed(2) }}</div>
+                                <div class="menu-item-desc">{{ item.description }}</div>
+                                <div class="tag-row">
+                                    <el-tag v-if="item.is_recommended" type="danger" size="small">推荐</el-tag>
+                                    <el-tag type="info" size="small">库存: {{ item.stock }}</el-tag>
+                                    <el-tag type="success" size="small">已售: {{ item.sales_count }}</el-tag>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <el-button type="primary" size="small" @click="addToCart(item)" :disabled="item.stock <= 0">
+                                        {{ item.stock > 0 ? '加入购物车' : '已售罄' }}
+                                    </el-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤2: 购物车 -->
+                    <div v-if="currentStep === 2">
+                        <div v-if="cart.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                            购物车是空的，去选菜吧！
+                        </div>
+                        <div v-else>
+                            <div v-for="(item, index) in cart" :key="index" class="cart-item">
+                                <div>
+                                    <div style="font-weight: bold;">{{ item.name }}</div>
+                                    <div style="color: #F56C6C;">¥{{ item.price.toFixed(2) }}</div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <el-button size="small" @click="updateCartQuantity(index, item.quantity - 1)">-</el-button>
+                                    <span>{{ item.quantity }}</span>
+                                    <el-button size="small" @click="updateCartQuantity(index, item.quantity + 1)">+</el-button>
+                                </div>
+                            </div>
+                            <el-divider></el-divider>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                                <div style="font-size: 18px; font-weight: bold;">
+                                    总计: ¥{{ cartTotal.toFixed(2) }}
+                                </div>
+                                <div>
+                                    <el-button @click="currentStep = 1">返回选菜</el-button>
+                                    <el-button type="primary" @click="currentStep = 3">去结算</el-button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 步骤3: 支付 -->
+                    <div v-if="currentStep === 3">
+                        <div style="text-align: center; padding: 20px;">
+                            <h2>订单确认</h2>
+                            <p>桌号: {{ selectedTable.table_number }}</p>
+                            <div style="font-size: 24px; color: #F56C6C; font-weight: bold; margin: 20px 0;">
+                                应付金额: ¥{{ cartTotal.toFixed(2) }}
+                            </div>
+                            <p>订单明细:</p>
+                            <div v-for="(item, index) in cart" :key="index" style="padding: 10px 0; border-bottom: 1px solid #EBEEF5;">
+                                {{ item.name }} x {{ item.quantity }} = ¥{{ (item.price * item.quantity).toFixed(2) }}
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <el-form label-position="top">
+                                <el-form-item label="选择支付方式">
+                                    <el-radio-group v-model="paymentMethod">
+                                        <el-radio label="wechat">
+                                            <el-icon><span style="color: #09BB07;">💚</span></el-icon>
+                                            微信支付
+                                        </el-radio>
+                                        <el-radio label="alipay">
+                                            <el-icon><span style="color: #1677FF;">💙</span></el-icon>
+                                            支付宝
+                                        </el-radio>
+                                        <el-radio label="credit_card">
+                                            <el-icon><span style="color: #F56C6C;">❤️</span></el-icon>
+                                            信用卡
+                                        </el-radio>
+                                        <el-radio label="debit_card">
+                                            <el-icon><span style="color: #E6A23C;">🧡</span></el-icon>
+                                            借记卡
+                                        </el-radio>
+                                        <el-radio label="cash">
+                                            <el-icon><span style="color: #67C23A;">💵</span></el-icon>
+                                            现金
+                                        </el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="会员手机号（可选，积分累计）">
+                                    <el-input v-model="memberPhone" placeholder="请输入会员手机号"></el-input>
+                                </el-form-item>
+                            </el-form>
+                            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                <el-button @click="currentStep = 2" style="flex: 1;">返回购物车</el-button>
+                                <el-button type="primary" @click="submitOrder" style="flex: 2;" :loading="submitting">
+                                    确认支付并下单
+                                </el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
+            <!-- 订单管理 -->
+            <el-tab-pane label="📋 订单管理" name="orders">
+                <div class="card">
+                    <h3>订单列表</h3>
+                    <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                        <el-select v-model="orderFilterStatus" placeholder="订单状态" @change="filterOrders">
+                            <el-option label="全部" value=""></el-option>
+                            <el-option label="待确认" value="pending"></el-option>
+                            <el-option label="已确认" value="confirmed"></el-option>
+                            <el-option label="制作中" value="preparing"></el-option>
+                            <el-option label="待传菜" value="ready"></el-option>
+                            <el-option label="上菜中" value="serving"></el-option>
+                            <el-option label="已完成" value="completed"></el-option>
+                            <el-option label="已取消" value="cancelled"></el-option>
+                        </el-select>
+                        <el-select v-model="orderFilterTable" placeholder="桌号" @change="filterOrders">
+                            <el-option label="全部" value=""></el-option>
+                            <el-option v-for="table in tables" :key="table.id" 
+                                       :label="table.table_number" :value="table.id"></el-option>
+                        </el-select>
+                        <el-button type="primary" @click="refreshOrders">刷新</el-button>
+                    </div>
+                    
+                    <div v-if="filteredOrders.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                        暂无订单
+                    </div>
+                    
+                    <el-table v-else :data="filteredOrders" style="width: 100%">
+                        <el-table-column prop="id" label="订单号" width="80"></el-table-column>
+                        <el-table-column prop="table_number" label="桌号" width="80"></el-table-column>
+                        <el-table-column prop="total_amount" label="金额" width="100">
+                            <template #default="scope">¥{{ scope.row.total_amount.toFixed(2) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="状态" width="100">
+                            <template #default="scope">
+                                <span class="order-status" :class="'status-' + scope.row.status">
+                                    {{ getStatusText(scope.row.status) }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="payment_method" label="支付方式" width="100">
+                            <template #default="scope">{{ getPaymentMethodText(scope.row.payment_method) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="created_at" label="下单时间" width="180"></el-table-column>
+                        <el-table-column label="操作" fixed="right" width="200">
+                            <template #default="scope">
+                                <el-button size="small" @click="viewOrderDetail(scope.row)">详情</el-button>
+                                <el-button size="small" type="primary" @click="printReceipt(scope.row)">打印</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 订单详情弹窗 -->
+                <el-dialog v-model="orderDetailVisible" title="订单详情" width="800px">
+                    <div v-if="selectedOrder">
+                        <el-descriptions :column="2" border>
+                            <el-descriptions-item label="订单号">{{ selectedOrder.id }}</el-descriptions-item>
+                            <el-descriptions-item label="桌号">{{ selectedOrder.table_number }}</el-descriptions-item>
+                            <el-descriptions-item label="金额">¥{{ selectedOrder.total_amount.toFixed(2) }}</el-descriptions-item>
+                            <el-descriptions-item label="状态">
+                                <span class="order-status" :class="'status-' + selectedOrder.status">
+                                    {{ getStatusText(selectedOrder.status) }}
+                                </span>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="支付方式">{{ getPaymentMethodText(selectedOrder.payment_method) }}</el-descriptions-item>
+                            <el-descriptions-item label="下单时间">{{ selectedOrder.created_at }}</el-descriptions-item>
+                        </el-descriptions>
+                        
+                        <el-divider></el-divider>
+                        
+                        <h4>订单明细</h4>
+                        <el-table :data="selectedOrder.items" style="width: 100%">
+                            <el-table-column prop="menu_item_name" label="菜品名称"></el-table-column>
+                            <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
+                            <el-table-column prop="price" label="单价" width="100">
+                                <template #default="scope">¥{{ scope.row.price.toFixed(2) }}</template>
+                            </el-table-column>
+                            <el-table-column label="小计" width="100">
+                                <template #default="scope">¥{{ (scope.row.price * scope.row.quantity).toFixed(2) }}</template>
+                            </el-table-column>
+                            <el-table-column prop="item_status" label="状态" width="100">
+                                <template #default="scope">
+                                    <span class="order-status" :class="'status-' + scope.row.item_status">
+                                        {{ getItemStatusText(scope.row.item_status) }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+
+                        <el-divider></el-divider>
+
+                        <div style="text-align: center;">
+                            <el-button @click="updateOrderStatus(selectedOrder.id, 'confirmed')" 
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'confirmed')">
+                                确认订单
+                            </el-button>
+                            <el-button type="warning" @click="updateOrderStatus(selectedOrder.id, 'preparing')"
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'preparing')">
+                                开始制作
+                            </el-button>
+                            <el-button type="success" @click="updateOrderStatus(selectedOrder.id, 'ready')"
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'ready')">
+                                制作完成
+                            </el-button>
+                            <el-button type="primary" @click="updateOrderStatus(selectedOrder.id, 'serving')"
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'serving')">
+                                开始传菜
+                            </el-button>
+                            <el-button type="success" @click="updateOrderStatus(selectedOrder.id, 'completed')"
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'completed')">
+                                完成订单
+                            </el-button>
+                            <el-button type="danger" @click="updateOrderStatus(selectedOrder.id, 'cancelled')"
+                                       :disabled="!canUpdateStatus(selectedOrder.status, 'cancelled')">
+                                取消订单
+                            </el-button>
+                        </div>
+                    </div>
+                </el-dialog>
+
+                <!-- 小票打印预览 -->
+                <el-dialog v-model="receiptVisible" title="小票打印预览" width="400px">
+                    <div class="receipt print-content" v-if="selectedOrder">
+                        <h2>{{ storeName }}</h2>
+                        <p>地址: {{ storeAddress }}</p>
+                        <p>电话: {{ storePhone }}</p>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-line">
+                            <span>订单号: {{ selectedOrder.id }}</span>
+                        </div>
+                        <div class="receipt-line">
+                            <span>桌号: {{ selectedOrder.table_number }}</span>
+                            <span>时间: {{ formatDateTime(selectedOrder.created_at) }}</span>
+                        </div>
+                        <div class="receipt-line">
+                            <span>支付: {{ getPaymentMethodText(selectedOrder.payment_method) }}</span>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <div v-for="item in selectedOrder.items" :key="item.id">
+                            <div class="receipt-line">
+                                <span>{{ item.menu_item_name }}</span>
+                                <span>x{{ item.quantity }}</span>
+                            </div>
+                            <div class="receipt-line" style="padding-left: 20px;">
+                                <span>¥{{ item.price.toFixed(2) }}</span>
+                                <span>¥{{ (item.price * item.quantity).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-line receipt-total">
+                            <span>总计:</span>
+                            <span>¥{{ selectedOrder.total_amount.toFixed(2) }}</span>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <p style="text-align: center;">感谢光临，欢迎下次再来！</p>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <el-button @click="receiptVisible = false">取消</el-button>
+                        <el-button type="primary" @click="printReceiptConfirm">打印</el-button>
+                    </div>
+                </el-dialog>
+            </el-tab-pane>
+
+            <!-- 厨房制作 -->
+            <el-tab-pane label="👨‍🍳 厨房制作" name="kitchen">
+                <div class="card">
+                    <h3>待制作订单</h3>
+                    <div style="margin-bottom: 15px;">
+                        <el-button type="primary" @click="refreshKitchenOrders">刷新订单</el-button>
+                    </div>
+                    
+                    <div v-if="kitchenOrders.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                        暂无待制作订单
+                    </div>
+                    
+                    <div v-for="order in kitchenOrders" :key="order.id" class="kitchen-item" 
+                         :class="{ cooking: order.status === 'preparing', ready: order.status === 'ready' }">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <div>
+                                <strong style="font-size: 18px;">订单 #{{ order.id }}</strong>
+                                <span style="margin-left: 10px;">桌号: {{ order.table_number }}</span>
+                                <span style="margin-left: 10px;">时间: {{ formatTime(order.created_at) }}</span>
+                            </div>
+                            <span class="order-status" :class="'status-' + order.status">
+                                {{ getStatusText(order.status) }}
+                            </span>
+                        </div>
+                        
+                        <el-table :data="order.items" style="width: 100%">
+                            <el-table-column prop="menu_item_name" label="菜品名称"></el-table-column>
+                            <el-table-column prop="quantity" label="数量" width="80"></el-table-column>
+                            <el-table-column prop="item_status" label="状态" width="100">
+                                <template #default="scope">
+                                    <span class="order-status" :class="'status-' + scope.row.item_status">
+                                        {{ getItemStatusText(scope.row.item_status) }}
+                                    </span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" width="200">
+                                <template #default="scope">
+                                    <el-button size="small" type="primary" 
+                                               @click="updateItemStatus(order.id, scope.row.id, 'preparing')"
+                                               :disabled="!canUpdateItemStatus(scope.row.item_status, 'preparing')">
+                                        开始制作
+                                    </el-button>
+                                    <el-button size="small" type="success"
+                                               @click="updateItemStatus(order.id, scope.row.id, 'ready')"
+                                               :disabled="!canUpdateItemStatus(scope.row.item_status, 'ready')">
+                                        制作完成
+                                    </el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        
+                        <div style="margin-top: 10px; text-align: right;">
+                            <el-button @click="printKitchenReceipt(order)">打印制作单</el-button>
+                        </div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
+            <!-- 传菜管理 -->
+            <el-tab-pane label="🍽️ 传菜管理" name="serving">
+                <div class="card">
+                    <h3>待传菜订单</h3>
+                    <div style="margin-bottom: 15px;">
+                        <el-button type="primary" @click="refreshServingOrders">刷新订单</el-button>
+                    </div>
+                    
+                    <div v-if="servingOrders.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                        暂无待传菜订单
+                    </div>
+                    
+                    <div v-for="order in servingOrders" :key="order.id" style="margin-bottom: 20px;">
+                        <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #EBEEF5;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <div>
+                                    <strong style="font-size: 18px;">订单 #{{ order.id }}</strong>
+                                    <span style="margin-left: 10px;">桌号: {{ order.table_number }}</span>
+                                    <span style="margin-left: 10px;">时间: {{ formatTime(order.created_at) }}</span>
+                                </div>
+                                <el-button type="primary" @click="printServingReceipt(order)">打印传菜单</el-button>
+                            </div>
+                            
+                            <h4>待上菜品 (请逐一确认上菜)</h4>
+                            <div v-for="item in order.items" :key="item.id" class="serving-item"
+                                 :class="{ served: item.item_status === 'served' }">
+                                <div>
+                                    <strong>{{ item.menu_item_name }}</strong>
+                                    <span style="margin-left: 10px;">x{{ item.quantity }}</span>
+                                </div>
+                                <el-button type="success" size="small"
+                                           @click="confirmServeItem(order.id, item.id)"
+                                           :disabled="item.item_status === 'served'">
+                                    {{ item.item_status === 'served' ? '已上菜' : '确认上菜' }}
+                                </el-button>
+                            </div>
+                            
+                            <el-divider></el-divider>
+                            
+                            <div style="text-align: center;">
+                                <el-button type="success" @click="confirmAllServed(order.id)"
+                                           :disabled="!allItemsServed(order.items)">
+                                    全部上菜完成
+                                </el-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 传菜单打印预览 -->
+                <el-dialog v-model="servingReceiptVisible" title="传菜单打印预览" width="400px">
+                    <div class="receipt print-content" v-if="selectedServingOrder">
+                        <h2>传菜单</h2>
+                        <p>桌号: {{ selectedServingOrder.table_number }}</p>
+                        <p>订单号: {{ selectedServingOrder.id }}</p>
+                        <div class="receipt-divider"></div>
+                        <h4>待传菜品:</h4>
+                        <div v-for="item in selectedServingOrder.items" :key="item.id"
+                             :class="{ served: item.item_status === 'served' }">
+                            <div class="receipt-line">
+                                <span>{{ item.menu_item_name }}</span>
+                                <span>x{{ item.quantity }}</span>
+                            </div>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <p style="text-align: center;">请服务员逐一确认上菜</p>
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <el-button @click="servingReceiptVisible = false">取消</el-button>
+                        <el-button type="primary" @click="printServingReceiptConfirm">打印</el-button>
+                    </div>
+                </el-dialog>
+            </el-tab-pane>
+
+            <!-- 菜品管理 -->
+            <el-tab-pane label="🍲 菜品管理" name="menu">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>菜品列表</h3>
+                        <el-button type="primary" @click="showAddMenuItemDialog">添加菜品</el-button>
+                    </div>
+                    
+                    <el-table :data="menuItems" style="width: 100%">
+                        <el-table-column prop="name" label="菜品名称"></el-table-column>
+                        <el-table-column prop="category_name" label="分类"></el-table-column>
+                        <el-table-column prop="price" label="价格">
+                            <template #default="scope">¥{{ scope.row.price.toFixed(2) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="stock" label="库存" width="80"></el-table-column>
+                        <el-table-column prop="sales_count" label="销量" width="80"></el-table-column>
+                        <el-table-column label="状态" width="100">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.is_available ? 'success' : 'danger'">
+                                    {{ scope.row.is_available ? '上架' : '下架' }}
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="150">
+                            <template #default="scope">
+                                <el-button size="small" @click="editMenuItem(scope.row)">编辑</el-button>
+                                <el-button size="small" type="danger" @click="deleteMenuItem(scope.row.id)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 添加/编辑菜品弹窗 -->
+                <el-dialog v-model="menuItemDialogVisible" :title="editingMenuItem ? '编辑菜品' : '添加菜品'" width="600px">
+                    <el-form :model="menuItemForm" label-width="100px">
+                        <el-form-item label="菜品名称">
+                            <el-input v-model="menuItemForm.name"></el-input>
+                        </el-form-item>
+                        <el-form-item label="分类">
+                            <el-select v-model="menuItemForm.category_id">
+                                <el-option v-for="cat in categories" :key="cat.id"
+                                           :label="cat.name" :value="cat.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="价格">
+                            <el-input-number v-model="menuItemForm.price" :min="0" :precision="2"></el-input-number>
+                        </el-form-item>
+                        <el-form-item label="库存">
+                            <el-input-number v-model="menuItemForm.stock" :min="0"></el-input-number>
+                        </el-form-item>
+                        <el-form-item label="描述">
+                            <el-input type="textarea" v-model="menuItemForm.description" rows="3"></el-input>
+                        </el-form-item>
+                        <el-form-item label="图片URL">
+                            <el-input v-model="menuItemForm.image_url"></el-input>
+                        </el-form-item>
+                        <el-form-item label="是否推荐">
+                            <el-switch v-model="menuItemForm.is_recommended"></el-switch>
+                        </el-form-item>
+                        <el-form-item label="是否上架">
+                            <el-switch v-model="menuItemForm.is_available"></el-switch>
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="menuItemDialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="saveMenuItem">保存</el-button>
+                    </template>
+                </el-dialog>
+            </el-tab-pane>
+
+            <!-- 桌号管理 -->
+            <el-tab-pane label="🪑 桌号管理" name="tables">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>桌号列表</h3>
+                        <el-button type="primary" @click="showAddTableDialog">添加桌号</el-button>
+                    </div>
+                    
+                    <el-table :data="tables" style="width: 100%">
+                        <el-table-column prop="table_number" label="桌号"></el-table-column>
+                        <el-table-column prop="seats" label="座位数"></el-table-column>
+                        <el-table-column label="状态" width="100">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.is_occupied ? 'danger' : 'success'">
+                                    {{ scope.row.is_occupied ? '占用' : '空闲' }}
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="150">
+                            <template #default="scope">
+                                <el-button size="small" @click="editTable(scope.row)">编辑</el-button>
+                                <el-button size="small" type="primary" @click="generateQRCode(scope.row)">生成二维码</el-button>
+                                <el-button size="small" type="danger" @click="deleteTable(scope.row.id)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <!-- 添加/编辑桌号弹窗 -->
+                <el-dialog v-model="tableDialogVisible" :title="editingTable ? '编辑桌号' : '添加桌号'" width="500px">
+                    <el-form :model="tableForm" label-width="100px">
+                        <el-form-item label="桌号">
+                            <el-input v-model="tableForm.table_number"></el-input>
+                        </el-form-item>
+                        <el-form-item label="座位数">
+                            <el-input-number v-model="tableForm.seats" :min="1"></el-input-number>
+                        </el-form-item>
+                        <el-form-item label="是否可用">
+                            <el-switch v-model="tableForm.is_active"></el-switch>
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="tableDialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="saveTable">保存</el-button>
+                    </template>
+                </el-dialog>
+
+                <!-- 二维码预览弹窗 -->
+                <el-dialog v-model="qrCodeVisible" title="桌号二维码" width="400px">
+                    <div style="text-align: center;">
+                        <img :src="qrCodeUrl" style="max-width: 300px;">
+                        <p style="margin-top: 10px;">桌号: {{ qrCodeTable?.table_number }}</p>
+                        <p>客人扫码后可直接点餐</p>
+                    </div>
+                    <template #footer>
+                        <el-button @click="qrCodeVisible = false">关闭</el-button>
+                    </template>
+                </el-dialog>
+            </el-tab-pane>
+
+            <!-- 系统设置 -->
+            <el-tab-pane label="⚙️ 系统设置" name="settings">
+                <div class="card">
+                    <h3>店铺信息</h3>
+                    <el-form label-width="120px" style="max-width: 600px;">
+                        <el-form-item label="店铺名称">
+                            <el-input v-model="storeSettings.name"></el-input>
+                        </el-form-item>
+                        <el-form-item label="店铺地址">
+                            <el-input v-model="storeSettings.address"></el-input>
+                        </el-form-item>
+                        <el-form-item label="联系电话">
+                            <el-input v-model="storeSettings.phone"></el-input>
+                        </el-form-item>
+                        <el-form-item label="API地址">
+                            <el-input v-model="apiBaseUrl"></el-input>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="saveStoreSettings">保存设置</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, reactive } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 全局状态
+                const activeTab = ref('customer');
+                const apiBaseUrl = ref('http://localhost:8000');
+                const apiConnected = ref(true);
+                const currentStore = ref(null);
+                
+                // 店铺信息
+                const storeName = ref('美味餐厅');
+                const storeAddress = ref('北京市朝阳区xxx路xxx号');
+                const storePhone = ref('010-12345678');
+                
+                const storeSettings = reactive({
+                    name: storeName.value,
+                    address: storeAddress.value,
+                    phone: storePhone.value
+                });
+
+                // 顾客端相关
+                const tables = ref([]);
+                const selectedTable = ref(null);
+                const categories = ref([]);
+                const menuItems = ref([]);
+                const selectedCategory = ref('');
+                const cart = ref([]);
+                const currentStep = ref(1);
+                const paymentMethod = ref('wechat');
+                const memberPhone = ref('');
+                const submitting = ref(false);
+
+                // 订单相关
+                const orders = ref([]);
+                const filteredOrders = ref([]);
+                const orderFilterStatus = ref('');
+                const orderFilterTable = ref('');
+                const orderDetailVisible = ref(false);
+                const selectedOrder = ref(null);
+                const receiptVisible = ref(false);
+
+                // 厨房相关
+                const kitchenOrders = ref([]);
+
+                // 传菜相关
+                const servingOrders = ref([]);
+                const servingReceiptVisible = ref(false);
+                const selectedServingOrder = ref(null);
+
+                // 菜品管理相关
+                const menuItemDialogVisible = ref(false);
+                const editingMenuItem = ref(null);
+                const menuItemForm = reactive({
+                    name: '',
+                    category_id: null,
+                    price: 0,
+                    stock: 100,
+                    description: '',
+                    image_url: '',
+                    is_recommended: false,
+                    is_available: true
+                });
+
+                // 桌号管理相关
+                const tableDialogVisible = ref(false);
+                const editingTable = ref(null);
+                const tableForm = reactive({
+                    table_number: '',
+                    seats: 4,
+                    is_active: true
+                });
+                const qrCodeVisible = ref(false);
+                const qrCodeUrl = ref('');
+                const qrCodeTable = ref(null);
+
+                // 计算属性
+                const filteredMenuItems = computed(() => {
+                    if (!selectedCategory.value) return menuItems.value.filter(item => item.is_available);
+                    return menuItems.value.filter(item => 
+                        item.category_id === selectedCategory.value && item.is_available
+                    );
+                });
+
+                const cartTotal = computed(() => {
+                    return cart.value.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                });
+
+                // API请求函数
+                async function apiRequest(method, endpoint, data = null) {
+                    try {
+                        const config = {
+                            method: method,
+                            url: `${apiBaseUrl.value}${endpoint}`,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        };
+                        if (data) {
+                            config.data = data;
+                        }
+                        const response = await axios(config);
+                        apiConnected.value = true;
+                        return response.data;
+                    } catch (error) {
+                        console.error('API请求失败:', error);
+                        apiConnected.value = false;
+                        throw error;
+                    }
+                }
+
+                // 加载初始数据
+                async function loadInitialData() {
+                    try {
+                        await Promise.all([
+                            loadTables(),
+                            loadCategories(),
+                            loadMenuItems(),
+                            loadOrders()
+                        ]);
+                    } catch (error) {
+                        console.error('加载数据失败:', error);
+                    }
+                }
+
+                // 加载桌号
+                async function loadTables() {
+                    try {
+                        const response = await apiRequest('GET', '/api/tables/');
+                        tables.value = response || [];
+                        console.log('加载桌号成功:', tables.value.length);
+                    } catch (error) {
+                        console.error('加载桌号失败:', error);
+                        tables.value = [];
+                    }
+                }
+
+                // 加载菜品分类
+                async function loadCategories() {
+                    try {
+                        const response = await apiRequest('GET', '/api/menu-categories/');
+                        categories.value = response || [];
+                        console.log('加载分类成功:', categories.value.length);
+                    } catch (error) {
+                        console.error('加载分类失败:', error);
+                        categories.value = [];
+                    }
+                }
+
+                // 加载菜品
+                async function loadMenuItems() {
+                    try {
+                        const response = await apiRequest('GET', '/api/menu-items/');
+                        menuItems.value = response || [];
+                        console.log('加载菜品成功:', menuItems.value.length);
+                    } catch (error) {
+                        console.error('加载菜品失败:', error);
+                        menuItems.value = [];
+                    }
+                }
+
+                // 加载订单
+                async function loadOrders() {
+                    try {
+                        const response = await apiRequest('GET', '/api/orders/');
+                        orders.value = response || [];
+                        filterOrders();
+                        console.log('加载订单成功:', orders.value.length);
+                    } catch (error) {
+                        console.error('加载订单失败:', error);
+                        orders.value = [];
+                    }
+                }
+
+                // 筛选订单
+                function filterOrders() {
+                    filteredOrders.value = orders.value.filter(order => {
+                        if (orderFilterStatus.value && order.status !== orderFilterStatus.value) return false;
+                        if (orderFilterTable.value && order.table_id !== orderFilterTable.value) return false;
+                        return true;
+                    });
+                }
+
+                // 选择桌号
+                function selectTable(table) {
+                    if (table.is_occupied) {
+                        ElementPlus.ElMessage.warning('该桌已被占用');
+                        return;
+                    }
+                    selectedTable.value = table;
+                    currentStep.value = 1;
+                    cart.value = [];
+                }
+
+                // 添加到购物车
+                function addToCart(item) {
+                    if (item.stock <= 0) return;
+                    
+                    const existingItem = cart.value.find(c => c.id === item.id);
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        cart.value.push({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: 1,
+                            stock: item.stock
+                        });
+                    }
+                    
+                    ElementPlus.ElMessage.success(`${item.name} 已加入购物车`);
+                }
+
+                // 更新购物车数量
+                function updateCartQuantity(index, quantity) {
+                    if (quantity <= 0) {
+                        cart.value.splice(index, 1);
+                    } else if (quantity <= cart.value[index].stock) {
+                        cart.value[index].quantity = quantity;
+                    } else {
+                        ElementPlus.ElMessage.warning('库存不足');
+                    }
+                }
+
+                // 提交订单
+                async function submitOrder() {
+                    if (cart.value.length === 0) {
+                        ElementPlus.ElMessage.warning('请先选择菜品');
+                        return;
+                    }
+                    
+                    if (!paymentMethod.value) {
+                        ElementPlus.ElMessage.warning('请选择支付方式');
+                        return;
+                    }
+
+                    submitting.value = true;
+
+                    try {
+                        const orderData = {
+                            table_id: selectedTable.value.id,
+                            items: cart.value.map(item => ({
+                                menu_item_id: item.id,
+                                quantity: item.quantity
+                            })),
+                            payment_method: paymentMethod.value
+                        };
+
+                        // 如果提供了会员手机号，添加到订单备注
+                        if (memberPhone.value) {
+                            orderData.notes = `会员手机号: ${memberPhone.value}`;
+                        }
+
+                        const response = await apiRequest('POST', '/api/orders/', orderData);
+                        
+                        ElementPlus.ElMessage.success('订单提交成功！');
+                        ElementPlus.ElNotification({
+                            title: '订单详情',
+                            message: `订单号: ${response.id}, 总金额: ¥${response.total_amount.toFixed(2)}`,
+                            type: 'success',
+                            duration: 5000
+                        });
+
+                        // 重置购物车
+                        cart.value = [];
+                        currentStep.value = 1;
+                        selectedTable.value = null;
+
+                        // 刷新订单列表
+                        await loadOrders();
+
+                    } catch (error) {
+                        console.error('提交订单失败:', error);
+                        ElementPlus.ElMessage.error('提交订单失败: ' + (error.response?.data?.detail || error.message));
+                    } finally {
+                        submitting.value = false;
+                    }
+                }
+
+                // 刷新订单
+                function refreshOrders() {
+                    loadOrders();
+                    ElementPlus.ElMessage.success('订单已刷新');
+                }
+
+                // 查看订单详情
+                function viewOrderDetail(order) {
+                    selectedOrder.value = order;
+                    orderDetailVisible.value = true;
+                }
+
+                // 更新订单状态
+                async function updateOrderStatus(orderId, newStatus) {
+                    try {
+                        await apiRequest('PATCH', `/api/orders/${orderId}/status`, {
+                            status: newStatus
+                        });
+                        ElementPlus.ElMessage.success('订单状态更新成功');
+                        await loadOrders();
+                        
+                        if (selectedOrder.value && selectedOrder.value.id === orderId) {
+                            selectedOrder.value.status = newStatus;
+                            selectedOrder.value.items = selectedOrder.value.items.map(item => ({
+                                ...item,
+                                item_status: newStatus
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('更新订单状态失败:', error);
+                        ElementPlus.ElMessage.error('更新订单状态失败');
+                    }
+                }
+
+                // 检查是否可以更新状态
+                function canUpdateStatus(currentStatus, newStatus) {
+                    const statusFlow = {
+                        pending: ['confirmed', 'cancelled'],
+                        confirmed: ['preparing', 'cancelled'],
+                        preparing: ['ready'],
+                        ready: ['serving'],
+                        serving: ['completed'],
+                        completed: [],
+                        cancelled: []
+                    };
+                    return statusFlow[currentStatus]?.includes(newStatus);
+                }
+
+                // 打印小票
+                function printReceipt(order) {
+                    selectedOrder.value = order;
+                    receiptVisible.value = true;
+                }
+
+                function printReceiptConfirm() {
+                    window.print();
+                    receiptVisible.value = false;
+                }
+
+                // 获取状态文本
+                function getStatusText(status) {
+                    const statusMap = {
+                        pending: '待确认',
+                        confirmed: '已确认',
+                        preparing: '制作中',
+                        ready: '待传菜',
+                        serving: '上菜中',
+                        completed: '已完成',
+                        cancelled: '已取消'
+                    };
+                    return statusMap[status] || status;
+                }
+
+                function getItemStatusText(status) {
+                    const statusMap = {
+                        pending: '待制作',
+                        preparing: '制作中',
+                        ready: '待传菜',
+                        served: '已上菜'
+                    };
+                    return statusMap[status] || status;
+                }
+
+                function getPaymentMethodText(method) {
+                    const methodMap = {
+                        wechat: '微信',
+                        alipay: '支付宝',
+                        credit_card: '信用卡',
+                        debit_card: '借记卡',
+                        cash: '现金'
+                    };
+                    return methodMap[method] || method;
+                }
+
+                function formatDateTime(dateStr) {
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN');
+                }
+
+                function formatTime(dateStr) {
+                    const date = new Date(dateStr);
+                    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                }
+
+                // 厨房相关
+                function refreshKitchenOrders() {
+                    loadOrders();
+                    kitchenOrders.value = orders.value.filter(order => 
+                        ['confirmed', 'preparing', 'ready'].includes(order.status)
+                    );
+                    ElementPlus.ElMessage.success('厨房订单已刷新');
+                }
+
+                function updateItemStatus(orderId, itemId, newStatus) {
+                    apiRequest('PATCH', `/api/orders/${orderId}/items/${itemId}/status`, {
+                        item_status: newStatus
+                    }).then(() => {
+                        ElementPlus.ElMessage.success('菜品状态更新成功');
+                        loadOrders();
+                        refreshKitchenOrders();
+                    }).catch(error => {
+                        console.error('更新菜品状态失败:', error);
+                        ElementPlus.ElMessage.error('更新菜品状态失败');
+                    });
+                }
+
+                function canUpdateItemStatus(currentStatus, newStatus) {
+                    const statusFlow = {
+                        pending: ['preparing'],
+                        preparing: ['ready'],
+                        ready: [],
+                        served: []
+                    };
+                    return statusFlow[currentStatus]?.includes(newStatus);
+                }
+
+                function printKitchenReceipt(order) {
+                    selectedOrder.value = order;
+                    // 可以打开一个弹窗显示厨房制作单
+                    ElementPlus.ElMessage.info('打印厨房制作单 (订单号: ' + order.id + ')');
+                }
+
+                // 传菜相关
+                function refreshServingOrders() {
+                    loadOrders();
+                    servingOrders.value = orders.value.filter(order => 
+                        order.status === 'serving' || order.status === 'ready'
+                    );
+                    ElementPlus.ElMessage.success('传菜订单已刷新');
+                }
+
+                function printServingReceipt(order) {
+                    selectedServingOrder.value = order;
+                    servingReceiptVisible.value = true;
+                }
+
+                function printServingReceiptConfirm() {
+                    window.print();
+                    servingReceiptVisible.value = false;
+                }
+
+                function confirmServeItem(orderId, itemId) {
+                    apiRequest('PATCH', `/api/orders/${orderId}/items/${itemId}/status`, {
+                        item_status: 'served'
+                    }).then(() => {
+                        ElementPlus.ElMessage.success('确认上菜成功');
+                        loadOrders();
+                        refreshServingOrders();
+                    }).catch(error => {
+                        console.error('确认上菜失败:', error);
+                        ElementPlus.ElMessage.error('确认上菜失败');
+                    });
+                }
+
+                function allItemsServed(items) {
+                    return items.every(item => item.item_status === 'served');
+                }
+
+                function confirmAllServed(orderId) {
+                    updateOrderStatus(orderId, 'completed');
+                }
+
+                // 菜品管理相关
+                function showAddMenuItemDialog() {
+                    editingMenuItem.value = null;
+                    Object.assign(menuItemForm, {
+                        name: '',
+                        category_id: categories.value[0]?.id || null,
+                        price: 0,
+                        stock: 100,
+                        description: '',
+                        image_url: '',
+                        is_recommended: false,
+                        is_available: true
+                    });
+                    menuItemDialogVisible.value = true;
+                }
+
+                function editMenuItem(item) {
+                    editingMenuItem.value = item;
+                    Object.assign(menuItemForm, {
+                        name: item.name,
+                        category_id: item.category_id,
+                        price: item.price,
+                        stock: item.stock,
+                        description: item.description,
+                        image_url: item.image_url,
+                        is_recommended: item.is_recommended,
+                        is_available: item.is_available
+                    });
+                    menuItemDialogVisible.value = true;
+                }
+
+                async function saveMenuItem() {
+                    try {
+                        const data = { ...menuItemForm };
+                        
+                        if (editingMenuItem.value) {
+                            await apiRequest('PATCH', `/api/menu-items/${editingMenuItem.value.id}`, data);
+                            ElementPlus.ElMessage.success('菜品更新成功');
+                        } else {
+                            await apiRequest('POST', '/api/menu-items/', data);
+                            ElementPlus.ElMessage.success('菜品添加成功');
+                        }
+                        
+                        menuItemDialogVisible.value = false;
+                        await loadMenuItems();
+                    } catch (error) {
+                        console.error('保存菜品失败:', error);
+                        ElementPlus.ElMessage.error('保存菜品失败');
+                    }
+                }
+
+                async function deleteMenuItem(itemId) {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm('确定要删除这个菜品吗？', '确认删除', {
+                            type: 'warning'
+                        });
+                        
+                        await apiRequest('DELETE', `/api/menu-items/${itemId}`);
+                        ElementPlus.ElMessage.success('菜品删除成功');
+                        await loadMenuItems();
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('删除菜品失败:', error);
+                            ElementPlus.ElMessage.error('删除菜品失败');
+                        }
+                    }
+                }
+
+                // 桌号管理相关
+                function showAddTableDialog() {
+                    editingTable.value = null;
+                    Object.assign(tableForm, {
+                        table_number: '',
+                        seats: 4,
+                        is_active: true
+                    });
+                    tableDialogVisible.value = true;
+                }
+
+                function editTable(table) {
+                    editingTable.value = table;
+                    Object.assign(tableForm, {
+                        table_number: table.table_number,
+                        seats: table.seats,
+                        is_active: table.is_active
+                    });
+                    tableDialogVisible.value = true;
+                }
+
+                async function saveTable() {
+                    try {
+                        const data = { ...tableForm };
+                        
+                        if (editingTable.value) {
+                            await apiRequest('PATCH', `/api/tables/${editingTable.value.id}`, data);
+                            ElementPlus.ElMessage.success('桌号更新成功');
+                        } else {
+                            await apiRequest('POST', '/api/tables/', data);
+                            ElementPlus.ElMessage.success('桌号添加成功');
+                        }
+                        
+                        tableDialogVisible.value = false;
+                        await loadTables();
+                    } catch (error) {
+                        console.error('保存桌号失败:', error);
+                        ElementPlus.ElMessage.error('保存桌号失败');
+                    }
+                }
+
+                async function deleteTable(tableId) {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm('确定要删除这个桌号吗？', '确认删除', {
+                            type: 'warning'
+                        });
+                        
+                        await apiRequest('DELETE', `/api/tables/${tableId}`);
+                        ElementPlus.ElMessage.success('桌号删除成功');
+                        await loadTables();
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('删除桌号失败:', error);
+                            ElementPlus.ElMessage.error('删除桌号失败');
+                        }
+                    }
+                }
+
+                async function generateQRCode(table) {
+                    try {
+                        const response = await apiRequest('POST', '/api/tables/generate-qr', {
+                            table_id: table.id
+                        });
+                        
+                        qrCodeTable.value = table;
+                        qrCodeUrl.value = response.qr_code_url;
+                        qrCodeVisible.value = true;
+                    } catch (error) {
+                        console.error('生成二维码失败:', error);
+                        ElementPlus.ElMessage.error('生成二维码失败');
+                    }
+                }
+
+                // 系统设置
+                function saveStoreSettings() {
+                    storeName.value = storeSettings.name;
+                    storeAddress.value = storeSettings.address;
+                    storePhone.value = storeSettings.phone;
+                    ElementPlus.ElMessage.success('店铺设置已保存');
+                }
+
+                // Tab切换处理
+                function handleTabChange(tabName) {
+                    activeTab.value = tabName;
+                    
+                    // 根据不同的Tab刷新数据
+                    switch(tabName) {
+                        case 'orders':
+                            loadOrders();
+                            break;
+                        case 'kitchen':
+                            refreshKitchenOrders();
+                            break;
+                        case 'serving':
+                            refreshServingOrders();
+                            break;
+                        case 'menu':
+                            loadMenuItems();
+                            loadCategories();
+                            break;
+                        case 'tables':
+                            loadTables();
+                            break;
+                    }
+                }
+
+                // 初始化
+                onMounted(() => {
+                    loadInitialData();
+                });
+
+                return {
+                    activeTab,
+                    apiBaseUrl,
+                    apiConnected,
+                    currentStore,
+                    storeName,
+                    storeAddress,
+                    storePhone,
+                    storeSettings,
+                    
+                    // 顾客端
+                    tables,
+                    selectedTable,
+                    categories,
+                    menuItems,
+                    selectedCategory,
+                    filteredMenuItems,
+                    cart,
+                    cartTotal,
+                    currentStep,
+                    paymentMethod,
+                    memberPhone,
+                    submitting,
+                    
+                    // 订单管理
+                    orders,
+                    filteredOrders,
+                    orderFilterStatus,
+                    orderFilterTable,
+                    orderDetailVisible,
+                    selectedOrder,
+                    receiptVisible,
+                    
+                    // 厨房
+                    kitchenOrders,
+                    
+                    // 传菜
+                    servingOrders,
+                    servingReceiptVisible,
+                    selectedServingOrder,
+                    
+                    // 菜品管理
+                    menuItemDialogVisible,
+                    editingMenuItem,
+                    menuItemForm,
+                    
+                    // 桌号管理
+                    tableDialogVisible,
+                    editingTable,
+                    tableForm,
+                    qrCodeVisible,
+                    qrCodeUrl,
+                    qrCodeTable,
+                    
+                    // 方法
+                    handleTabChange,
+                    selectTable,
+                    addToCart,
+                    updateCartQuantity,
+                    submitOrder,
+                    refreshOrders,
+                    filterOrders,
+                    viewOrderDetail,
+                    updateOrderStatus,
+                    canUpdateStatus,
+                    printReceipt,
+                    printReceiptConfirm,
+                    getStatusText,
+                    getItemStatusText,
+                    getPaymentMethodText,
+                    formatDateTime,
+                    formatTime,
+                    
+                    refreshKitchenOrders,
+                    updateItemStatus,
+                    canUpdateItemStatus,
+                    printKitchenReceipt,
+                    
+                    refreshServingOrders,
+                    printServingReceipt,
+                    printServingReceiptConfirm,
+                    confirmServeItem,
+                    allItemsServed,
+                    confirmAllServed,
+                    
+                    showAddMenuItemDialog,
+                    editMenuItem,
+                    saveMenuItem,
+                    deleteMenuItem,
+                    
+                    showAddTableDialog,
+                    editTable,
+                    saveTable,
+                    deleteTable,
+                    generateQRCode,
+                    
+                    saveStoreSettings
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
