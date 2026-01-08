@@ -2,28 +2,44 @@
   publish = "assets"
   command = "# No build command needed for static site"
 
-# SPA 重定向规则（单页应用）
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = false
-
-# 特殊路径不重定向
+# 特殊路径重定向规则（必须在通用规则之前）
 [[redirects]]
   from = "/login"
   to = "/login_standalone.html"
   status = 200
+  force = false
 
 [[redirects]]
   from = "/staff-workflow"
   to = "/staff_workflow.html"
   status = 200
+  force = false
+
+[[redirects]]
+  from = "/shop-settings"
+  to = "/shop_settings.html"
+  status = 200
+  force = false
 
 [[redirects]]
   from = "/table-settings"
   to = "/table_settings.html"
   status = 200
+  force = false
+
+[[redirects]]
+  from = "/customer-order"
+  to = "/customer_order.html"
+  status = 200
+  force = false
+
+# SPA 重定向规则（单页应用）- 放在最后作为默认处理
+# 只对不存在的路径生效
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
 
 # 静态资源缓存优化
 [[headers]]
