@@ -277,7 +277,7 @@
                             <div class="table-number">{{ table.number }}号桌</div>
                             <div class="actions no-print">
                                 <el-button size="small" @click="editTable(table)">编辑</el-button>
-                                <el-button size="small" type="primary" @click="generateQrcode(table)">生成二维码</el-button>
+                                <el-button size="small" type="primary" @click="generateStyledQrcode(table)">生成二维码</el-button>
                                 <el-button size="small" type="danger" @click="deleteTable(table)">删除</el-button>
                             </div>
                         </div>
@@ -399,7 +399,7 @@
                         </el-table-column>
                         <el-table-column label="操作" width="200" fixed="right">
                             <template #default="scope">
-                                <el-button size="small" @click="generateQrcode(scope.row)">
+                                <el-button size="small" type="primary" @click="generateStyledQrcode(scope.row)">
                                     生成
                                 </el-button>
                                 <el-button size="small" @click="previewQrcode(scope.row)">

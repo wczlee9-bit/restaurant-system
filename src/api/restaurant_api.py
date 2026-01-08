@@ -800,9 +800,12 @@ def generate_styled_qrcode(
     生成带样式的二维码
     支持自定义颜色和添加logo
     """
-    from fastapi import Form, UploadFile
-    from tools.qrcode_tool import QRCodeGenerator
     import io
+    import qrcode
+    from qrcode.constants import ERROR_CORRECT_H
+    from PIL import Image, ImageDraw
+    from storage.s3.s3_storage import S3SyncStorage
+    import os
 
     db = get_session()
     try:
@@ -816,22 +819,87 @@ def generate_styled_qrcode(
         if logo:
             logo_data = logo.file.read()
 
-        # 生成二维码
-        generator = QRCodeGenerator()
-        result = generator.generate_qrcode_for_table(
-            table_id=table_id,
-            base_url=base_url,
-            foreground_color=foreground_color,
-            background_color=background_color,
-            logo_data=logo_data,
-            logo_ratio=logo_ratio
+        # 生成二维码内容（前端期望的格式）
+        qrcode_content = f"{base_url}/customer_order_v2.html?table={table.table_number}"
+
+        # 生成二维码图片
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=ERROR_CORRECT_H,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(qrcode_content)
+        qr.make(fit=True)
+
+        # 转换为图片，使用自定义颜色
+        img = qr.make_image(fill_color=foreground_color, back_color=background_color)
+        img = img.convert('RGB')
+
+        # 如果有logo，添加到二维码中间
+        if logo_data:
+            try:
+                # 加载logo图片
+                logo_img = Image.open(io.BytesIO(logo_data))
+
+                # 计算logo尺寸
+                qr_width, qr_height = img.size
+                logo_size = int(min(qr_width, qr_height) * logo_ratio)
+
+                # 调整logo大小
+                logo_img.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
+
+                # 转换为RGBA模式以支持透明度
+                if logo_img.mode != 'RGBA':
+                    logo_img = logo_img.convert('RGBA')
+
+                # 计算logo位置（居中）
+                logo_position = (
+                    (qr_width - logo_size) // 2,
+                    (qr_height - logo_size) // 2
+                )
+
+                # 将logo粘贴到二维码上
+                img.paste(logo_img, logo_position, logo_img)
+            except Exception as e:
+                print(f"添加logo失败: {str(e)}")
+
+        # 将图片转换为字节流
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='PNG')
+        img_bytes = img_byte_arr.getvalue()
+
+        # 上传到S3
+        storage = S3SyncStorage(
+            endpoint_url=os.getenv("COZE_BUCKET_ENDPOINT_URL"),
+            access_key="",
+            secret_key="",
+            bucket_name=os.getenv("COZE_BUCKET_NAME"),
+            region="cn-beijing",
+        )
+
+        # 生成文件名
+        color_fg = foreground_color.replace('#', '')
+        color_bg = background_color.replace('#', '')
+        file_name = f"qrcode_table{table.table_number}_{color_fg}_{color_bg}.png"
+
+        qrcode_key = storage.upload_file(
+            file_content=img_bytes,
+            file_name=file_name,
+            content_type="image/png"
+        )
+
+        # 生成签名URL
+        qrcode_url = storage.generate_presigned_url(
+            key=qrcode_key,
+            expire_time=3600
         )
 
         return {
-            "qrcode_url": result["qrcode_url"],
-            "qrcode_content": result["qrcode_content"],
-            "table_id": result["table_id"],
-            "table_number": result["table_number"]
+            "qrcode_url": qrcode_url,
+            "qrcode_content": qrcode_content,
+            "table_id": table.id,
+            "table_number": table.table_number
         }
     finally:
         db.close()
