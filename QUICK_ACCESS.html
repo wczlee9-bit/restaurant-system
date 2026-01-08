@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ 餐饮点餐系统 - 快速访问</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            color: white;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .header h1 { font-size: 32px; margin-bottom: 15px; }
+        .header p { font-size: 16px; opacity: 0.9; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .card-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .url-box {
+            background: #f5f7fa;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%);
+        }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        .step-number {
+            font-weight: bold;
+            color: #667eea;
+        }
+        .info-box {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .info-box-title {
+            font-weight: bold;
+            color: #1890ff;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ 餐饮点餐系统</h1>
+            <p>快速访问测试页面</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">⚡ 立即开始测试（推荐）</div>
+            <div class="step">
+                <div class="step-number">第1步：</div>
+                <div>复制下面的URL</div>
+                <div class="url-box">http://9.128.251.82:8080/assets/restaurant_full_test.html?table=8</div>
+            </div>
+            <div class="step">
+                <div class="step-number">第2步：</div>
+                <div>在浏览器地址栏中粘贴并访问</div>
+            </div>
+            <div class="step">
+                <div class="step-number">第3步：</div>
+                <div>开始测试！页面会自动选择8号桌</div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="http://9.128.251.82:8080/assets/restaurant_full_test.html?table=8" target="_blank" class="btn btn-success">
+                    🚀 点击这里直接测试8号桌
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📱 其他访问方式</div>
+
+            <div class="step">
+                <div class="step-number">主入口页面：</div>
+                <a href="http://9.128.251.82:8080/assets/index.html" target="_blank" class="btn">
+                    🎮 打开主入口
+                </a>
+                <div class="url-box">http://9.128.251.82:8080/assets/index.html</div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">测试页面：</div>
+                <a href="http://9.128.251.82:8080/assets/restaurant_full_test.html" target="_blank" class="btn">
+                    📱 打开测试页面
+                </a>
+                <div class="url-box">http://9.128.251.82:8080/assets/restaurant_full_test.html</div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">API文档：</div>
+                <a href="http://9.128.251.82:8000/docs" target="_blank" class="btn">
+                    📖 查看API文档
+                </a>
+                <div class="url-box">http://9.128.251.82:8000/docs</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 完整测试流程</div>
+            <div class="step">
+                <div class="step-number">1️⃣ 顾客点餐 👤</div>
+                <div>浏览菜单，添加菜品，提交订单</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2️⃣ 厨师制作 👨‍🍳</div>
+                <div>点击顶部"👨‍🍳 厨师"按钮，查看待制作订单</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3️⃣ 传菜员上菜 🤵</div>
+                <div>点击顶部"🤵 传菜员"按钮，确认上菜</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4️⃣ 收银员结账 💰</div>
+                <div>点击顶部"💰 收银员"按钮，处理支付</div>
+            </div>
+            <div class="step">
+                <div class="step-number">5️⃣ 店长管理 👔</div>
+                <div>点击顶部"👔 店长"按钮，查看数据</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">💡 提示</div>
+            <div class="info-box">
+                <div class="info-box-title">如果URL无法访问</div>
+                <div>1. 检查网络连接</div>
+                <div>2. 确认服务是否运行</div>
+                <div>3. 尝试使用 localhost 访问</div>
+                <div class="url-box">http://localhost:8080/assets/restaurant_full_test.html?table=8</div>
+            </div>
+            <div class="info-box">
+                <div class="info-box-title">角色切换</div>
+                <div>在测试页面顶部，点击不同的角色按钮即可切换：</div>
+                <div>👤 顾客 | 👨‍🍳 厨师 | 🤵 传菜员 | 💰 收银员 | 👔 店长</div>
+            </div>
+        </div>
+
+        <div class="card" style="text-align: center;">
+            <a href="http://9.128.251.82:8080/assets/restaurant_full_test.html?table=8" target="_blank" class="btn btn-success" style="font-size: 20px; padding: 20px 40px;">
+                ⚡ 立即测试8号桌完整流程
+            </a>
+        </div>
+    </div>
+</body>
+</html>
