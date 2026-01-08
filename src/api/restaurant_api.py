@@ -779,6 +779,12 @@ def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusR
         db.close()
 
 
+from src.api.workflow_api import router as workflow_router
+
+# 注册工作流程配置路由
+app.include_router(workflow_router)
+
+
 @app.get("/health")
 def health_check():
     """健康检查"""

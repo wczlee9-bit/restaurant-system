@@ -154,6 +154,7 @@ class Stores(Base):
     tables: Mapped[list['Tables']] = relationship('Tables', back_populates='store')
     menu_items: Mapped[list['MenuItems']] = relationship('MenuItems', back_populates='store')
     orders: Mapped[list['Orders']] = relationship('Orders', back_populates='store')
+    workflow_configs: Mapped[list['WorkflowConfig']] = relationship('WorkflowConfig', back_populates='store', cascade='all, delete-orphan')
 
 
 class UserRoles(Base):
@@ -509,3 +510,28 @@ class PointLogs(Base):
 
     member: Mapped['Members'] = relationship('Members', back_populates='point_logs')
     order: Mapped[Optional['Orders']] = relationship('Orders', back_populates='point_logs')
+
+
+class WorkflowConfig(Base):
+    """订单流程配置表 - 用于配置每个角色在每个流程环节的操作方式"""
+    __tablename__ = 'workflow_config'
+    __table_args__ = (
+        ForeignKeyConstraint(['store_id'], ['stores.id'], ondelete='CASCADE', name='workflow_config_store_id_fkey'),
+        PrimaryKeyConstraint('id', name='workflow_config_pkey'),
+        UniqueConstraint('store_id', 'role', 'status', name='workflow_config_store_role_status_key')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='店铺ID')
+    role: Mapped[str] = mapped_column(String(50), nullable=False, comment='角色：kitchen(厨师), waiter(传菜员), cashier(收银员), manager(店长)')
+    status: Mapped[str] = mapped_column(String(50), nullable=False, comment='订单状态：pending(待确认), preparing(制作中), ready(待传菜), serving(上菜中), completed(已完成)')
+    action_mode: Mapped[str] = mapped_column(String(50), nullable=False, default='per_item', comment='操作模式：per_item(逐项确认), per_order(订单确认), skip(跳过), ignore(忽略)')
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否启用该环节')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='更新时间')
+
+    store: Mapped['Stores'] = relationship('Stores', back_populates='workflow_configs')
+
+
+# 更新 Stores 模型添加关系（需要在 Stores 类中添加）
+# Stores.workflow_configs = relationship('WorkflowConfig', back_populates='store', cascade='all, delete-orphan')

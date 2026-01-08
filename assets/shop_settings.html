@@ -179,6 +179,7 @@
                         <el-badge :value="tables.length" class="item" v-if="tables.length > 0"></el-badge>
                     </el-tab-pane>
                     <el-tab-pane label="二维码管理" name="qrcode"></el-tab-pane>
+                    <el-tab-pane label="流程配置" name="workflow"></el-tab-pane>
                 </el-tabs>
             </div>
 
@@ -322,6 +323,56 @@
                     </el-table>
                 </div>
             </div>
+
+            <!-- 流程配置 -->
+            <div class="tab-content" v-show="activeTab === 'workflow'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>⚙️ 订单流程配置</span>
+                    <div class="actions">
+                        <el-button @click="resetWorkflowConfig" type="warning">重置为默认</el-button>
+                        <el-button type="primary" @click="saveWorkflowConfig" :loading="saving">保存配置</el-button>
+                    </div>
+                </div>
+
+                <el-alert
+                    title="配置说明"
+                    type="info"
+                    description="配置每个角色在订单各环节的操作方式。操作模式说明：逐项确认（每道菜单独确认）、订单确认（整个订单一起确认）、自动跳过（自动流转到下一状态）、忽略不显示（不显示该状态）。"
+                    :closable="false"
+                    style="margin-bottom: 20px;">
+                </el-alert>
+
+                <div v-for="(roleConfigs, roleName) in groupedWorkflowConfigs" :key="roleName" style="margin-bottom: 30px;">
+                    <h3 style="margin-bottom: 15px; color: #333; padding: 10px; background: #f5f7fa; border-radius: 4px;">
+                        {{ roleName }}
+                    </h3>
+                    <el-table :data="roleConfigs" style="width: 100%; background: white;">
+                        <el-table-column prop="status_name" label="订单状态" width="150"></el-table-column>
+                        <el-table-column label="操作模式" width="250">
+                            <template #default="scope">
+                                <el-select v-model="scope.row.action_mode" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="逐项确认" value="per_item"></el-option>
+                                    <el-option label="订单确认" value="per_order"></el-option>
+                                    <el-option label="自动跳过" value="skip"></el-option>
+                                    <el-option label="忽略不显示" value="ignore"></el-option>
+                                </el-select>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="是否启用" width="100">
+                            <template #default="scope">
+                                <el-switch v-model="scope.row.is_enabled"></el-switch>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="说明">
+                            <template #default="scope">
+                                <span style="font-size: 12px; color: #666;">
+                                    {{ getActionModeDescription(scope.row.action_mode) }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
         </div>
 
         <!-- 添加/编辑桌号对话框 -->
@@ -412,6 +463,23 @@
                     remark: ''
                 });
 
+                // 工作流程配置
+                const workflowConfigs = ref([]);
+                const saving = ref(false);
+                const loading = ref(false);
+
+                // 计算属性：按角色分组
+                const groupedWorkflowConfigs = computed(() => {
+                    const grouped = {};
+                    workflowConfigs.value.forEach(config => {
+                        if (!grouped[config.role_name]) {
+                            grouped[config.role_name] = [];
+                        }
+                        grouped[config.role_name].push(config);
+                    });
+                    return grouped;
+                });
+
                 // 获取当前页面的基础URL
                 const getBaseUrl = () => {
                     const url = window.location.href;
@@ -440,6 +508,87 @@
                     shopInfo.openingHours = ['09:00', '22:00'];
                     shopInfo.description = '提供优质的餐饮服务，欢迎光临！';
                     ElementPlus.ElMessage.success('已重置店铺信息');
+                };
+
+                // 加载工作流程配置
+                const loadWorkflowConfig = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch('http://localhost:8000/api/workflow-config/');
+                        if (response.ok) {
+                            const data = await response.json();
+                            workflowConfigs.value = data;
+                        }
+                    } catch (error) {
+                        console.error('加载工作流程配置失败:', error);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                // 保存工作流程配置
+                const saveWorkflowConfig = async () => {
+                    saving.value = true;
+                    try {
+                        const configs = workflowConfigs.value.map(config => ({
+                            id: config.id,
+                            action_mode: config.action_mode,
+                            is_enabled: config.is_enabled
+                        }));
+
+                        const response = await fetch('http://localhost:8000/api/workflow-config/bulk-update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ configs })
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('工作流程配置已保存');
+                        } else {
+                            ElementPlus.ElMessage.error('保存失败');
+                        }
+                    } catch (error) {
+                        console.error('保存工作流程配置失败:', error);
+                        ElementPlus.ElMessage.error('保存失败');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                // 重置工作流程配置
+                const resetWorkflowConfig = async () => {
+                    if (!confirm('确定要重置为默认配置吗？')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('http://localhost:8000/api/workflow-config/reset-defaults', {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('已重置为默认配置');
+                            await loadWorkflowConfig();
+                        } else {
+                            ElementPlus.ElMessage.error('重置失败');
+                        }
+                    } catch (error) {
+                        console.error('重置工作流程配置失败:', error);
+                        ElementPlus.ElMessage.error('重置失败');
+                    }
+                };
+
+                // 获取操作模式描述
+                const getActionModeDescription = (mode) => {
+                    const descriptions = {
+                        'per_item': '每道菜单独确认，厨师逐个制作',
+                        'per_order': '整个订单一起确认，按订单流转',
+                        'skip': '自动跳过此步骤，无需手动操作',
+                        'ignore': '不显示此状态，直接跳过'
+                    };
+                    return descriptions[mode] || '';
                 };
 
                 // 保存桌号
@@ -680,6 +829,9 @@
                     if (savedTables) {
                         tables.value = JSON.parse(savedTables);
                     }
+
+                    // 加载工作流程配置
+                    loadWorkflowConfig();
                 };
 
                 const handleTabChange = () => {
@@ -711,7 +863,15 @@
                     downloadPreviewQrcode,
                     printQrcode,
                     printAllQrcodes,
-                    handleTabChange
+                    handleTabChange,
+                    workflowConfigs,
+                    saving,
+                    loading,
+                    groupedWorkflowConfigs,
+                    loadWorkflowConfig,
+                    saveWorkflowConfig,
+                    resetWorkflowConfig,
+                    getActionModeDescription
                 };
             }
         }).use(ElementPlus).mount('#app');
