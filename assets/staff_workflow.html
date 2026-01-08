@@ -511,7 +511,12 @@
                 },
                 
                 connectWebSocket() {
-                    const wsUrl = `ws://localhost:8001/ws/store/1`;
+                    // 使用当前页面的主机和8000端口
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                        ? 'localhost:8000' 
+                        : `${window.location.hostname}:8000`;
+                    const wsUrl = `${wsProtocol}//${wsHost}/ws/store/1`;
                     this.ws = new WebSocket(wsUrl);
                     
                     this.ws.onopen = () => {

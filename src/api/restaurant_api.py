@@ -2,7 +2,7 @@
 餐饮系统完整 API 服务
 整合顾客端、管理端、厨房端、传菜端等所有接口
 """
-from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile
+from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -10,6 +10,8 @@ from typing import List, Optional, Dict
 from datetime import datetime
 import random
 import string
+import json
+import logging
 
 import sys
 import os
@@ -20,6 +22,8 @@ from storage.database.shared.model import (
     Companies, Users, Stores, MenuCategories, MenuItems,
     Tables, Orders, OrderItems, MemberLevelRules
 )
+
+logger = logging.getLogger(__name__)
 
 # 创建 FastAPI 应用
 app = FastAPI(title="多店铺扫码点餐系统 - 完整API", version="1.0.0")
@@ -32,6 +36,172 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============ WebSocket 连接管理 ============
+
+class ConnectionManager:
+    """WebSocket 连接管理器"""
+    
+    def __init__(self):
+        # store_id -> {connection_id: WebSocket}
+        self.store_connections: Dict[int, Dict[str, WebSocket]] = {}
+        # order_id -> {connection_id: WebSocket} 顾客订阅订单
+        self.order_connections: Dict[int, Dict[str, WebSocket]] = {}
+        # table_id -> {connection_id: WebSocket} 桌号连接（顾客端）
+        self.table_connections: Dict[int, Dict[str, WebSocket]] = {}
+    
+    async def connect_to_store(self, websocket: WebSocket, store_id: int, connection_id: str):
+        """连接到店铺（用于店员端）"""
+        await websocket.accept()
+        if store_id not in self.store_connections:
+            self.store_connections[store_id] = {}
+        self.store_connections[store_id][connection_id] = websocket
+        logger.info(f"WebSocket连接到店铺: store_id={store_id}, connection_id={connection_id}")
+        
+        # 发送连接成功消息
+        await websocket.send_json({
+            "type": "connected",
+            "message": "连接成功",
+            "store_id": store_id,
+            "connection_id": connection_id,
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    async def connect_to_order(self, websocket: WebSocket, order_id: int, connection_id: str):
+        """连接到订单（用于顾客端）"""
+        await websocket.accept()
+        if order_id not in self.order_connections:
+            self.order_connections[order_id] = {}
+        self.order_connections[order_id][connection_id] = websocket
+        logger.info(f"WebSocket连接到订单: order_id={order_id}, connection_id={connection_id}")
+        
+        # 发送连接成功消息
+        await websocket.send_json({
+            "type": "connected",
+            "message": "连接成功",
+            "order_id": order_id,
+            "connection_id": connection_id,
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    async def connect_to_table(self, websocket: WebSocket, table_id: int, connection_id: str):
+        """连接到桌号（用于顾客端）"""
+        await websocket.accept()
+        if table_id not in self.table_connections:
+            self.table_connections[table_id] = {}
+        self.table_connections[table_id][connection_id] = websocket
+        logger.info(f"WebSocket连接到桌号: table_id={table_id}, connection_id={connection_id}")
+        
+        # 发送连接成功消息
+        await websocket.send_json({
+            "type": "connected",
+            "message": "连接成功",
+            "table_id": table_id,
+            "connection_id": connection_id,
+            "timestamp": datetime.now().isoformat()
+        })
+    
+    def disconnect(self, store_id: int = None, order_id: int = None, table_id: int = None, connection_id: str = None):
+        """断开连接"""
+        if store_id and store_id in self.store_connections:
+            if connection_id and connection_id in self.store_connections[store_id]:
+                del self.store_connections[store_id][connection_id]
+                logger.info(f"断开店铺连接: store_id={store_id}, connection_id={connection_id}")
+        
+        if order_id and order_id in self.order_connections:
+            if connection_id and connection_id in self.order_connections[order_id]:
+                del self.order_connections[order_id][connection_id]
+                logger.info(f"断开订单连接: order_id={order_id}, connection_id={connection_id}")
+        
+        if table_id and table_id in self.table_connections:
+            if connection_id and connection_id in self.table_connections[table_id]:
+                del self.table_connections[table_id][connection_id]
+                logger.info(f"断开桌号连接: table_id={table_id}, connection_id={connection_id}")
+    
+    async def broadcast_to_store(self, store_id: int, message: dict):
+        """向店铺的所有连接广播消息"""
+        if store_id not in self.store_connections:
+            return
+        
+        disconnected = []
+        for connection_id, websocket in self.store_connections[store_id].items():
+            try:
+                await websocket.send_json(message)
+            except Exception as e:
+                logger.error(f"发送消息失败: store_id={store_id}, connection_id={connection_id}, error={str(e)}")
+                disconnected.append(connection_id)
+        
+        # 清理断开的连接
+        for connection_id in disconnected:
+            del self.store_connections[store_id][connection_id]
+    
+    async def broadcast_to_order(self, order_id: int, message: dict):
+        """向订单的所有连接广播消息（顾客端）"""
+        if order_id not in self.order_connections:
+            return
+        
+        disconnected = []
+        for connection_id, websocket in self.order_connections[order_id].items():
+            try:
+                await websocket.send_json(message)
+            except Exception as e:
+                logger.error(f"发送消息失败: order_id={order_id}, connection_id={connection_id}, error={str(e)}")
+                disconnected.append(connection_id)
+        
+        # 清理断开的连接
+        for connection_id in disconnected:
+            del self.order_connections[order_id][connection_id]
+    
+    async def broadcast_to_table(self, table_id: int, message: dict):
+        """向桌号的所有连接广播消息（顾客端）"""
+        if table_id not in self.table_connections:
+            return
+        
+        disconnected = []
+        for connection_id, websocket in self.table_connections[table_id].items():
+            try:
+                await websocket.send_json(message)
+            except Exception as e:
+                logger.error(f"发送消息失败: table_id={table_id}, connection_id={connection_id}, error={str(e)}")
+                disconnected.append(connection_id)
+        
+        # 清理断开的连接
+        for connection_id in disconnected:
+            del self.table_connections[table_id][connection_id]
+    
+    async def broadcast_order_status(self, order_id: int, order_data: dict):
+        """
+        广播订单状态更新
+        同时推送到店铺（店员端）和订单（顾客端）
+        """
+        message = {
+            "type": "order_status_update",
+            "order": order_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 推送到店铺
+        if "store_id" in order_data:
+            await self.broadcast_to_store(order_data["store_id"], message)
+        
+        # 推送到订单
+        await self.broadcast_to_order(order_id, message)
+    
+    async def broadcast_new_order(self, order_data: dict):
+        """广播新订单到店铺"""
+        message = {
+            "type": "new_order",
+            "order": order_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        if "store_id" in order_data:
+            await self.broadcast_to_store(order_data["store_id"], message)
+
+
+# 全局连接管理器
+manager = ConnectionManager()
 
 
 # ============ 数据模型 ============
@@ -552,7 +722,7 @@ def get_orders(
 
 
 @app.post("/api/orders/", response_model=OrderResponse)
-def create_order(order: CreateOrderRequest):
+async def create_order(order: CreateOrderRequest):
     """创建订单"""
     db = get_session()
     try:
@@ -624,6 +794,27 @@ def create_order(order: CreateOrderRequest):
         db.commit()
         db.refresh(db_order)
         
+        # 广播新订单到店员端（WebSocket通知）
+        try:
+            order_data = {
+                "id": db_order.id,
+                "order_number": db_order.order_number,
+                "store_id": db_order.store_id,
+                "table_id": db_order.table_id,
+                "table_number": table.table_number,
+                "total_amount": float(db_order.total_amount),
+                "payment_method": db_order.payment_method,
+                "payment_status": db_order.payment_status,
+                "status": db_order.order_status,
+                "created_at": db_order.created_at.isoformat() if db_order.created_at else "",
+                "items": order_items_data
+            }
+            # 直接使用await调用异步方法
+            await manager.broadcast_new_order(order_data)
+        except Exception as ws_error:
+            logger.error(f"WebSocket通知失败: {str(ws_error)}")
+            # WebSocket失败不影响订单创建，只记录错误
+
         # 获取桌号
         table_number = table.table_number
         
@@ -705,7 +896,7 @@ def get_order(order_id: int):
 
 
 @app.patch("/api/orders/{order_id}/status")
-def update_order_status(order_id: int, req: UpdateOrderStatusRequest):
+async def update_order_status(order_id: int, req: UpdateOrderStatusRequest):
     """更新订单状态"""
     db = get_session()
     try:
@@ -736,13 +927,31 @@ def update_order_status(order_id: int, req: UpdateOrderStatusRequest):
         order.order_status = new_status
         db.commit()
         
+        # 广播订单状态更新（WebSocket通知）
+        try:
+            # 获取完整的订单数据
+            order_data = {
+                "id": order.id,
+                "order_number": order.order_number,
+                "store_id": order.store_id,
+                "table_id": order.table_id,
+                "total_amount": float(order.total_amount),
+                "payment_method": order.payment_method,
+                "status": order.order_status,
+                "created_at": order.created_at.isoformat() if order.created_at else ""
+            }
+            # 直接使用await调用异步方法
+            await manager.broadcast_order_status(order_id, order_data)
+        except Exception as ws_error:
+            logger.error(f"WebSocket通知失败: {str(ws_error)}")
+        
         return {"message": "订单状态更新成功", "status": new_status}
     finally:
         db.close()
 
 
 @app.patch("/api/orders/{order_id}/items/{item_id}/status")
-def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusRequest):
+async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusRequest):
     """更新订单项状态"""
     db = get_session()
     try:
@@ -774,15 +983,41 @@ def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusR
         order_item.status = new_status
         db.commit()
         
+        # 广播订单项状态更新（WebSocket通知）
+        try:
+            import asyncio
+            # 获取订单信息
+            order = db.query(Orders).filter(Orders.id == order_id).first()
+            if order:
+                order_data = {
+                    "id": order.id,
+                    "order_number": order.order_number,
+                    "store_id": order.store_id,
+                    "table_id": order.table_id,
+                    "total_amount": float(order.total_amount),
+                    "payment_method": order.payment_method,
+                    "status": order.order_status,
+                    "created_at": order.created_at.isoformat() if order.created_at else ""
+                }
+                # 直接使用await调用异步方法
+                await manager.broadcast_order_status(order_id, order_data)
+        except Exception as ws_error:
+            logger.error(f"WebSocket通知失败: {str(ws_error)}")
+        
         return {"message": "菜品状态更新成功", "item_status": new_status}
     finally:
         db.close()
 
 
-from src.api.order_flow_api import router as order_flow_router
+# 订单流程配置路由
+try:
+    from api.order_flow_api import router as order_flow_router
+    # 注册订单流程配置路由
+    app.include_router(order_flow_router)
+except ImportError:
+    # 如果没有order_flow_api模块，跳过
+    pass
 
-# 注册订单流程配置路由
-app.include_router(order_flow_router)
 
 
 # ============ 二维码生成 API ============
@@ -909,6 +1144,110 @@ def generate_styled_qrcode(
 def health_check():
     """健康检查"""
     return {"status": "ok", "message": "餐饮系统API服务运行正常"}
+
+
+# ============ WebSocket 接口 ============
+
+@app.websocket("/ws/store/{store_id}")
+async def websocket_store(
+    websocket: WebSocket,
+    store_id: int,
+    connection_id: str = Query(default=None)
+):
+    """
+    店铺WebSocket连接
+    店员端使用，接收新订单和订单状态更新
+    """
+    if not connection_id:
+        connection_id = f"store_{store_id}_{datetime.now().timestamp()}"
+    
+    await manager.connect_to_store(websocket, store_id, connection_id)
+    
+    try:
+        while True:
+            # 接收客户端消息（心跳等）
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # 处理心跳
+            if message.get("type") == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat()
+                })
+    except WebSocketDisconnect:
+        manager.disconnect(store_id=store_id, connection_id=connection_id)
+    except Exception as e:
+        logger.error(f"店铺WebSocket错误: {str(e)}")
+        manager.disconnect(store_id=store_id, connection_id=connection_id)
+
+
+@app.websocket("/ws/order/{order_id}")
+async def websocket_order(
+    websocket: WebSocket,
+    order_id: int,
+    connection_id: str = Query(default=None)
+):
+    """
+    订单WebSocket连接
+    顾客端使用，接收订单状态和支付状态更新
+    """
+    if not connection_id:
+        connection_id = f"order_{order_id}_{datetime.now().timestamp()}"
+    
+    await manager.connect_to_order(websocket, order_id, connection_id)
+    
+    try:
+        while True:
+            # 接收客户端消息（心跳等）
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # 处理心跳
+            if message.get("type") == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat()
+                })
+    except WebSocketDisconnect:
+        manager.disconnect(order_id=order_id, connection_id=connection_id)
+    except Exception as e:
+        logger.error(f"订单WebSocket错误: {str(e)}")
+        manager.disconnect(order_id=order_id, connection_id=connection_id)
+
+
+@app.websocket("/ws/table/{table_id}")
+async def websocket_table(
+    websocket: WebSocket,
+    table_id: int,
+    connection_id: str = Query(default=None)
+):
+    """
+    桌号WebSocket连接
+    顾客端使用，接收该桌号的订单状态更新
+    """
+    if not connection_id:
+        connection_id = f"table_{table_id}_{datetime.now().timestamp()}"
+    
+    await manager.connect_to_table(websocket, table_id, connection_id)
+    
+    try:
+        while True:
+            # 接收客户端消息（心跳等）
+            data = await websocket.receive_text()
+            message = json.loads(data)
+            
+            # 处理心跳
+            if message.get("type") == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat()
+                })
+    except WebSocketDisconnect:
+        manager.disconnect(table_id=table_id, connection_id=connection_id)
+    except Exception as e:
+        logger.error(f"桌号WebSocket错误: {str(e)}")
+        manager.disconnect(table_id=table_id, connection_id=connection_id)
 
 
 if __name__ == "__main__":
