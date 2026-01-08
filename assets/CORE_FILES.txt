@@ -1,0 +1,43 @@
+# ========================================
+# Netlify 部署核心文件清单
+# ========================================
+# 使用说明：复制下面的文件名，在文件管理器中搜索并选中
+
+【必须上传的文件】
+portal.html
+index.html
+login_standalone.html
+test.html
+customer_order_v2.html
+staff_workflow.html
+shop_settings.html
+api_test.html
+
+【可选上传的文件】
+menu_management.html
+inventory_management.html
+order_flow_config.html
+restaurant_test_system.html
+
+【不要上传的文件】
+*.bak
+*.md
+coze_test_dashboard.html
+kitchen_display.html
+order.html
+test_dashboard.html
+test_customer_flow.html
+test_login.html
+
+【配置文件】
+netlify-simple.toml（重命名为 netlify.toml）
+
+【目录】
+config/（可选）
+
+【总数】
+- 必传：8个文件
+- 可选：4个文件
+- 总计：约180KB（最小包）/ 320KB（完整包）
+
+========================================
