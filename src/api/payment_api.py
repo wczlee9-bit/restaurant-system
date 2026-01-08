@@ -35,8 +35,9 @@ logger = logging.getLogger(__name__)
 class CreatePaymentRequest(BaseModel):
     """创建支付请求"""
     order_id: int
-    payment_method: str = Field(..., description="支付方式: wechat, alipay, cash, credit_card")
+    payment_method: str = Field(..., description="支付方式: wechat, alipay, cash, credit_card, debit_card, other")
     customer_phone: Optional[str] = None  # 手机号，用于会员识别
+    other_method_name: Optional[str] = Field(None, description="其他支付方式名称（当payment_method为other时必填）")
 
 
 class PaymentResponse(BaseModel):
@@ -171,9 +172,16 @@ def create_payment(request: CreatePaymentRequest, background_tasks: BackgroundTa
             raise HTTPException(status_code=400, detail="订单已支付")
         
         # 创建支付记录
+        payment_method_name = request.payment_method
+        # 如果是其他支付方式，使用自定义名称
+        if request.payment_method == "other":
+            if not request.other_method_name:
+                raise HTTPException(status_code=400, detail="使用其他支付方式时必须指定支付方式名称")
+            payment_method_name = request.other_method_name
+        
         payment = Payments(
             order_id=order.id,
-            payment_method=request.payment_method,
+            payment_method=payment_method_name,
             amount=order.final_amount,
             refund_amount=0.0,  # 退款金额默认为0
             status="pending"
@@ -189,10 +197,10 @@ def create_payment(request: CreatePaymentRequest, background_tasks: BackgroundTa
             # 模拟生成支付二维码
             qr_code = f"pay://fake.{request.payment_method}.com?payment_id={payment.id}&amount={order.final_amount}"
             payment_url = f"http://localhost:8000/api/payment/qr/{payment.id}"
-        elif request.payment_method == "credit_card":
-            # 信用卡支付需要跳转到收银台
+        elif request.payment_method in ["credit_card", "debit_card"]:
+            # 银行卡支付需要跳转到收银台
             payment_url = f"http://localhost:8000/api/payment/card/{payment.id}"
-        # 现金支付不需要支付链接
+        # 现金支付和其他支付不需要支付链接
         
         db.commit()
         db.refresh(payment)
@@ -370,6 +378,18 @@ def get_payment_methods():
                 "name": "信用卡",
                 "description": "刷卡支付",
                 "icon": "credit-card"
+            },
+            {
+                "id": "debit_card",
+                "name": "借记卡",
+                "description": "借记卡支付",
+                "icon": "debit-card"
+            },
+            {
+                "id": "other",
+                "name": "其他支付",
+                "description": "其他支付方式",
+                "icon": "other"
             }
         ]
     }
