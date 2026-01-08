@@ -89,42 +89,43 @@
 # ========================================
 # API 代理配置
 # ========================================
-# 重要：将 YOUR_BACKEND_IP 替换为实际的后端服务器IP地址
+# 重要：后端服务器地址
+# 使用当前环境的公网IP
 # 示例：http://9.128.251.82:8000
 # 或使用域名：https://api.yourdomain.com
 
 # 会员 API (端口 8004)
 [[redirects]]
   from = "/api/member*"
-  to = "http://YOUR_BACKEND_IP:8004/api/member:splat"
+  to = "http://115.191.1.219:8004/api/member:splat"
   status = 200
   force = true
 
 # 总公司管理 API (端口 8006)
 [[redirects]]
   from = "/api/headquarters*"
-  to = "http://YOUR_BACKEND_IP:8006/api/headquarters:splat"
+  to = "http://115.191.1.219:8006/api/headquarters:splat"
   status = 200
   force = true
 
 # 订单相关接口代理到 customer_api (端口 8001)
 [[redirects]]
   from = "/api/orders*"
-  to = "http://YOUR_BACKEND_IP:8001/api/orders:splat"
+  to = "http://115.191.1.219:8001/api/orders:splat"
   status = 200
   force = true
 
 # WebSocket 代理
 [[redirects]]
   from = "/ws/*"
-  to = "http://YOUR_BACKEND_IP:8001/ws/:splat"
+  to = "http://115.191.1.219:8001/ws/:splat"
   status = 200
   force = true
 
 # 其他 API 接口代理到 restaurant_api (端口 8000)
 [[redirects]]
   from = "/api/*"
-  to = "http://YOUR_BACKEND_IP:8000/api/:splat"
+  to = "http://115.191.1.219:8000/api/:splat"
   status = 200
   force = true
 
