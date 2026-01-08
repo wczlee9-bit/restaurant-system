@@ -93,6 +93,7 @@
                     <button class="btn btn-primary" @click="openTestPage">🎮 进入测试页面</button>
                     <button class="btn btn-success" @click="viewApiDocs">📖 查看API文档</button>
                     <button class="btn" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;" @click="openShopSettings">🏪 店铺设置</button>
+                    <button class="btn" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;" @click="openLogin">🔐 工作人员登录</button>
                     <button class="btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;" @click="openStaffWorkflow">👨‍🍳 工作人员端</button>
                     <button class="btn" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;" @click="openDeployGuide">🚀 部署指南</button>
                 </div>
@@ -215,6 +216,9 @@
                 },
                 openStaffWorkflow() {
                     window.location.href = 'staff_workflow.html';
+                },
+                openLogin() {
+                    window.location.href = 'login.html';
                 },
                 openDeployGuide() {
                     window.location.href = 'netlify_deployment_quickref.html';

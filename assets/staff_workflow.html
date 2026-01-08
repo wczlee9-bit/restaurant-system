@@ -178,6 +178,12 @@
                     <div class="role-tab" :class="{active: currentRole === 'cashier'}" @click="switchRole('cashier')">
                         💰 收银员
                     </div>
+                    <div class="role-tab" style="background: rgba(255,255,255,0.2);" @click="logout">
+                        🚪 退出
+                    </div>
+                </div>
+                <div class="header-info" v-if="currentUser" style="text-align: right; margin-top: 10px;">
+                    当前用户: {{ currentUser.name || currentUser.username }}
                 </div>
             </div>
         </div>
@@ -372,6 +378,7 @@
         createApp({
             data() {
                 return {
+                    currentUser: null,
                     currentRole: 'manager',
                     orders: [],
                     storeInfo: null,
@@ -441,10 +448,29 @@
                 }
             },
             async mounted() {
+                // 检查登录状态
+                const currentUser = localStorage.getItem('currentUser');
+                if (!currentUser) {
+                    ElementPlus.ElMessage.warning('请先登录 / Please login first');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1000);
+                    return;
+                }
+
+                // 解析用户信息
+                try {
+                    const user = JSON.parse(currentUser);
+                    this.currentUser = user;
+                    console.log('当前用户 / Current user:', user);
+                } catch (e) {
+                    console.error('解析用户信息失败 / Failed to parse user info:', e);
+                }
+
                 await this.initData();
                 this.connectWebSocket();
                 this.initAudio();
-                
+
                 // 自动刷新订单列表
                 setInterval(() => {
                     this.loadOrders();
@@ -763,6 +789,22 @@
                         'cashier': '暂无待支付订单'
                     };
                     return textMap[this.currentRole] || '暂无数据';
+                },
+                
+                logout() {
+                    this.$confirm('确定要退出登录吗？\nAre you sure you want to logout?', '提示 / Confirm', {
+                        confirmButtonText: '确定 / Yes',
+                        cancelButtonText: '取消 / Cancel',
+                        type: 'warning'
+                    }).then(() => {
+                        localStorage.removeItem('currentUser');
+                        ElementPlus.ElMessage.success('退出成功 / Logout successful');
+                        setTimeout(() => {
+                            window.location.href = 'login.html';
+                        }, 500);
+                    }).catch(() => {
+                        // 用户取消
+                    });
                 }
             }
         }).use(ElementPlus).mount('#app');
