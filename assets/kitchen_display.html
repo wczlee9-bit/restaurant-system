@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>厨房显示系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f0f0;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .header .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .connection-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .connected {
+            background: #52c41a;
+        }
+        .disconnected {
+            background: #ff4d4f;
+        }
+        .controls {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .store-select {
+            width: 200px;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .filter-btn {
+            padding: 8px 20px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .orders-container {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+        .order-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .order-card.new {
+            animation: slideIn 0.5s ease-out;
+            border: 2px solid #52c41a;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .order-header {
+            background: #f5f5f5;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+        }
+        .order-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .table-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .order-time {
+            font-size: 14px;
+            color: #999;
+        }
+        .order-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status-pending {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+        .status-confirmed {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+        .status-preparing {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .status-ready {
+            background: #fff0f6;
+            color: #eb2f96;
+        }
+        .status-serving {
+            background: #fff1b8;
+            color: #faad14;
+        }
+        .order-items {
+            padding: 15px;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .item-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        .item-quantity {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            background: #f0f0f0;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        .item-notes {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        .order-footer {
+            padding: 15px;
+            background: #f9f9f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .order-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .action-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .action-btn.confirm {
+            background: #1890ff;
+            color: white;
+        }
+        .action-btn.prepare {
+            background: #52c41a;
+            color: white;
+        }
+        .action-btn.ready {
+            background: #eb2f96;
+            color: white;
+        }
+        .action-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #52c41a;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🍳 厨房显示系统</h1>
+            <div class="status">
+                <div class="connection-status" :class="wsConnected ? 'connected' : 'disconnected'">
+                    {{ wsConnected ? '● 已连接' : '● 未连接' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="controls">
+            <el-select 
+                v-model="storeId" 
+                class="store-select" 
+                placeholder="选择店铺"
+                @change="onStoreChange"
+            >
+                <el-option
+                    v-for="store in stores"
+                    :key="store.id"
+                    :label="store.name"
+                    :value="store.id"
+                />
+            </el-select>
+            
+            <div class="filter-buttons">
+                <button
+                    class="filter-btn"
+                    :class="{ active: statusFilter === 'all' }"
+                    @click="statusFilter = 'all'"
+                >
+                    全部
+                </button>
+                <button
+                    class="filter-btn"
+                    :class="{ active: statusFilter === 'pending' }"
+                    @click="statusFilter = 'pending'"
+                >
+                    待确认
+                </button>
+                <button
+                    class="filter-btn"
+                    :class="{ active: statusFilter === 'confirmed' }"
+                    @click="statusFilter = 'confirmed'"
+                >
+                    已确认
+                </button>
+                <button
+                    class="filter-btn"
+                    :class="{ active: statusFilter === 'preparing' }"
+                    @click="statusFilter = 'preparing'"
+                >
+                    准备中
+                </button>
+                <button
+                    class="filter-btn"
+                    :class="{ active: statusFilter === 'ready' }"
+                    @click="statusFilter = 'ready'"
+                >
+                    已完成
+                </button>
+            </div>
+        </div>
+
+        <!-- 订单列表 -->
+        <div class="orders-container">
+            <div v-if="filteredOrders.length === 0" class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <p>暂无订单</p>
+            </div>
+
+            <div
+                v-for="order in filteredOrders"
+                :key="order.id"
+                class="order-card"
+                :class="{ new: order.isNew }"
+            >
+                <div class="order-header">
+                    <div class="order-info">
+                        <div class="table-number">{{ order.table_number }}号桌</div>
+                        <div class="order-time">{{ formatTime(order.created_at) }}</div>
+                    </div>
+                    <div class="order-status" :class="'status-' + order.order_status">
+                        {{ getStatusText(order.order_status) }}
+                    </div>
+                </div>
+
+                <div class="order-items">
+                    <div
+                        v-for="item in order.items"
+                        :key="item.id"
+                        class="order-item"
+                    >
+                        <div>
+                            <div class="item-name">{{ item.menu_item_name }}</div>
+                            <div v-if="item.special_instructions" class="item-notes">
+                                备注: {{ item.special_instructions }}
+                            </div>
+                        </div>
+                        <div class="item-quantity">×{{ item.quantity }}</div>
+                    </div>
+                </div>
+
+                <div class="order-footer">
+                    <div>订单号: {{ order.order_number }}</div>
+                    <div class="order-actions">
+                        <button
+                            v-if="order.order_status === 'pending'"
+                            class="action-btn confirm"
+                            @click="updateOrderStatus(order.id, 'confirmed')"
+                        >
+                            确认订单
+                        </button>
+                        <button
+                            v-if="order.order_status === 'confirmed'"
+                            class="action-btn prepare"
+                            @click="updateOrderStatus(order.id, 'preparing')"
+                        >
+                            开始制作
+                        </button>
+                        <button
+                            v-if="order.order_status === 'preparing'"
+                            class="action-btn ready"
+                            @click="updateOrderStatus(order.id, 'ready')"
+                        >
+                            制作完成
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新订单通知 -->
+        <div v-if="notification" class="notification">
+            {{ notification }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 数据
+                const storeId = ref(1);
+                const statusFilter = ref('all');
+                const wsConnected = ref(false);
+                const orders = ref([]);
+                const stores = ref([]);
+                const notification = ref(null);
+                let ws = null;
+
+                // 获取店铺列表
+                const fetchStores = async () => {
+                    try {
+                        // 这里应该调用API获取店铺列表
+                        // 暂时使用模拟数据
+                        stores.value = [
+                            { id: 1, name: '测试餐厅' },
+                            { id: 2, name: '二号店' }
+                        ];
+                    } catch (err) {
+                        console.error('获取店铺列表失败:', err);
+                    }
+                };
+
+                // 获取订单列表
+                const fetchOrders = async () => {
+                    try {
+                        const response = await fetch(
+                            `http://localhost:8001/api/staff/orders?store_id=${storeId.value}`
+                        );
+                        if (response.ok) {
+                            const data = await response.json();
+                            orders.value = data.map(order => ({
+                                ...order,
+                                isNew: false
+                            }));
+                        }
+                    } catch (err) {
+                        console.error('获取订单列表失败:', err);
+                    }
+                };
+
+                // 更新订单状态
+                const updateOrderStatus = async (orderId, status) => {
+                    try {
+                        const response = await fetch('http://localhost:8001/api/staff/order/status', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                order_id: orderId,
+                                order_status: status,
+                                operator_id: 1  // 这里应该是真实的操作人ID
+                            })
+                        });
+
+                        if (response.ok) {
+                            // 刷新订单列表
+                            await fetchOrders();
+                            ElementPlus.ElMessage.success('订单状态更新成功');
+                        } else {
+                            ElementPlus.ElMessage.error('更新失败');
+                        }
+                    } catch (err) {
+                        console.error('更新订单状态失败:', err);
+                        ElementPlus.ElMessage.error('更新失败');
+                    }
+                };
+
+                // WebSocket 连接
+                const connectWebSocket = () => {
+                    if (ws) {
+                        ws.close();
+                    }
+
+                    const wsUrl = `ws://localhost:8003/ws/store/${storeId.value}`;
+                    ws = new WebSocket(wsUrl);
+
+                    ws.onopen = () => {
+                        console.log('WebSocket连接成功');
+                        wsConnected.value = true;
+                        
+                        // 发送心跳
+                        setInterval(() => {
+                            if (ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({ type: 'ping' }));
+                            }
+                        }, 30000);
+                    };
+
+                    ws.onmessage = (event) => {
+                        const message = JSON.parse(event.data);
+                        console.log('收到消息:', message);
+
+                        if (message.type === 'new_order') {
+                            // 新订单
+                            orders.value.unshift({
+                                ...message.order,
+                                isNew: true
+                            });
+                            showNotification(`新订单: ${message.order.table_number}号桌`);
+                            
+                            // 3秒后移除新订单标记
+                            setTimeout(() => {
+                                const order = orders.value.find(o => o.id === message.order.id);
+                                if (order) {
+                                    order.isNew = false;
+                                }
+                            }, 3000);
+                        } else if (message.type === 'order_status_update') {
+                            // 订单状态更新
+                            const index = orders.value.findIndex(o => o.id === message.order.id);
+                            if (index !== -1) {
+                                orders.value[index] = {
+                                    ...orders.value[index],
+                                    ...message.order
+                                };
+                            }
+                        }
+                    };
+
+                    ws.onclose = () => {
+                        console.log('WebSocket连接断开');
+                        wsConnected.value = false;
+                        
+                        // 5秒后重连
+                        setTimeout(() => {
+                            if (storeId.value) {
+                                connectWebSocket();
+                            }
+                        }, 5000);
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error('WebSocket错误:', error);
+                        wsConnected.value = false;
+                    };
+                };
+
+                // 显示通知
+                const showNotification = (message) => {
+                    notification.value = message;
+                    setTimeout(() => {
+                        notification.value = null;
+                    }, 3000);
+                };
+
+                // 格式化时间
+                const formatTime = (time) => {
+                    const date = new Date(time);
+                    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                };
+
+                // 获取状态文本
+                const getStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'preparing': '准备中',
+                        'ready': '已完成',
+                        'serving': '上菜中',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
+                };
+
+                // 过滤订单
+                const filteredOrders = computed(() => {
+                    if (statusFilter.value === 'all') {
+                        return orders.value;
+                    }
+                    return orders.value.filter(order => order.order_status === statusFilter.value);
+                });
+
+                // 店铺变化
+                const onStoreChange = () => {
+                    connectWebSocket();
+                    fetchOrders();
+                };
+
+                // 初始化
+                onMounted(() => {
+                    fetchStores();
+                    fetchOrders();
+                    connectWebSocket();
+                });
+
+                // 清理
+                onUnmounted(() => {
+                    if (ws) {
+                        ws.close();
+                    }
+                });
+
+                return {
+                    storeId,
+                    statusFilter,
+                    wsConnected,
+                    orders,
+                    stores,
+                    notification,
+                    filteredOrders,
+                    updateOrderStatus,
+                    onStoreChange,
+                    formatTime,
+                    getStatusText
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
