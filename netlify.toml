@@ -1,6 +1,6 @@
 [build]
   publish = "assets"
-  command = "# No build command needed for static site"
+  command = ""
 
 # 特殊路径重定向规则（必须在通用规则之前）
 [[redirects]]
