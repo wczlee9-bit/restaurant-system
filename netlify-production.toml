@@ -61,6 +61,25 @@
 # 注意：修改为实际的后端 API 地址
 # ========================================
 
+# ========================================
+# API 代理配置
+# 注意：修改为实际的后端 API 地址
+# ========================================
+
+# 会员 API (端口 8004)
+[[redirects]]
+  from = "/api/member*"
+  to = "http://9.128.251.82:8004/api/member:splat"
+  status = 200
+  force = true
+
+# 总公司管理 API (端口 8006)
+[[redirects]]
+  from = "/api/headquarters*"
+  to = "http://9.128.251.82:8006/api/headquarters:splat"
+  status = 200
+  force = true
+
 # 订单相关接口代理到 customer_api (端口 8001)
 [[redirects]]
   from = "/api/orders*"
