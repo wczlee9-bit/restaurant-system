@@ -283,6 +283,11 @@
                             <!-- 厨师操作 -->
                             <template v-if="currentRole === 'kitchen'">
                                 <el-button type="primary" size="small"
+                                           @click="printKitchenOrder(order)"
+                                           style="margin-right: 10px;">
+                                    🖨️ 打印订单
+                                </el-button>
+                                <el-button type="primary" size="small"
                                            @click="startCooking(order.id, item.id)"
                                            v-for="item in order.items"
                                            :key="'start-'+item.id"
@@ -305,6 +310,11 @@
                             
                             <!-- 传菜员操作 -->
                             <template v-if="currentRole === 'waiter'">
+                                <el-button type="primary" size="small"
+                                           @click="printWaiterOrder(order)"
+                                           style="margin-right: 10px;">
+                                    🖨️ 打印订单
+                                </el-button>
                                 <el-button type="primary" size="small"
                                            @click="deliverDish(order.id, item.id)"
                                            v-for="item in order.items"
@@ -753,6 +763,253 @@
                 
                 printReceipt(orderId) {
                     this.$message.info('打印小票功能待实现');
+                },
+                
+                printKitchenOrder(order) {
+                    // 打印厨师订单
+                    const printWindow = window.open('', '_blank');
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('zh-CN');
+                    const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let html = `
+                        <html>
+                            <head>
+                                <title>厨师订单 - ${order.order_id}</title>
+                                <style>
+                                    body { 
+                                        font-family: '宋体', 'Microsoft YaHei', Arial, sans-serif; 
+                                        padding: 20px; 
+                                        font-size: 14px;
+                                        line-height: 1.6;
+                                    }
+                                    .header { 
+                                        text-align: center; 
+                                        border-bottom: 2px solid #000; 
+                                        padding-bottom: 10px; 
+                                        margin-bottom: 15px; 
+                                    }
+                                    .order-info { 
+                                        margin-bottom: 15px; 
+                                        padding: 10px; 
+                                        background: #f5f5f5; 
+                                    }
+                                    .item-list { 
+                                        margin: 15px 0; 
+                                    }
+                                    .item { 
+                                        display: flex; 
+                                        justify-content: space-between; 
+                                        padding: 8px 0; 
+                                        border-bottom: 1px dashed #ccc; 
+                                    }
+                                    .item-name { 
+                                        flex: 1; 
+                                        font-weight: bold; 
+                                    }
+                                    .item-qty { 
+                                        width: 80px; 
+                                        text-align: right; 
+                                        font-size: 16px;
+                                        font-weight: bold;
+                                    }
+                                    .footer { 
+                                        text-align: center; 
+                                        margin-top: 20px; 
+                                        padding-top: 10px; 
+                                        border-top: 1px dashed #000; 
+                                    }
+                                    .remark { 
+                                        color: #e6a23c; 
+                                        margin-top: 10px; 
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header">
+                                    <h1 style="margin: 0; font-size: 24px;">👨‍🍳 厨师订单</h1>
+                                    <p style="margin: 10px 0; font-size: 18px;">${this.storeInfo.name || '美味餐厅'}</p>
+                                </div>
+                                
+                                <div class="order-info">
+                                    <p><strong>订单号：</strong>${order.order_id}</p>
+                                    <p><strong>桌号：</strong>${order.table_number}号桌</p>
+                                    <p><strong>下单时间：</strong>${dateStr} ${timeStr}</p>
+                                    <p><strong>订单状态：</strong>${this.getOrderStatusText(order.order_status)}</p>
+                                </div>
+                                
+                                <div class="item-list">
+                                    <h3 style="margin-bottom: 10px;">菜品清单</h3>
+                    `;
+                    
+                    order.items.forEach(item => {
+                        html += `
+                            <div class="item">
+                                <div class="item-name">${item.menu_item_name}</div>
+                                <div class="item-qty">x${item.quantity}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                                </div>
+                                
+                                <div class="remark">
+                                    <p><strong>备注：</strong>${order.remark || '无'}</p>
+                                    ${order.payment_method === 'counter' ? '<p style="color: #e6a23c; font-weight: bold;">⚠️ 柜台支付</p>' : ''}
+                                </div>
+                                
+                                <div class="footer">
+                                    <p style="margin: 5px 0;">打印时间：${new Date().toLocaleString('zh-CN')}</p>
+                                    <p style="margin: 5px 0; font-size: 12px;">请尽快制作</p>
+                                </div>
+                                
+                                <script>
+                                    window.onload = function() {
+                                        window.print();
+                                    }
+                                <\/script>
+                            </body>
+                        </html>
+                    `;
+                    
+                    printWindow.document.write(html);
+                },
+                
+                printWaiterOrder(order) {
+                    // 打印传菜员订单
+                    const printWindow = window.open('', '_blank');
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('zh-CN');
+                    const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let html = `
+                        <html>
+                            <head>
+                                <title>传菜员订单 - ${order.order_id}</title>
+                                <style>
+                                    body { 
+                                        font-family: '宋体', 'Microsoft YaHei', Arial, sans-serif; 
+                                        padding: 20px; 
+                                        font-size: 14px;
+                                        line-height: 1.6;
+                                    }
+                                    .header { 
+                                        text-align: center; 
+                                        border-bottom: 2px solid #000; 
+                                        padding-bottom: 10px; 
+                                        margin-bottom: 15px; 
+                                    }
+                                    .order-info { 
+                                        margin-bottom: 15px; 
+                                        padding: 10px; 
+                                        background: #f5f5f5; 
+                                    }
+                                    .item-list { 
+                                        margin: 15px 0; 
+                                    }
+                                    .item { 
+                                        display: flex; 
+                                        justify-content: space-between; 
+                                        padding: 8px 0; 
+                                        border-bottom: 1px dashed #ccc; 
+                                    }
+                                    .item-name { 
+                                        flex: 1; 
+                                        font-weight: bold; 
+                                    }
+                                    .item-qty { 
+                                        width: 80px; 
+                                        text-align: right; 
+                                        font-size: 16px;
+                                        font-weight: bold;
+                                    }
+                                    .footer { 
+                                        text-align: center; 
+                                        margin-top: 20px; 
+                                        padding-top: 10px; 
+                                        border-top: 1px dashed #000; 
+                                    }
+                                    .remark { 
+                                        color: #e6a23c; 
+                                        margin-top: 10px; 
+                                    }
+                                    .total-section {
+                                        margin-top: 15px;
+                                        padding: 10px;
+                                        background: #f0f9ff;
+                                        border-radius: 5px;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header">
+                                    <h1 style="margin: 0; font-size: 24px;">🤵 传菜员订单</h1>
+                                    <p style="margin: 10px 0; font-size: 18px;">${this.storeInfo.name || '美味餐厅'}</p>
+                                </div>
+                                
+                                <div class="order-info">
+                                    <p><strong>订单号：</strong>${order.order_id}</p>
+                                    <p><strong>桌号：</strong>${order.table_number}号桌</p>
+                                    <p><strong>下单时间：</strong>${dateStr} ${timeStr}</p>
+                                    <p><strong>订单状态：</strong>${this.getOrderStatusText(order.order_status)}</p>
+                                </div>
+                                
+                                <div class="item-list">
+                                    <h3 style="margin-bottom: 10px;">菜品清单</h3>
+                    `;
+                    
+                    order.items.forEach(item => {
+                        html += `
+                            <div class="item">
+                                <div class="item-name">${item.menu_item_name}</div>
+                                <div class="item-qty">x${item.quantity}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                                </div>
+                                
+                                <div class="total-section">
+                                    <p><strong>订单总额：</strong>¥${order.total_amount.toFixed(2)}</p>
+                                    <p><strong>支付方式：</strong>${order.payment_method === 'immediate' ? '已支付' : '柜台支付'}</p>
+                                    <p><strong>支付状态：</strong>${order.payment_status === 'paid' ? '已支付' : '未支付'}</p>
+                                </div>
+                                
+                                <div class="remark">
+                                    <p><strong>备注：</strong>${order.remark || '无'}</p>
+                                    ${order.payment_method === 'counter' ? '<p style="color: #e6a23c; font-weight: bold;">⚠️ 提醒顾客到收银台支付</p>' : ''}
+                                </div>
+                                
+                                <div class="footer">
+                                    <p style="margin: 5px 0;">打印时间：${new Date().toLocaleString('zh-CN')}</p>
+                                    <p style="margin: 5px 0; font-size: 12px;">请及时传菜</p>
+                                </div>
+                                
+                                <script>
+                                    window.onload = function() {
+                                        window.print();
+                                    }
+                                <\/script>
+                            </body>
+                        </html>
+                    `;
+                    
+                    printWindow.document.write(html);
+                },
+                
+                getOrderStatusText(status) {
+                    const statusMap = {
+                        'pending': '待确认',
+                        'confirmed': '已确认',
+                        'preparing': '制作中',
+                        'ready': '待传菜',
+                        'serving': '上菜中',
+                        'completed': '已完成',
+                        'cancelled': '已取消'
+                    };
+                    return statusMap[status] || status;
                 },
                 
                 viewOrderDetail(orderId) {

@@ -375,10 +375,35 @@
                 </div>
                 
                 <div class="cart-footer">
+                    <!-- 支付方式选择 -->
+                    <div v-if="cart.length > 0" style="margin-bottom: 15px;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">选择支付方式：</div>
+                        <el-radio-group v-model="paymentMethod" style="width: 100%;">
+                            <el-radio label="immediate" style="display: block; margin-bottom: 10px; padding: 10px; background: #f5f7fa; border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <strong>💳 马上支付</strong>
+                                        <div style="font-size: 12px; color: #666; margin-top: 4px;">在线支付（微信/支付宝）</div>
+                                    </div>
+                                    <span style="color: #67c23a; font-size: 14px;">立即结算</span>
+                                </div>
+                            </el-radio>
+                            <el-radio label="counter" style="display: block; padding: 10px; background: #f5f7fa; border-radius: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <strong>🏪 用餐后柜台支付</strong>
+                                        <div style="font-size: 12px; color: #666; margin-top: 4px;">先用餐，离店时到收银台支付</div>
+                                    </div>
+                                    <span style="color: #e6a23c; font-size: 14px;">灵活便捷</span>
+                                </div>
+                            </el-radio>
+                        </el-radio-group>
+                    </div>
+                    
                     <el-button type="primary" size="large" style="width: 100%; height: 50px;"
-                               :disabled="cart.length === 0"
+                               :disabled="cart.length === 0 || !paymentMethod"
                                @click="submitOrder()">
-                        提交订单 (¥{{ cartTotal }})
+                        {{ paymentMethod === 'immediate' ? '立即支付' : '确认下单，用餐后支付' }} (¥{{ cartTotal }})
                     </el-button>
                 </div>
             </div>
@@ -401,6 +426,7 @@
                     cart: [],
                     showCart: false,
                     currentOrder: null,
+                    paymentMethod: '', // 支付方式: immediate(马上支付) / counter(柜台支付)
                     ws: null,
                     wsConnected: false
                 };
@@ -559,23 +585,53 @@
                         return;
                     }
                     
+                    if (!this.paymentMethod) {
+                        this.$message.warning('请选择支付方式');
+                        return;
+                    }
+                    
                     try {
+                        // 生成订单号（日期+序号）
+                        const now = new Date();
+                        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, ''); // 20240108
+                        const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, ''); // 143055
+                        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                        const orderId = `${dateStr}${timeStr}${randomNum}`; // 例如: 20240108143055001
+                        
                         const orderData = {
+                            order_id: orderId,
                             table_id: this.selectedTable.id,
+                            table_number: this.selectedTable.table_number,
                             items: this.cart.map(item => ({
                                 menu_item_id: item.id,
+                                name: item.name,
+                                price: item.price,
                                 quantity: item.qty
                             })),
-                            payment_method: 'wechat'
+                            total_amount: this.cartTotal,
+                            payment_method: this.paymentMethod, // immediate / counter
+                            payment_status: this.paymentMethod === 'immediate' ? 'paid' : 'unpaid',
+                            status: 'pending'
                         };
                         
-                        const response = await axios.post('/api/orders/', orderData);
+                        // 这里应该调用API，暂时模拟成功
+                        // const response = await axios.post('/api/orders/', orderData);
                         
-                        this.currentOrder = response.data;
+                        this.currentOrder = {
+                            ...orderData,
+                            created_at: now.toISOString()
+                        };
+                        
+                        // 保存订单到本地存储（模拟）
+                        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+                        savedOrders.unshift(this.currentOrder);
+                        localStorage.setItem('orders', JSON.stringify(savedOrders));
+                        
                         this.cart = [];
                         this.showCart = false;
                         
-                        this.$message.success('订单提交成功！');
+                        const paymentText = this.paymentMethod === 'immediate' ? '支付成功' : '订单已提交';
+                        this.$message.success(`${paymentText}！订单号：${orderId}`);
                         
                         // 连接到订单的WebSocket
                         if (this.ws) {
