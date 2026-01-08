@@ -10,7 +10,15 @@ from typing import List, Optional
 from datetime import datetime
 
 from src.storage.database.shared.model import RoleConfig, OrderFlowConfig, Stores
-from src.storage.database.session import get_db
+from src.storage.database.db import get_session
+
+def get_db():
+    """获取数据库会话"""
+    db = get_session()
+    try:
+        yield db
+    finally:
+        db.close()
 
 router = APIRouter(prefix="/order-flow", tags=["订单流程配置"])
 

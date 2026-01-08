@@ -2,7 +2,7 @@
 餐饮系统完整 API 服务
 整合顾客端、管理端、厨房端、传菜端等所有接口
 """
-from fastapi import FastAPI, HTTPException, Query, Body
+from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
@@ -779,14 +779,62 @@ def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusR
         db.close()
 
 
-from src.api.workflow_api import router as workflow_router
 from src.api.order_flow_api import router as order_flow_router
-
-# 注册工作流程配置路由
-app.include_router(workflow_router)
 
 # 注册订单流程配置路由
 app.include_router(order_flow_router)
+
+
+# ============ 二维码生成 API ============
+
+@app.post("/api/generate-styled-qrcode")
+def generate_styled_qrcode(
+    table_id: int = Form(...),
+    base_url: str = Form(default="https://order.example.com"),
+    foreground_color: str = Form(default="black"),
+    background_color: str = Form(default="white"),
+    logo_ratio: float = Form(default=0.2),
+    logo: Optional[UploadFile] = None
+):
+    """
+    生成带样式的二维码
+    支持自定义颜色和添加logo
+    """
+    from fastapi import Form, UploadFile
+    from tools.qrcode_tool import QRCodeGenerator
+    import io
+
+    db = get_session()
+    try:
+        # 验证桌号是否存在
+        table = db.query(Tables).filter(Tables.id == table_id).first()
+        if not table:
+            raise HTTPException(status_code=404, detail=f"桌号ID {table_id} 不存在")
+
+        # 读取logo数据
+        logo_data = None
+        if logo:
+            logo_data = logo.file.read()
+
+        # 生成二维码
+        generator = QRCodeGenerator()
+        result = generator.generate_qrcode_for_table(
+            table_id=table_id,
+            base_url=base_url,
+            foreground_color=foreground_color,
+            background_color=background_color,
+            logo_data=logo_data,
+            logo_ratio=logo_ratio
+        )
+
+        return {
+            "qrcode_url": result["qrcode_url"],
+            "qrcode_content": result["qrcode_content"],
+            "table_id": result["table_id"],
+            "table_number": result["table_number"]
+        }
+    finally:
+        db.close()
 
 
 @app.get("/health")

@@ -154,6 +154,38 @@
                 page-break-inside: avoid;
             }
         }
+
+        /* Logo上传样式 */
+        .logo-uploader {
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            width: 150px;
+            height: 150px;
+            background: #fafafa;
+        }
+        .logo-uploader:hover {
+            border-color: #667eea;
+        }
+        .logo-uploader-icon {
+            font-size: 28px;
+            color: #8c939d;
+            width: 150px;
+            height: 150px;
+            line-height: 150px;
+            text-align: center;
+        }
+        .logo-preview {
+            width: 150px;
+            height: 150px;
+            display: block;
+            object-fit: contain;
+        }
+        .qrcode-config-card {
+            border: 1px solid #e4e7ed;
+        }
     </style>
 </head>
 <body>
@@ -286,6 +318,56 @@
                     :closable="false"
                     style="margin-bottom: 20px;">
                 </el-alert>
+
+                <!-- 二维码样式配置 -->
+                <div class="qrcode-config-card" style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #333;">🎨 二维码样式配置</h3>
+
+                    <el-form :model="qrcodeStyle" label-width="120px">
+                        <el-row :gutter="20">
+                            <el-col :span="8">
+                                <el-form-item label="前景色">
+                                    <el-color-picker v-model="qrcodeStyle.foregroundColor" show-alpha></el-color-picker>
+                                    <span style="margin-left: 10px; font-size: 12px; color: #666;">{{ qrcodeStyle.foregroundColor }}</span>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="背景色">
+                                    <el-color-picker v-model="qrcodeStyle.backgroundColor" show-alpha></el-color-picker>
+                                    <span style="margin-left: 10px; font-size: 12px; color: #666;">{{ qrcodeStyle.backgroundColor }}</span>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="Logo大小">
+                                    <el-slider v-model="qrcodeStyle.logoRatio" :min="0.1" :max="0.4" :step="0.05" :marks="{0.1: '10%', 0.2: '20%', 0.3: '30%', 0.4: '40%'}"></el-slider>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
+                        <el-form-item label="上传Logo">
+                            <el-upload
+                                class="logo-uploader"
+                                action="#"
+                                :show-file-list="true"
+                                :on-change="handleLogoChange"
+                                :auto-upload="false"
+                                :limit="1"
+                                accept="image/png,image/jpeg,image/jpg">
+                                <img v-if="qrcodeStyle.logoUrl" :src="qrcodeStyle.logoUrl" class="logo-preview" />
+                                <el-icon v-else class="logo-uploader-icon"><plus /></el-icon>
+                            </el-upload>
+                            <div style="margin-top: 10px; font-size: 12px; color: #999;">
+                                建议上传正方形图片（如200x200），支持PNG、JPG格式。Logo将显示在二维码中心。
+                            </div>
+                        </el-form-item>
+
+                        <el-form-item>
+                            <el-button type="primary" @click="saveQrcodeStyle">保存样式配置</el-button>
+                            <el-button @click="resetQrcodeStyle">重置为默认</el-button>
+                            <el-button type="success" @click="previewStyledQrcode">预览效果</el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
 
                 <div v-if="tables.length === 0" class="empty-state">
                     <i class="el-icon-picture"></i>
@@ -498,6 +580,15 @@
                     remark: ''
                 });
 
+                // 二维码样式配置
+                const qrcodeStyle = reactive({
+                    foregroundColor: '#000000',
+                    backgroundColor: '#ffffff',
+                    logoUrl: '',
+                    logoData: null,
+                    logoRatio: 0.2
+                });
+
                 // 工作流程配置
                 const workflowConfigs = ref([]);
                 const saving = ref(false);
@@ -558,6 +649,102 @@
                         console.error('加载工作流程配置失败:', error);
                     } finally {
                         loading.value = false;
+                    }
+                };
+
+                // 处理Logo上传
+                const handleLogoChange = (file) => {
+                    const isImage = file.raw.type.startsWith('image/');
+                    const isLt2M = file.raw.size / 1024 / 1024 < 2;
+
+                    if (!isImage) {
+                        ElementPlus.ElMessage.error('只能上传图片文件！');
+                        return false;
+                    }
+                    if (!isLt2M) {
+                        ElementPlus.ElMessage.error('图片大小不能超过2MB！');
+                        return false;
+                    }
+
+                    // 读取图片为base64
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file.raw);
+                    reader.onload = () => {
+                        qrcodeStyle.logoUrl = reader.result;
+                        // 保存原始文件对象
+                        qrcodeStyle.logoData = file.raw;
+                    };
+
+                    return false; // 阻止自动上传
+                };
+
+                // 保存二维码样式配置
+                const saveQrcodeStyle = () => {
+                    const styleData = {
+                        foregroundColor: qrcodeStyle.foregroundColor,
+                        backgroundColor: qrcodeStyle.backgroundColor,
+                        logoUrl: qrcodeStyle.logoUrl,
+                        logoRatio: qrcodeStyle.logoRatio
+                    };
+                    localStorage.setItem('qrcodeStyle', JSON.stringify(styleData));
+                    ElementPlus.ElMessage.success('二维码样式配置已保存');
+                };
+
+                // 重置二维码样式配置
+                const resetQrcodeStyle = () => {
+                    qrcodeStyle.foregroundColor = '#000000';
+                    qrcodeStyle.backgroundColor = '#ffffff';
+                    qrcodeStyle.logoUrl = '';
+                    qrcodeStyle.logoData = null;
+                    qrcodeStyle.logoRatio = 0.2;
+                    localStorage.removeItem('qrcodeStyle');
+                    ElementPlus.ElMessage.success('已重置二维码样式配置');
+                };
+
+                // 预览样式的二维码
+                const previewStyledQrcode = () => {
+                    // 使用第一个桌号进行预览
+                    if (tables.value.length === 0) {
+                        ElementPlus.ElMessage.warning('请先添加桌号');
+                        return;
+                    }
+
+                    const table = tables.value[0];
+                    const qrcodeContent = generateQrcodeUrl(table.number);
+
+                    // 创建临时容器生成二维码
+                    const tempContainer = document.createElement('div');
+                    tempContainer.style.display = 'none';
+                    document.body.appendChild(tempContainer);
+
+                    try {
+                        new QRCode(tempContainer, {
+                            text: qrcodeContent,
+                            width: 300,
+                            height: 300,
+                            colorDark: qrcodeStyle.foregroundColor,
+                            colorLight: qrcodeStyle.backgroundColor,
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+
+                        setTimeout(() => {
+                            const img = tempContainer.querySelector('img');
+                            previewQrcodeUrl.value = img.src;
+                            showPreviewDialog.value = true;
+                            document.body.removeChild(tempContainer);
+                        }, 100);
+                    } catch (error) {
+                        document.body.removeChild(tempContainer);
+                        ElementPlus.ElMessage.error('生成预览失败');
+                    }
+                };
+
+                // 从本地存储加载二维码样式
+                const loadQrcodeStyle = () => {
+                    const savedStyle = localStorage.getItem('qrcodeStyle');
+                    if (savedStyle) {
+                        const styleData = JSON.parse(savedStyle);
+                        Object.assign(qrcodeStyle, styleData);
                     }
                 };
 
@@ -689,12 +876,50 @@
                     }).catch(() => {});
                 };
 
-                // 生成二维码
+                // 生成二维码（使用前端QRCode.js）
                 const generateQrcode = (table) => {
                     const qrcodeUrl = generateQrcodeUrl(table.number);
                     table.qrcodeUrl = qrcodeUrl;
                     saveTablesToStorage();
                     ElementPlus.ElMessage.success(`${table.number}号桌二维码已生成`);
+                };
+
+                // 生成带样式的二维码（使用后端API）
+                const generateStyledQrcode = async (table) => {
+                    try {
+                        ElementPlus.ElMessage.info('正在生成二维码，请稍候...');
+
+                        // 准备请求数据
+                        const formData = new FormData();
+                        formData.append('table_id', table.id);
+                        formData.append('base_url', getBaseUrl());
+                        formData.append('foreground_color', qrcodeStyle.foregroundColor);
+                        formData.append('background_color', qrcodeStyle.backgroundColor);
+                        formData.append('logo_ratio', qrcodeStyle.logoRatio);
+
+                        // 如果有logo，添加logo数据
+                        if (qrcodeStyle.logoData) {
+                            formData.append('logo', qrcodeStyle.logoData);
+                        }
+
+                        // 调用后端API
+                        const response = await fetch('http://localhost:8000/api/generate-styled-qrcode', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            table.qrcodeUrl = data.qrcode_url;
+                            saveTablesToStorage();
+                            ElementPlus.ElMessage.success(`${table.number}号桌二维码已生成`);
+                        } else {
+                            ElementPlus.ElMessage.error('生成二维码失败');
+                        }
+                    } catch (error) {
+                        console.error('生成二维码失败:', error);
+                        ElementPlus.ElMessage.error('生成二维码失败，请检查网络连接');
+                    }
                 };
 
                 // 批量生成所有二维码
@@ -880,6 +1105,7 @@
 
                 // 初始化
                 loadFromStorage();
+                loadQrcodeStyle();
 
                 return {
                     activeTab,
@@ -897,6 +1123,7 @@
                     editTable,
                     deleteTable,
                     generateQrcode,
+                    generateStyledQrcode,
                     generateAllQrcodes,
                     previewQrcode,
                     downloadQrcode,
@@ -912,7 +1139,12 @@
                     loadWorkflowConfig,
                     saveWorkflowConfig,
                     resetWorkflowConfig,
-                    getActionModeDescription
+                    getActionModeDescription,
+                    qrcodeStyle,
+                    handleLogoChange,
+                    saveQrcodeStyle,
+                    resetQrcodeStyle,
+                    previewStyledQrcode
                 };
             }
         }).use(ElementPlus).mount('#app');
