@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物料采购 - 扫码点餐系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f5f7fa; min-height: 100vh; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        
+        .page-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            color: white; text-decoration: none; padding: 8px 20px;
+            background: rgba(255,255,255,0.2); border-radius: 4px; transition: all 0.3s;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        .tabs { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .tab-content { background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        
+        .section-title {
+            font-size: 18px; font-weight: bold; margin-bottom: 20px;
+            color: #333; border-bottom: 2px solid #667eea; padding-bottom: 10px;
+        }
+        
+        .toolbar {
+            display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;
+        }
+        
+        .search-box { width: 300px; }
+        
+        .stat-card {
+            padding: 20px; border-radius: 8px; text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stat-value { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        .stat-label { color: #666; font-size: 14px; }
+        
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #999;
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 20px; }
+        
+        .stock-low { color: #f56c6c; }
+        .stock-normal { color: #67c23a; }
+        .stock-warning { color: #e6a23c; }
+        
+        .status-badge {
+            padding: 4px 12px; border-radius: 4px; font-size: 12px;
+        }
+        .status-pending { background: #fef0f0; color: #f56c6c; }
+        .status-approved { background: #ecf5ff; color: #667eea; }
+        .status-completed { background: #f0f9ff; color: #67c23a; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .toolbar { flex-direction: column; }
+            .search-box { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1>📦 物料采购管理</h1>
+                    <p>管理库存、采购订单和物料信息</p>
+                </div>
+                <div>
+                    <a href="portal.html" class="back-btn">← 返回门户</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="tabs">
+                <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+                    <el-tab-pane label="库存概览" name="overview"></el-tab-pane>
+                    <el-tab-pane label="物料列表" name="materials">
+                        <span>物料列表</span>
+                        <el-badge :value="materials.length" class="item" v-if="materials.length > 0"></el-badge>
+                    </el-tab-pane>
+                    <el-tab-pane label="采购订单" name="orders">
+                        <span>采购订单</span>
+                        <el-badge :value="purchaseOrders.length" class="item" v-if="purchaseOrders.length > 0"></el-badge>
+                    </el-tab-pane>
+                </el-tabs>
+            </div>
+
+            <!-- 库存概览 -->
+            <div class="tab-content" v-show="activeTab === 'overview'">
+                <div class="section-title">📊 库存统计</div>
+                
+                <el-row :gutter="20" style="margin-bottom: 30px;">
+                    <el-col :xs="12" :sm="6">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <div class="stat-label">物料总数</div>
+                            <div class="stat-value">{{ materials.length }}</div>
+                        </div>
+                    </el-col>
+                    <el-col :xs="12" :sm="6">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                            <div class="stat-label">库存预警</div>
+                            <div class="stat-value">{{ lowStockCount }}</div>
+                        </div>
+                    </el-col>
+                    <el-col :xs="12" :sm="6">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                            <div class="stat-label">待处理订单</div>
+                            <div class="stat-value">{{ pendingOrdersCount }}</div>
+                        </div>
+                    </el-col>
+                    <el-col :xs="12" :sm="6">
+                        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                            <div class="stat-label">本月采购金额</div>
+                            <div class="stat-value">¥{{ monthlyPurchaseAmount }}</div>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title">⚠️ 库存预警</div>
+                <el-table :data="lowStockMaterials" style="width: 100%">
+                    <el-table-column prop="name" label="物料名称" min-width="150"></el-table-column>
+                    <el-table-column prop="category" label="分类" width="120"></el-table-column>
+                    <el-table-column prop="current_stock" label="当前库存" width="100">
+                        <template #default="scope">
+                            <span class="stock-low">{{ scope.row.current_stock }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="min_stock" label="最低库存" width="100"></el-table-column>
+                    <el-table-column prop="unit" label="单位" width="80"></el-table-column>
+                    <el-table-column label="建议采购量" width="120">
+                        <template #default="scope">
+                            {{ scope.row.min_stock * 2 - scope.row.current_stock }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120">
+                        <template #default="scope">
+                            <el-button size="small" type="primary" @click="createPurchaseOrder(scope.row)">采购</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 物料列表 -->
+            <div class="tab-content" v-show="activeTab === 'materials'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📋 物料管理</span>
+                    <el-button type="primary" @click="showMaterialDialog = true">+ 添加物料</el-button>
+                </div>
+
+                <div class="toolbar">
+                    <el-input
+                        v-model="searchKeyword"
+                        placeholder="搜索物料名称..."
+                        class="search-box"
+                        clearable>
+                        <template #prefix>
+                            <el-icon><Search /></el-icon>
+                        </template>
+                    </el-input>
+                    <el-select v-model="filterCategory" placeholder="选择分类" clearable style="width: 150px;">
+                        <el-option label="全部分类" value=""></el-option>
+                        <el-option label="蔬菜类" value="蔬菜类"></el-option>
+                        <el-option label="肉类" value="肉类"></el-option>
+                        <el-option label="海鲜类" value="海鲜类"></el-option>
+                        <el-option label="调料" value="调料"></el-option>
+                        <el-option label="主食" value="主食"></el-option>
+                    </el-select>
+                    <el-select v-model="filterStock" placeholder="库存状态" clearable style="width: 150px;">
+                        <el-option label="全部状态" value=""></el-option>
+                        <el-option label="库存充足" value="normal"></el-option>
+                        <el-option label="库存预警" value="low"></el-option>
+                    </el-select>
+                </div>
+
+                <el-table :data="filteredMaterials" style="width: 100%">
+                    <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                    <el-table-column prop="name" label="物料名称" min-width="150">
+                        <template #default="scope">
+                            <strong>{{ scope.row.name }}</strong>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="category" label="分类" width="100"></el-table-column>
+                    <el-table-column prop="current_stock" label="当前库存" width="100">
+                        <template #default="scope">
+                            <span :class="getStockClass(scope.row)">{{ scope.row.current_stock }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="min_stock" label="最低库存" width="100"></el-table-column>
+                    <el-table-column prop="unit" label="单位" width="80"></el-table-column>
+                    <el-table-column prop="price" label="单价(¥)" width="100"></el-table-column>
+                    <el-table-column prop="supplier" label="供应商" min-width="150"></el-table-column>
+                    <el-table-column label="状态" width="100">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.is_active ? 'success' : 'info'">
+                                {{ scope.row.is_active ? '启用' : '禁用' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" fixed="right">
+                        <template #default="scope">
+                            <el-button size="small" @click="editMaterial(scope.row)">编辑</el-button>
+                            <el-button size="small" type="primary" @click="createPurchaseOrder(scope.row)">采购</el-button>
+                            <el-button size="small" type="danger" @click="deleteMaterial(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 采购订单 -->
+            <div class="tab-content" v-show="activeTab === 'orders'">
+                <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>📝 采购订单</span>
+                    <div>
+                        <el-button type="primary" @click="showOrderDialog = true; isEditingOrder = false; resetOrderForm()">
+                            + 新建订单
+                        </el-button>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <el-select v-model="filterOrderStatus" placeholder="订单状态" clearable style="width: 150px;">
+                        <el-option label="全部状态" value=""></el-option>
+                        <el-option label="待审核" value="pending"></el-option>
+                        <el-option label="已批准" value="approved"></el-option>
+                        <el-option label="已完成" value="completed"></el-option>
+                    </el-select>
+                    <el-date-picker
+                        v-model="orderDateRange"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        style="width: 300px;">
+                    </el-date-picker>
+                </div>
+
+                <el-table :data="filteredPurchaseOrders" style="width: 100%">
+                    <el-table-column prop="id" label="订单号" width="120"></el-table-column>
+                    <el-table-column prop="material_name" label="物料名称" min-width="150"></el-table-column>
+                    <el-table-column prop="quantity" label="采购数量" width="100"></el-table-column>
+                    <el-table-column prop="unit" label="单位" width="80"></el-table-column>
+                    <el-table-column prop="unit_price" label="单价(¥)" width="100"></el-table-column>
+                    <el-table-column prop="total_amount" label="总金额(¥)" width="120">
+                        <template #default="scope">
+                            <strong>{{ scope.row.total_amount }}</strong>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="supplier" label="供应商" min-width="150"></el-table-column>
+                    <el-table-column label="状态" width="100">
+                        <template #default="scope">
+                            <span class="status-badge" :class="'status-' + scope.row.status">
+                                {{ getOrderStatusText(scope.row.status) }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="created_at" label="创建时间" width="180"></el-table-column>
+                    <el-table-column label="操作" width="200" fixed="right">
+                        <template #default="scope">
+                            <el-button size="small" @click="viewOrder(scope.row)">查看</el-button>
+                            <el-button 
+                                v-if="scope.row.status === 'pending'"
+                                size="small" 
+                                type="success" 
+                                @click="approveOrder(scope.row)">
+                                批准
+                            </el-button>
+                            <el-button 
+                                v-if="scope.row.status === 'approved'"
+                                size="small" 
+                                type="primary" 
+                                @click="completeOrder(scope.row)">
+                                完成
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+
+        <!-- 物料对话框 -->
+        <el-dialog
+            v-model="showMaterialDialog"
+            :title="editingMaterial ? '编辑物料' : '添加物料'"
+            width="600px">
+            <el-form :model="materialForm" label-width="100px">
+                <el-form-item label="物料名称" required>
+                    <el-input v-model="materialForm.name" placeholder="请输入物料名称"></el-input>
+                </el-form-item>
+                <el-form-item label="分类" required>
+                    <el-select v-model="materialForm.category" placeholder="请选择分类" style="width: 100%;">
+                        <el-option label="蔬菜类" value="蔬菜类"></el-option>
+                        <el-option label="肉类" value="肉类"></el-option>
+                        <el-option label="海鲜类" value="海鲜类"></el-option>
+                        <el-option label="调料" value="调料"></el-option>
+                        <el-option label="主食" value="主食"></el-option>
+                        <el-option label="其他" value="其他"></el-option>
+                    </el-select>
+                </el-form-item>
+                <div class="form-grid">
+                    <el-form-item label="当前库存">
+                        <el-input-number v-model="materialForm.current_stock" :min="0"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="最低库存">
+                        <el-input-number v-model="materialForm.min_stock" :min="0"></el-input-number>
+                    </el-form-item>
+                </div>
+                <div class="form-grid">
+                    <el-form-item label="单位">
+                        <el-input v-model="materialForm.unit" placeholder="如：kg、件、箱"></el-input>
+                    </el-form-item>
+                    <el-form-item label="单价(¥)">
+                        <el-input-number v-model="materialForm.price" :min="0" :precision="2"></el-input-number>
+                    </el-form-item>
+                </div>
+                <el-form-item label="供应商">
+                    <el-input v-model="materialForm.supplier" placeholder="请输入供应商名称"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="materialForm.remark" type="textarea" :rows="3" placeholder="请输入备注"></el-input>
+                </el-form-item>
+                <el-form-item label="状态">
+                    <el-switch v-model="materialForm.is_active" active-text="启用" inactive-text="禁用"></el-switch>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showMaterialDialog = false">取消</el-button>
+                    <el-button type="primary" @click="saveMaterial">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 采购订单对话框 -->
+        <el-dialog
+            v-model="showOrderDialog"
+            :title="isEditingOrder ? '编辑采购订单' : '新建采购订单'"
+            width="600px">
+            <el-form :model="orderForm" label-width="100px">
+                <el-form-item label="物料" required>
+                    <el-select v-model="orderForm.material_id" placeholder="请选择物料" style="width: 100%;">
+                        <el-option
+                            v-for="material in materials"
+                            :key="material.id"
+                            :label="material.name"
+                            :value="material.id">
+                            <span>{{ material.name }}</span>
+                            <span style="color: #999; font-size: 12px; margin-left: 10px;">
+                                库存: {{ material.current_stock }}{{ material.unit }}
+                            </span>
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <div class="form-grid">
+                    <el-form-item label="采购数量" required>
+                        <el-input-number v-model="orderForm.quantity" :min="1"></el-input-number>
+                    </el-form-item>
+                    <el-form-item label="单价(¥)" required>
+                        <el-input-number v-model="orderForm.unit_price" :min="0" :precision="2"></el-input-number>
+                    </el-form-item>
+                </div>
+                <el-form-item label="总金额">
+                    <el-input v-model="orderTotal" disabled></el-input>
+                </el-form-item>
+                <el-form-item label="供应商">
+                    <el-input v-model="orderForm.supplier" placeholder="请输入供应商名称"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="orderForm.remark" type="textarea" :rows="3" placeholder="请输入备注"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showOrderDialog = false">取消</el-button>
+                    <el-button type="primary" @click="saveOrder">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 订单详情对话框 -->
+        <el-dialog
+            v-model="showOrderDetailDialog"
+            title="订单详情"
+            width="600px">
+            <el-descriptions :column="2" border>
+                <el-descriptions-item label="订单号">{{ currentOrder.id }}</el-descriptions-item>
+                <el-descriptions-item label="状态">
+                    <span class="status-badge" :class="'status-' + currentOrder.status">
+                        {{ getOrderStatusText(currentOrder.status) }}
+                    </span>
+                </el-descriptions-item>
+                <el-descriptions-item label="物料名称">{{ currentOrder.material_name }}</el-descriptions-item>
+                <el-descriptions-item label="采购数量">{{ currentOrder.quantity }} {{ currentOrder.unit }}</el-descriptions-item>
+                <el-descriptions-item label="单价">¥{{ currentOrder.unit_price }}</el-descriptions-item>
+                <el-descriptions-item label="总金额">¥{{ currentOrder.total_amount }}</el-descriptions-item>
+                <el-descriptions-item label="供应商">{{ currentOrder.supplier }}</el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ currentOrder.created_at }}</el-descriptions-item>
+                <el-descriptions-item label="备注" :span="2">{{ currentOrder.remark || '无' }}</el-descriptions-item>
+            </el-descriptions>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="showOrderDetailDialog = false">关闭</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('overview');
+                const searchKeyword = ref('');
+                const filterCategory = ref('');
+                const filterStock = ref('');
+                const filterOrderStatus = ref('');
+                const orderDateRange = ref([]);
+                const showMaterialDialog = ref(false);
+                const showOrderDialog = ref(false);
+                const showOrderDetailDialog = ref(false);
+                const editingMaterial = ref(null);
+                const isEditingOrder = ref(false);
+                const currentOrder = ref({});
+
+                // 物料数据
+                const materials = ref([
+                    { id: 1, name: '土豆', category: '蔬菜类', current_stock: 50, min_stock: 30, unit: 'kg', price: 3.50, supplier: 'XX蔬菜批发市场', remark: '', is_active: true },
+                    { id: 2, name: '西红柿', category: '蔬菜类', current_stock: 20, min_stock: 25, unit: 'kg', price: 5.00, supplier: 'XX蔬菜批发市场', remark: '', is_active: true },
+                    { id: 3, name: '猪肉', category: '肉类', current_stock: 15, min_stock: 20, unit: 'kg', price: 45.00, supplier: 'XX肉类供应商', remark: '', is_active: true },
+                    { id: 4, name: '鸡蛋', category: '其他', current_stock: 100, min_stock: 50, unit: 'kg', price: 12.00, supplier: 'XX农场', remark: '', is_active: true },
+                    { id: 5, name: '食用油', category: '调料', current_stock: 10, min_stock: 15, unit: '桶', price: 85.00, supplier: 'XX粮油公司', remark: '', is_active: true },
+                    { id: 6, name: '大米', category: '主食', current_stock: 80, min_stock: 50, unit: 'kg', price: 6.00, supplier: 'XX粮油公司', remark: '', is_active: true }
+                ]);
+
+                // 采购订单数据
+                const purchaseOrders = ref([
+                    { id: 'PO202401001', material_id: 1, material_name: '土豆', quantity: 100, unit: 'kg', unit_price: 3.50, total_amount: 350.00, supplier: 'XX蔬菜批发市场', status: 'completed', remark: '定期补货', created_at: '2024-01-15 10:30:00' },
+                    { id: 'PO202401002', material_id: 2, material_name: '西红柿', quantity: 50, unit: 'kg', unit_price: 5.00, total_amount: 250.00, supplier: 'XX蔬菜批发市场', status: 'approved', remark: '', created_at: '2024-01-16 14:20:00' },
+                    { id: 'PO202401003', material_id: 3, material_name: '猪肉', quantity: 30, unit: 'kg', unit_price: 45.00, total_amount: 1350.00, supplier: 'XX肉类供应商', status: 'pending', remark: '急用', created_at: '2024-01-17 09:00:00' }
+                ]);
+
+                // 物料表单
+                const materialForm = reactive({
+                    id: null,
+                    name: '',
+                    category: '',
+                    current_stock: 0,
+                    min_stock: 0,
+                    unit: '',
+                    price: 0,
+                    supplier: '',
+                    remark: '',
+                    is_active: true
+                });
+
+                // 采购订单表单
+                const orderForm = reactive({
+                    id: null,
+                    material_id: null,
+                    quantity: 1,
+                    unit_price: 0,
+                    total_amount: 0,
+                    supplier: '',
+                    remark: '',
+                    status: 'pending'
+                });
+
+                // 计算属性 - 库存预警数量
+                const lowStockCount = computed(() => {
+                    return materials.value.filter(m => m.current_stock < m.min_stock).length;
+                });
+
+                // 计算属性 - 待处理订单数量
+                const pendingOrdersCount = computed(() => {
+                    return purchaseOrders.value.filter(o => o.status === 'pending').length;
+                });
+
+                // 计算属性 - 本月采购金额
+                const monthlyPurchaseAmount = computed(() => {
+                    return purchaseOrders.value
+                        .filter(o => o.status === 'completed')
+                        .reduce((sum, o) => sum + o.total_amount, 0)
+                        .toFixed(2);
+                });
+
+                // 计算属性 - 库存预警物料列表
+                const lowStockMaterials = computed(() => {
+                    return materials.value.filter(m => m.current_stock < m.min_stock);
+                });
+
+                // 计算属性 - 过滤后的物料列表
+                const filteredMaterials = computed(() => {
+                    return materials.value.filter(material => {
+                        const matchKeyword = !searchKeyword.value || 
+                            material.name.toLowerCase().includes(searchKeyword.value.toLowerCase());
+                        const matchCategory = !filterCategory.value || 
+                            material.category === filterCategory.value;
+                        
+                        let matchStock = true;
+                        if (filterStock.value === 'low') {
+                            matchStock = material.current_stock < material.min_stock;
+                        } else if (filterStock.value === 'normal') {
+                            matchStock = material.current_stock >= material.min_stock;
+                        }
+                        
+                        return matchKeyword && matchCategory && matchStock;
+                    });
+                });
+
+                // 计算属性 - 过滤后的订单列表
+                const filteredPurchaseOrders = computed(() => {
+                    return purchaseOrders.value.filter(order => {
+                        const matchStatus = !filterOrderStatus.value || order.status === filterOrderStatus.value;
+                        // 这里可以添加日期过滤逻辑
+                        return matchStatus;
+                    });
+                });
+
+                // 计算属性 - 订单总金额
+                const orderTotal = computed(() => {
+                    const total = orderForm.quantity * orderForm.unit_price;
+                    orderForm.total_amount = total.toFixed(2);
+                    return `¥${total.toFixed(2)}`;
+                });
+
+                // 获取库存样式类
+                const getStockClass = (material) => {
+                    if (material.current_stock < material.min_stock) {
+                        return 'stock-low';
+                    }
+                    return 'stock-normal';
+                };
+
+                // 获取订单状态文本
+                const getOrderStatusText = (status) => {
+                    const statusMap = {
+                        'pending': '待审核',
+                        'approved': '已批准',
+                        'completed': '已完成'
+                    };
+                    return statusMap[status] || status;
+                };
+
+                // 重置物料表单
+                const resetMaterialForm = () => {
+                    materialForm.id = null;
+                    materialForm.name = '';
+                    materialForm.category = '';
+                    materialForm.current_stock = 0;
+                    materialForm.min_stock = 0;
+                    materialForm.unit = '';
+                    materialForm.price = 0;
+                    materialForm.supplier = '';
+                    materialForm.remark = '';
+                    materialForm.is_active = true;
+                };
+
+                // 重置订单表单
+                const resetOrderForm = () => {
+                    orderForm.id = null;
+                    orderForm.material_id = null;
+                    orderForm.quantity = 1;
+                    orderForm.unit_price = 0;
+                    orderForm.total_amount = 0;
+                    orderForm.supplier = '';
+                    orderForm.remark = '';
+                    orderForm.status = 'pending';
+                };
+
+                // 创建采购订单
+                const createPurchaseOrder = (material) => {
+                    resetOrderForm();
+                    orderForm.material_id = material.id;
+                    orderForm.unit = material.unit;
+                    orderForm.unit_price = material.price;
+                    orderForm.supplier = material.supplier;
+                    showOrderDialog.value = true;
+                };
+
+                // 保存物料
+                const saveMaterial = () => {
+                    if (!materialForm.name || !materialForm.category) {
+                        ElementPlus.ElMessage.warning('请填写完整的物料信息');
+                        return;
+                    }
+
+                    if (editingMaterial.value) {
+                        // 编辑
+                        const index = materials.value.findIndex(m => m.id === editingMaterial.value.id);
+                        if (index !== -1) {
+                            materials.value[index] = { ...materialForm, id: editingMaterial.value.id };
+                        }
+                    } else {
+                        // 新增
+                        const newId = Math.max(...materials.value.map(m => m.id), 0) + 1;
+                        materials.value.push({
+                            id: newId,
+                            ...materialForm
+                        });
+                    }
+
+                    saveData();
+                    showMaterialDialog.value = false;
+                    editingMaterial.value = null;
+                    ElementPlus.ElMessage.success(editingMaterial.value ? '物料已更新' : '物料已添加');
+                };
+
+                // 编辑物料
+                const editMaterial = (material) => {
+                    editingMaterial.value = material;
+                    Object.assign(materialForm, material);
+                    showMaterialDialog.value = true;
+                };
+
+                // 删除物料
+                const deleteMaterial = (material) => {
+                    ElementPlus.ElMessageBox.confirm(
+                        `确定要删除物料"${material.name}"吗？`,
+                        '提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning'
+                        }
+                    ).then(() => {
+                        const index = materials.value.findIndex(m => m.id === material.id);
+                        if (index !== -1) {
+                            materials.value.splice(index, 1);
+                            saveData();
+                            ElementPlus.ElMessage.success('物料已删除');
+                        }
+                    }).catch(() => {});
+                };
+
+                // 保存采购订单
+                const saveOrder = () => {
+                    if (!orderForm.material_id || !orderForm.quantity || orderForm.unit_price <= 0) {
+                        ElementPlus.ElMessage.warning('请填写完整的订单信息');
+                        return;
+                    }
+
+                    const material = materials.value.find(m => m.id === orderForm.material_id);
+                    
+                    if (isEditingOrder.value) {
+                        // 编辑
+                        const index = purchaseOrders.value.findIndex(o => o.id === orderForm.id);
+                        if (index !== -1) {
+                            purchaseOrders.value[index] = {
+                                ...orderForm,
+                                material_name: material.name,
+                                unit: material.unit
+                            };
+                        }
+                    } else {
+                        // 新增
+                        const newId = 'PO' + Date.now();
+                        purchaseOrders.value.unshift({
+                            id: newId,
+                            ...orderForm,
+                            material_name: material.name,
+                            unit: material.unit,
+                            created_at: new Date().toLocaleString('zh-CN')
+                        });
+                    }
+
+                    saveData();
+                    showOrderDialog.value = false;
+                    isEditingOrder.value = false;
+                    ElementPlus.ElMessage.success(isEditingOrder.value ? '订单已更新' : '订单已创建');
+                };
+
+                // 查看订单详情
+                const viewOrder = (order) => {
+                    currentOrder.value = order;
+                    showOrderDetailDialog.value = true;
+                };
+
+                // 批准订单
+                const approveOrder = (order) => {
+                    order.status = 'approved';
+                    saveData();
+                    ElementPlus.ElMessage.success('订单已批准');
+                };
+
+                // 完成订单
+                const completeOrder = (order) => {
+                    ElementPlus.ElMessageBox.confirm(
+                        '完成订单将增加物料库存，确定吗？',
+                        '提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'info'
+                        }
+                    ).then(() => {
+                        order.status = 'completed';
+                        
+                        // 增加对应物料的库存
+                        const material = materials.value.find(m => m.id === order.material_id);
+                        if (material) {
+                            material.current_stock += order.quantity;
+                        }
+                        
+                        saveData();
+                        ElementPlus.ElMessage.success('订单已完成，库存已更新');
+                    }).catch(() => {});
+                };
+
+                // 保存数据到本地存储
+                const saveData = () => {
+                    localStorage.setItem('inventoryMaterials', JSON.stringify(materials.value));
+                    localStorage.setItem('purchaseOrders', JSON.stringify(purchaseOrders.value));
+                };
+
+                // 从本地存储加载数据
+                const loadData = () => {
+                    const savedMaterials = localStorage.getItem('inventoryMaterials');
+                    if (savedMaterials) {
+                        materials.value = JSON.parse(savedMaterials);
+                    }
+
+                    const savedOrders = localStorage.getItem('purchaseOrders');
+                    if (savedOrders) {
+                        purchaseOrders.value = JSON.parse(savedOrders);
+                    }
+                };
+
+                const handleTabChange = () => {
+                    // Tab 切换处理
+                };
+
+                // 初始化
+                loadData();
+
+                return {
+                    activeTab,
+                    searchKeyword,
+                    filterCategory,
+                    filterStock,
+                    filterOrderStatus,
+                    orderDateRange,
+                    showMaterialDialog,
+                    showOrderDialog,
+                    showOrderDetailDialog,
+                    editingMaterial,
+                    isEditingOrder,
+                    currentOrder,
+                    materials,
+                    purchaseOrders,
+                    materialForm,
+                    orderForm,
+                    lowStockCount,
+                    pendingOrdersCount,
+                    monthlyPurchaseAmount,
+                    lowStockMaterials,
+                    filteredMaterials,
+                    filteredPurchaseOrders,
+                    orderTotal,
+                    getStockClass,
+                    getOrderStatusText,
+                    resetMaterialForm,
+                    resetOrderForm,
+                    createPurchaseOrder,
+                    saveMaterial,
+                    editMaterial,
+                    deleteMaterial,
+                    saveOrder,
+                    viewOrder,
+                    approveOrder,
+                    completeOrder,
+                    handleTabChange
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

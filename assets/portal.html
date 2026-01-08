@@ -100,6 +100,20 @@
                     <div class="portal-desc">完整功能测试，API文档，调试工具</div>
                     <button class="btn test-btn">进入测试</button>
                 </div>
+
+                <div class="portal-card" @click="goToMenuManagement">
+                    <div class="portal-icon">🍽️</div>
+                    <div class="portal-title">菜品管理</div>
+                    <div class="portal-desc">菜品分类、价格管理、图片上传</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: white;">菜品管理</button>
+                </div>
+
+                <div class="portal-card" @click="goToInventoryManagement">
+                    <div class="portal-icon">📦</div>
+                    <div class="portal-title">物料采购</div>
+                    <div class="portal-desc">库存管理、采购订单、库存预警</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: white;">物料采购</button>
+                </div>
             </div>
 
             <!-- 桌号选择 -->
@@ -109,37 +123,6 @@
                     <div class="table-card" v-for="table in tables" :key="table.number" @click="selectTable(table.number)">
                         <div class="table-number">{{ table.number }}号</div>
                         <div class="table-seats">{{ table.seats }}座</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 演示账号 -->
-            <div style="background: white; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
-                <div class="section-title">🔐 演示账号</div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #667eea;">
-                        <strong style="color: #667eea;">👑 系统管理员</strong><br>
-                        用户名: system_admin | 密码: admin123
-                    </div>
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #f093fb;">
-                        <strong style="color: #f093fb;">🏢 总公司</strong><br>
-                        用户名: company | 密码: company123
-                    </div>
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #43e97b;">
-                        <strong style="color: #43e97b;">👔 店长</strong><br>
-                        用户名: admin | 密码: admin123
-                    </div>
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #fa709a;">
-                        <strong style="color: #fa709a;">👨‍🍳 厨师</strong><br>
-                        用户名: chef | 密码: chef123
-                    </div>
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #4facfe;">
-                        <strong style="color: #4facfe;">🤵 传菜员</strong><br>
-                        用户名: waiter | 密码: waiter123
-                    </div>
-                    <div style="padding: 15px; background: #f5f7fa; border-radius: 10px; border-left: 4px solid #fee140;">
-                        <strong style="color: #e6a23c;">💰 收银员</strong><br>
-                        用户名: cashier | 密码: cashier123
                     </div>
                 </div>
             </div>
@@ -178,6 +161,12 @@
                 },
                 goToTest() {
                     window.location.href = 'restaurant_full_test.html';
+                },
+                goToMenuManagement() {
+                    window.location.href = 'menu_management.html';
+                },
+                goToInventoryManagement() {
+                    window.location.href = 'inventory_management.html';
                 },
                 selectTable(tableNumber) {
                     window.location.href = `customer_order.html?table=${tableNumber}`;
