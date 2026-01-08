@@ -154,7 +154,8 @@ class Stores(Base):
     tables: Mapped[list['Tables']] = relationship('Tables', back_populates='store')
     menu_items: Mapped[list['MenuItems']] = relationship('MenuItems', back_populates='store')
     orders: Mapped[list['Orders']] = relationship('Orders', back_populates='store')
-    workflow_configs: Mapped[list['WorkflowConfig']] = relationship('WorkflowConfig', back_populates='store', cascade='all, delete-orphan')
+    role_configs: Mapped[list['RoleConfig']] = relationship('RoleConfig', cascade='all, delete-orphan')
+    order_flow_configs: Mapped[list['OrderFlowConfig']] = relationship('OrderFlowConfig', cascade='all, delete-orphan')
 
 
 class UserRoles(Base):
@@ -512,25 +513,43 @@ class PointLogs(Base):
     order: Mapped[Optional['Orders']] = relationship('Orders', back_populates='point_logs')
 
 
-class WorkflowConfig(Base):
-    """订单流程配置表 - 用于配置每个角色在每个流程环节的操作方式"""
-    __tablename__ = 'workflow_config'
+class RoleConfig(Base):
+    """角色配置表 - 支持店铺自定义角色"""
+    __tablename__ = 'role_config'
     __table_args__ = (
-        ForeignKeyConstraint(['store_id'], ['stores.id'], ondelete='CASCADE', name='workflow_config_store_id_fkey'),
-        PrimaryKeyConstraint('id', name='workflow_config_pkey'),
-        UniqueConstraint('store_id', 'role', 'status', name='workflow_config_store_role_status_key')
+        ForeignKeyConstraint(['店铺ID'], ['stores.id'], ondelete='CASCADE', name='role_config_store_id_fkey'),
+        PrimaryKeyConstraint('id', name='role_config_pkey'),
+        UniqueConstraint('店铺ID', '角色名称', name='role_config_store_role_key')
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    store_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='店铺ID')
-    role: Mapped[str] = mapped_column(String(50), nullable=False, comment='角色：kitchen(厨师), waiter(传菜员), cashier(收银员), manager(店长)')
-    status: Mapped[str] = mapped_column(String(50), nullable=False, comment='订单状态：pending(待确认), preparing(制作中), ready(待传菜), serving(上菜中), completed(已完成)')
-    action_mode: Mapped[str] = mapped_column(String(50), nullable=False, default='per_item', comment='操作模式：per_item(逐项确认), per_order(订单确认), skip(跳过), ignore(忽略)')
-    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否启用该环节')
-    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
-    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='更新时间')
+    店铺ID: Mapped[int] = mapped_column(Integer, nullable=False, comment='店铺ID')
+    角色名称: Mapped[str] = mapped_column(String(50), nullable=False, comment='角色名称')
+    角色描述: Mapped[Optional[str]] = mapped_column(String(255), comment='角色描述')
+    是否启用: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否启用')
+    排序: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment='排序序号')
+    创建时间: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    更新时间: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='更新时间')
 
-    store: Mapped['Stores'] = relationship('Stores', back_populates='workflow_configs')
+
+class OrderFlowConfig(Base):
+    """订单流程配置表 - 将订单状态的操作权限分配给角色"""
+    __tablename__ = 'order_flow_config'
+    __table_args__ = (
+        ForeignKeyConstraint(['店铺ID'], ['stores.id'], ondelete='CASCADE', name='order_flow_config_store_id_fkey'),
+        PrimaryKeyConstraint('id', name='order_flow_config_pkey'),
+        UniqueConstraint('店铺ID', '角色名称', '订单状态', name='order_flow_config_store_role_status_key')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    店铺ID: Mapped[int] = mapped_column(Integer, nullable=False, comment='店铺ID')
+    角色名称: Mapped[str] = mapped_column(String(50), nullable=False, comment='角色名称（关联role_config）')
+    订单状态: Mapped[str] = mapped_column(String(50), nullable=False, comment='订单状态：待确认, 制作中, 待传菜, 上菜中, 已完成')
+    操作方式: Mapped[str] = mapped_column(String(50), nullable=False, default='逐项确认', comment='操作方式：逐项确认, 订单确认, 自动跳过, 忽略不显示')
+    是否启用: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否启用该配置')
+    排序: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment='排序序号')
+    创建时间: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    更新时间: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='更新时间')
 
 
 # 更新 Stores 模型添加关系（需要在 Stores 类中添加）

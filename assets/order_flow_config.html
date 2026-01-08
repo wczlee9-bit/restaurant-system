@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>订单流程配置 - 扫码点餐系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 24px;
+        }
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .tabs {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .tab-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .role-card {
+            border: 1px solid #e4e7ed;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+        .role-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .role-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .role-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .action-mode-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .badge-per-item {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+        }
+        .badge-per-order {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .badge-skip {
+            background: #fff7e6;
+            color: #fa8c16;
+            border: 1px solid #ffd591;
+        }
+        .badge-ignore {
+            background: #f5f5f5;
+            color: #8c8c8c;
+            border: 1px solid #d9d9d9;
+        }
+        .info-card {
+            background: #f0f9ff;
+            border-left: 4px solid #1890ff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .info-card h4 {
+            color: #1890ff;
+            margin-bottom: 10px;
+        }
+        .info-card p {
+            color: #666;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <div>
+                <h1>订单流程配置</h1>
+                <p>灵活配置角色和订单流程，支持自定义角色和功能分配</p>
+            </div>
+            <a href="shop_settings.html" class="back-btn">← 返回店铺设置</a>
+        </div>
+
+        <div class="container">
+            <div class="tabs">
+                <el-tabs v-model="activeTab" type="border-card">
+                    <el-tab-pane label="角色管理" name="roles">
+                        <template #label>
+                            <span>👥 角色管理</span>
+                        </template>
+                    </el-tab-pane>
+                    <el-tab-pane label="流程配置" name="flow">
+                        <template #label>
+                            <span>⚙️ 流程配置</span>
+                        </template>
+                    </el-tab-pane>
+                </el-tabs>
+            </div>
+
+            <!-- 角色管理 -->
+            <div class="tab-content" v-show="activeTab === 'roles'">
+                <div class="section-title">
+                    <span>角色列表</span>
+                    <el-button type="primary" @click="showAddRoleDialog">+ 新增角色</el-button>
+                </div>
+
+                <div class="info-card">
+                    <h4>💡 角色管理说明</h4>
+                    <p>• 支持自定义创建角色，每个店铺可以有独立的角色配置</p>
+                    <p>• 角色可以分配不同的订单流程功能（如：传菜功能可以分配给收银员）</p>
+                    <p>• 可以启用/禁用角色，不使用的角色可以禁用而不删除</p>
+                </div>
+
+                <div class="role-card" v-for="role in roles" :key="role.id">
+                    <div class="role-header">
+                        <div>
+                            <div class="role-name">{{ role.角色名称 }}</div>
+                            <div class="role-description">{{ role.角色描述 || '暂无描述' }}</div>
+                        </div>
+                        <div>
+                            <el-tag :type="role.是否启用 ? 'success' : 'info'" style="margin-right: 10px;">
+                                {{ role.是否启用 ? '启用' : '禁用' }}
+                            </el-tag>
+                            <el-button size="small" @click="editRole(role)">编辑</el-button>
+                            <el-button size="small" type="danger" @click="deleteRole(role.id)">删除</el-button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <el-tag size="small">排序: {{ role.排序 }}</el-tag>
+                        <el-tag size="small" type="info">ID: {{ role.id }}</el-tag>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 流程配置 -->
+            <div class="tab-content" v-show="activeTab === 'flow'">
+                <div class="section-title">
+                    <span>订单流程配置</span>
+                    <div>
+                        <el-button @click="resetToDefault" type="warning">重置为默认</el-button>
+                        <el-button type="primary" @click="saveFlowConfigs" :loading="saving">保存配置</el-button>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h4>💡 配置说明</h4>
+                    <p>• <strong>操作方式</strong>：逐项确认（每道菜单独确认）、订单确认（整个订单一起确认）、自动跳过（该角色不需要处理此状态）、忽略不显示（可以看到但不需要操作）</p>
+                    <p>• <strong>灵活分配</strong>：传菜员角色可以不配置，传菜功能可以分配给收银员</p>
+                    <p>• <strong>多角色配置</strong>：一个订单状态可以分配给多个角色，每个角色可以有不同的操作方式</p>
+                </div>
+
+                <el-alert
+                    title="配置示例"
+                    type="success"
+                    description="例如：如果不使用传菜员角色，可以将'待传菜'和'上菜中'状态的'自动跳过'或分配给收银员。"
+                    :closable="false"
+                    style="margin-bottom: 20px;">
+                </el-alert>
+
+                <div v-for="(roleConfigs, roleName) in groupedFlowConfigs" :key="roleName" class="role-card">
+                    <div class="role-header">
+                        <div class="role-name">{{ roleName }}</div>
+                        <el-tag :type="isRoleEnabled(roleName) ? 'success' : 'info'" size="small">
+                            {{ isRoleEnabled(roleName) ? '启用' : '禁用' }}
+                        </el-tag>
+                    </div>
+
+                    <el-table :data="roleConfigs" style="width: 100%; background: white;">
+                        <el-table-column prop="订单状态" label="订单状态" width="150"></el-table-column>
+                        <el-table-column label="操作方式" width="250">
+                            <template #default="scope">
+                                <el-select v-model="scope.row.操作方式" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="逐项确认" value="逐项确认"></el-option>
+                                    <el-option label="订单确认" value="订单确认"></el-option>
+                                    <el-option label="自动跳过" value="自动跳过"></el-option>
+                                    <el-option label="忽略不显示" value="忽略不显示"></el-option>
+                                </el-select>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="是否启用" width="100">
+                            <template #default="scope">
+                                <el-switch v-model="scope.row.是否启用"></el-switch>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="说明">
+                            <template #default="scope">
+                                <el-tag :class="getActionModeClass(scope.row.操作方式)" class="action-mode-badge">
+                                    {{ getActionModeDescription(scope.row.操作方式) }}
+                                </el-tag>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加/编辑角色对话框 -->
+        <el-dialog
+            v-model="showRoleDialog"
+            :title="editingRole ? '编辑角色' : '新增角色'"
+            width="500px">
+            <el-form :model="roleForm" label-width="100px">
+                <el-form-item label="角色名称">
+                    <el-input v-model="roleForm.角色名称" placeholder="请输入角色名称"></el-input>
+                </el-form-item>
+                <el-form-item label="角色描述">
+                    <el-input v-model="roleForm.角色描述" type="textarea" :rows="3" placeholder="请输入角色描述"></el-input>
+                </el-form-item>
+                <el-form-item label="是否启用">
+                    <el-switch v-model="roleForm.是否启用"></el-switch>
+                </el-form-item>
+                <el-form-item label="排序">
+                    <el-input-number v-model="roleForm.排序" :min="0"></el-input-number>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="showRoleDialog = false">取消</el-button>
+                <el-button type="primary" @click="saveRole" :loading="saving">确定</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const activeTab = ref('roles');
+                const storeId = 1; // 默认店铺ID
+                const roles = ref([]);
+                const flowConfigs = ref([]);
+                const groupedFlowConfigs = ref({});
+                const saving = ref(false);
+                const showRoleDialog = ref(false);
+                const editingRole = ref(null);
+                const roleForm = ref({
+                    角色名称: '',
+                    角色描述: '',
+                    是否启用: true,
+                    排序: 0
+                });
+
+                const API_BASE = 'http://localhost:8000';
+
+                // 加载角色列表
+                const loadRoles = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/order-flow/stores/${storeId}/roles`);
+                        roles.value = await response.json();
+                    } catch (error) {
+                        console.error('加载角色列表失败:', error);
+                        ElementPlus.ElMessage.error('加载角色列表失败');
+                    }
+                };
+
+                // 加载流程配置
+                const loadFlowConfigs = async () => {
+                    try {
+                        const response = await fetch(`${API_BASE}/order-flow/stores/${storeId}/flow-configs/grouped`);
+                        groupedFlowConfigs.value = await response.json();
+                        
+                        // 展平为列表方便操作
+                        flowConfigs.value = [];
+                        Object.keys(groupedFlowConfigs.value).forEach(roleName => {
+                            groupedFlowConfigs.value[roleName].forEach(config => {
+                                flowConfigs.value.push(config);
+                            });
+                        });
+                    } catch (error) {
+                        console.error('加载流程配置失败:', error);
+                        ElementPlus.ElMessage.error('加载流程配置失败');
+                    }
+                };
+
+                // 显示添加角色对话框
+                const showAddRoleDialog = () => {
+                    editingRole.value = null;
+                    roleForm.value = {
+                        角色名称: '',
+                        角色描述: '',
+                        是否启用: true,
+                        排序: roles.value.length
+                    };
+                    showRoleDialog.value = true;
+                };
+
+                // 编辑角色
+                const editRole = (role) => {
+                    editingRole.value = role;
+                    roleForm.value = {
+                        角色名称: role.角色名称,
+                        角色描述: role.角色描述,
+                        是否启用: role.是否启用,
+                        排序: role.排序
+                    };
+                    showRoleDialog.value = true;
+                };
+
+                // 保存角色
+                const saveRole = async () => {
+                    saving.value = true;
+                    try {
+                        const url = editingRole.value
+                            ? `${API_BASE}/order-flow/stores/${storeId}/roles/${editingRole.value.id}`
+                            : `${API_BASE}/order-flow/stores/${storeId}/roles`;
+                        
+                        const method = editingRole.value ? 'PUT' : 'POST';
+                        const response = await fetch(url, {
+                            method: method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(roleForm.value)
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success(editingRole.value ? '角色更新成功' : '角色创建成功');
+                            showRoleDialog.value = false;
+                            await loadRoles();
+                            await loadFlowConfigs();
+                        } else {
+                            const error = await response.json();
+                            ElementPlus.ElMessage.error(error.detail || '操作失败');
+                        }
+                    } catch (error) {
+                        console.error('保存角色失败:', error);
+                        ElementPlus.ElMessage.error('保存角色失败');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                // 删除角色
+                const deleteRole = async (roleId) => {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm(
+                            '删除角色将同时删除该角色的所有流程配置，确定要删除吗？',
+                            '确认删除',
+                            { type: 'warning' }
+                        );
+
+                        const response = await fetch(`${API_BASE}/order-flow/stores/${storeId}/roles/${roleId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('角色删除成功');
+                            await loadRoles();
+                            await loadFlowConfigs();
+                        } else {
+                            ElementPlus.ElMessage.error('删除失败');
+                        }
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('删除角色失败:', error);
+                            ElementPlus.ElMessage.error('删除角色失败');
+                        }
+                    }
+                };
+
+                // 保存流程配置
+                const saveFlowConfigs = async () => {
+                    saving.value = true;
+                    try {
+                        // 展平所有配置
+                        const configsToUpdate = [];
+                        Object.keys(groupedFlowConfigs.value).forEach(roleName => {
+                            groupedFlowConfigs.value[roleName].forEach(config => {
+                                configsToUpdate.push({
+                                    id: config.id,
+                                    ...config
+                                });
+                            });
+                        });
+
+                        const response = await fetch(`${API_BASE}/order-flow/stores/${storeId}/flow-configs/batch`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(configsToUpdate)
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('流程配置保存成功');
+                        } else {
+                            ElementPlus.ElMessage.error('保存失败');
+                        }
+                    } catch (error) {
+                        console.error('保存流程配置失败:', error);
+                        ElementPlus.ElMessage.error('保存流程配置失败');
+                    } finally {
+                        saving.value = false;
+                    }
+                };
+
+                // 重置为默认配置
+                const resetToDefault = async () => {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm(
+                            '确定要重置为默认配置吗？这将覆盖所有自定义配置。',
+                            '确认重置',
+                            { type: 'warning' }
+                        );
+
+                        const response = await fetch(`${API_BASE}/order-flow/stores/${storeId}/reset`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('已重置为默认配置');
+                            await loadFlowConfigs();
+                        } else {
+                            ElementPlus.ElMessage.error('重置失败');
+                        }
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('重置配置失败:', error);
+                            ElementPlus.ElMessage.error('重置配置失败');
+                        }
+                    }
+                };
+
+                // 判断角色是否启用
+                const isRoleEnabled = (roleName) => {
+                    const role = roles.value.find(r => r.角色名称 === roleName);
+                    return role ? role.是否启用 : false;
+                };
+
+                // 获取操作方式描述
+                const getActionModeDescription = (mode) => {
+                    const descriptions = {
+                        '逐项确认': '每道菜单独确认',
+                        '订单确认': '整个订单一起确认',
+                        '自动跳过': '该角色不需要处理此状态',
+                        '忽略不显示': '可以看到但不需要操作'
+                    };
+                    return descriptions[mode] || mode;
+                };
+
+                // 获取操作方式样式类
+                const getActionModeClass = (mode) => {
+                    const classes = {
+                        '逐项确认': 'badge-per-item',
+                        '订单确认': 'badge-per-order',
+                        '自动跳过': 'badge-skip',
+                        '忽略不显示': 'badge-ignore'
+                    };
+                    return classes[mode] || '';
+                };
+
+                onMounted(() => {
+                    loadRoles();
+                    loadFlowConfigs();
+                });
+
+                return {
+                    activeTab,
+                    roles,
+                    flowConfigs,
+                    groupedFlowConfigs,
+                    saving,
+                    showRoleDialog,
+                    editingRole,
+                    roleForm,
+                    showAddRoleDialog,
+                    editRole,
+                    saveRole,
+                    deleteRole,
+                    saveFlowConfigs,
+                    resetToDefault,
+                    isRoleEnabled,
+                    getActionModeDescription,
+                    getActionModeClass
+                };
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

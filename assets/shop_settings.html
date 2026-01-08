@@ -180,6 +180,11 @@
                     </el-tab-pane>
                     <el-tab-pane label="二维码管理" name="qrcode"></el-tab-pane>
                     <el-tab-pane label="流程配置" name="workflow"></el-tab-pane>
+                    <el-tab-pane label="灵活配置" name="flexible">
+                        <template #label>
+                            <span>🎯 灵活配置</span>
+                        </template>
+                    </el-tab-pane>
                 </el-tabs>
             </div>
 
@@ -321,6 +326,36 @@
                             </template>
                         </el-table-column>
                     </el-table>
+                </div>
+
+                <!-- 灵活配置 -->
+                <div class="tab-content" v-show="activeTab === 'flexible'">
+                    <div class="section-title">🎯 灵活订单流程配置</div>
+                    
+                    <el-alert
+                        title="新功能"
+                        type="success"
+                        description="全新灵活配置功能，支持自定义角色和功能分配。"
+                        :closable="false"
+                        style="margin-bottom: 20px;">
+                    </el-alert>
+
+                    <div class="info-card" style="background: #f0f9ff; border-left: 4px solid #1890ff; padding: 20px; border-radius: 4px; margin-bottom: 20px;">
+                        <h3 style="color: #333; margin-bottom: 15px;">✨ 灵活配置功能特性：</h3>
+                        <ul style="color: #666; line-height: 2; padding-left: 20px;">
+                            <li><strong>自定义角色</strong>：支持创建、编辑、删除角色，每个店铺可以有独立的角色配置</li>
+                            <li><strong>功能灵活分配</strong>：将订单状态（待确认、制作中、待传菜、上菜中、已完成）分配给任意角色</li>
+                            <li><strong>操作方式独立配置</strong>：每个角色对每个状态的操作方式可以独立配置（逐项确认、订单确认、自动跳过、忽略不显示）</li>
+                            <li><strong>示例场景</strong>：传菜员角色可以不配置，传菜功能可以分配给收银员</li>
+                        </ul>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 40px;">
+                        <el-button type="primary" size="large" @click="goToFlexibleConfig">
+                            进入灵活配置页面
+                            <el-icon style="margin-left: 8px;"><arrow-right /></el-icon>
+                        </el-button>
+                    </div>
                 </div>
             </div>
 
@@ -838,6 +873,11 @@
                     // Tab切换时的处理
                 };
 
+                // 跳转到灵活配置页面
+                const goToFlexibleConfig = () => {
+                    window.location.href = 'order_flow_config.html';
+                };
+
                 // 初始化
                 loadFromStorage();
 
@@ -864,6 +904,7 @@
                     printQrcode,
                     printAllQrcodes,
                     handleTabChange,
+                    goToFlexibleConfig,
                     workflowConfigs,
                     saving,
                     loading,

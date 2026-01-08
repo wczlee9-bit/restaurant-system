@@ -780,9 +780,13 @@ def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusR
 
 
 from src.api.workflow_api import router as workflow_router
+from src.api.order_flow_api import router as order_flow_router
 
 # 注册工作流程配置路由
 app.include_router(workflow_router)
+
+# 注册订单流程配置路由
+app.include_router(order_flow_router)
 
 
 @app.get("/health")
