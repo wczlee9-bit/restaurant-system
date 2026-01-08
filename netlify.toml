@@ -63,6 +63,13 @@
   status = 200
   force = true
 
+# 主页重定向规则 - 访问根路径时重定向到门户页面
+[[redirects]]
+  from = "/"
+  to = "/portal.html"
+  status = 302
+  force = false
+
 # SPA 重定向规则（单页应用）- 放在最后作为默认处理
 # 只对不存在的路径生效
 [[redirects]]
