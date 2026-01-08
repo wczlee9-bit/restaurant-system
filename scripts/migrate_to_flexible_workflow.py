@@ -16,12 +16,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from src.storage.database.shared.model import Base, RoleConfig, OrderFlowConfig, Stores
+from src.storage.database.db import get_db_url
 
-# 数据库连接配置
-DATABASE_URL = os.getenv(
-    "POSTGRES_URL",
-    "postgresql+psycopg2://postgres:postgres@localhost:5432/restaurant"
-)
+# 使用数据库连接函数获取 URL
+DATABASE_URL = get_db_url()
 
 def migrate_database():
     """执行数据库迁移"""
@@ -51,7 +49,7 @@ def migrate_database():
         
         # 步骤3：获取所有店铺
         print("\n[3/5] 获取所有店铺...")
-        stores = session.query(Stores).filter(Stores.是否启用 == True).all()
+        stores = session.query(Stores).filter(Stores.is_active == True).all()
         print(f"✓ 找到 {len(stores)} 个活跃店铺")
         
         if not stores:
@@ -69,7 +67,7 @@ def migrate_database():
         ]
         
         for store in stores:
-            print(f"  - 店铺 [{store.id}] {store.名称}：")
+            print(f"  - 店铺 [{store.id}] {store.name}：")
             for role_data in default_roles:
                 # 检查是否已存在
                 existing = session.query(RoleConfig).filter(
@@ -114,7 +112,7 @@ def migrate_database():
         ]
         
         for store in stores:
-            print(f"  - 店铺 [{store.id}] {store.名称}：")
+            print(f"  - 店铺 [{store.id}] {store.name}：")
             for config_data in default_flow_config:
                 # 检查是否已存在
                 existing = session.query(OrderFlowConfig).filter(
