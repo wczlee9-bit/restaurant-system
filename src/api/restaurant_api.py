@@ -198,6 +198,21 @@ class ConnectionManager:
         
         if "store_id" in order_data:
             await self.broadcast_to_store(order_data["store_id"], message)
+    
+    async def broadcast_payment_status(self, order_id: int, payment_data: dict):
+        """广播支付状态更新"""
+        message = {
+            "type": "payment_status_update",
+            "payment": payment_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # 推送到店铺
+        if "store_id" in payment_data:
+            await self.broadcast_to_store(payment_data["store_id"], message)
+        
+        # 推送到订单
+        await self.broadcast_to_order(order_id, message)
 
 
 # 全局连接管理器
@@ -242,10 +257,15 @@ class OrderItemRequest(BaseModel):
     special_instructions: Optional[str] = None
 
 class CreateOrderRequest(BaseModel):
-    """创建订单请求"""
+    """创建订单请求（第一步：确认下单）"""
     table_id: int
     items: List[OrderItemRequest]
-    payment_method: str = "wechat"
+    # payment_method 将在第二步支付时设置，这里不需要
+
+
+class ConfirmPaymentRequest(BaseModel):
+    """确认支付请求（第二步：确认支付）"""
+    payment_method: str = Field(..., description="支付方式：immediate(马上支付) 或 counter(柜台支付)")
 
 class OrderItemResponse(BaseModel):
     """订单项响应"""
@@ -261,11 +281,13 @@ class OrderItemResponse(BaseModel):
 class OrderResponse(BaseModel):
     """订单响应"""
     id: int
+    order_number: str  # 添加订单号字段
     store_id: int
     table_id: int
     table_number: str
     total_amount: float
     payment_method: str
+    payment_status: str  # 添加支付状态字段
     status: str
     created_at: str
     items: List[OrderItemResponse]
@@ -761,7 +783,7 @@ async def create_order(order: CreateOrderRequest):
                 "special_instructions": item_req.special_instructions
             })
         
-        # 创建订单
+        # 创建订单（第一步：确认下单，不处理支付）
         db_order = Orders(
             order_number=generate_order_number(),
             store_id=first_store.id,
@@ -769,9 +791,9 @@ async def create_order(order: CreateOrderRequest):
             total_amount=total_amount,
             discount_amount=0,
             final_amount=total_amount,
-            payment_method=order.payment_method,
-            payment_status="paid",
-            order_status="pending"
+            payment_method="",  # 支付方式将在第二步设置
+            payment_status="unpaid",  # 初始状态为未支付
+            order_status="pending"  # 厨师可以开始制作
         )
         
         db.add(db_order)
@@ -834,11 +856,13 @@ async def create_order(order: CreateOrderRequest):
         
         return OrderResponse(
             id=db_order.id,
+            order_number=db_order.order_number,
             store_id=db_order.store_id,
             table_id=db_order.table_id,
             table_number=table_number,
             total_amount=float(db_order.total_amount),
             payment_method=db_order.payment_method,
+            payment_status=db_order.payment_status,
             status=db_order.order_status,
             created_at=db_order.created_at.isoformat(),
             items=order_items
@@ -849,6 +873,74 @@ async def create_order(order: CreateOrderRequest):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建订单失败: {str(e)}")
+    finally:
+        db.close()
+
+
+@app.post("/api/orders/{order_id}/confirm-payment")
+async def confirm_payment(order_id: int, req: ConfirmPaymentRequest):
+    """
+    确认支付（第二步）
+    顾客选择支付方式后调用此接口
+    """
+    db = get_session()
+    try:
+        order = db.query(Orders).filter(Orders.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
+        
+        # 检查订单是否已支付
+        if order.payment_status == "paid":
+            raise HTTPException(status_code=400, detail="订单已支付")
+        
+        # 更新支付方式
+        order.payment_method = req.payment_method
+        
+        # 根据支付方式设置支付状态
+        if req.payment_method == "immediate":
+            # 马上支付：标记为已支付
+            order.payment_status = "paid"
+            payment_time = datetime.now()
+            # 如果订单还没有开始制作，可以保持pending状态
+            # 如果订单已经在制作中，不影响
+        elif req.payment_method == "counter":
+            # 柜台支付：保持未支付状态，餐后到收银台支付
+            order.payment_status = "unpaid"
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的支付方式: {req.payment_method}")
+        
+        db.commit()
+        
+        # 广播支付状态更新（WebSocket通知）
+        try:
+            order_data = {
+                "id": order.id,
+                "order_number": order.order_number,
+                "store_id": order.store_id,
+                "table_id": order.table_id,
+                "total_amount": float(order.total_amount),
+                "payment_method": order.payment_method,
+                "payment_status": order.payment_status,
+                "status": order.order_status,
+                "created_at": order.created_at.isoformat() if order.created_at else ""
+            }
+            # 广播支付状态更新
+            await manager.broadcast_payment_status(order_id, order_data)
+        except Exception as ws_error:
+            logger.error(f"WebSocket通知失败: {str(ws_error)}")
+        
+        return {
+            "message": "支付确认成功",
+            "order_id": order.id,
+            "payment_method": order.payment_method,
+            "payment_status": order.payment_status
+        }
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"确认支付失败: {str(e)}")
     finally:
         db.close()
 
@@ -882,11 +974,13 @@ def get_order(order_id: int):
         
         return OrderResponse(
             id=order.id,
+            order_number=order.order_number,
             store_id=order.store_id,
             table_id=order.table_id,
             table_number=table_number,
             total_amount=float(order.total_amount),
             payment_method=order.payment_method,
+            payment_status=order.payment_status,
             status=order.order_status,
             created_at=order.created_at.isoformat() if order.created_at else "",
             items=order_items

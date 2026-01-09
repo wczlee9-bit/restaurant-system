@@ -323,23 +323,27 @@
                 <div class="cart-footer">
                     <el-button type="primary" size="large" style="width: 100%; height: 50px;"
                                :disabled="cart.length === 0"
-                               @click="goToPaymentStep()">
-                        确认订单，选择支付方式
+                               @click="submitOrder()">
+                        确认下单
                     </el-button>
                 </div>
             </div>
         </div>
         
-        <!-- 购物车弹窗 - 步骤2：选择支付方式 -->
-        <div class="cart-modal" v-if="showCartStep2" @click.self="goToConfirmStep()">
+        <!-- 订单支付弹窗 -->
+        <div class="cart-modal" v-if="showPaymentModal" @click.self="closePaymentModal()">
             <div class="cart-content">
                 <div class="cart-header">
-                    <h3><span class="step-number">2</span>选择支付方式</h3>
-                    <span style="cursor: pointer; font-size: 24px;" @click="closeCart()">×</span>
+                    <h3>💰 选择支付方式</h3>
+                    <span style="cursor: pointer; font-size: 24px;" @click="closePaymentModal()">×</span>
                 </div>
                 
                 <div class="cart-body">
                     <div class="order-summary">
+                        <div class="summary-row">
+                            <span>订单号</span>
+                            <span>{{ currentOrder.order_id }}</span>
+                        </div>
                         <div class="summary-row">
                             <span>桌号</span>
                             <span>{{ selectedTable.table_number }}号桌</span>
@@ -389,8 +393,8 @@
                         返回
                     </el-button>
                     <el-button type="primary" size="default" style="width: 48%;"
-                               :disabled="!paymentMethod" @click="submitOrder()">
-                        {{ paymentMethod === 'immediate' ? '立即支付' : '确认下单' }}
+                               :disabled="!paymentMethod" @click="confirmPayment()">
+                        {{ paymentMethod === 'immediate' ? '立即支付' : '确认支付（餐后柜台）' }}
                     </el-button>
                 </div>
             </div>
@@ -412,7 +416,7 @@
                     selectedCategory: null,
                     cart: [],
                     showCartStep1: false,
-                    showCartStep2: false,
+                    showPaymentModal: false,  // 改为支付弹窗
                     currentOrder: null,
                     paymentMethod: '',
                     ws: null,
@@ -568,22 +572,21 @@
                 
                 openCartStep1() {
                     this.showCartStep1 = true;
-                    this.showCartStep2 = false;
+                    this.showPaymentModal = false;
                 },
                 
-                goToPaymentStep() {
-                    this.showCartStep1 = false;
-                    this.showCartStep2 = true;
-                },
-                
-                goToConfirmStep() {
+                openCartStep1() {
                     this.showCartStep1 = true;
-                    this.showCartStep2 = false;
+                    this.showPaymentModal = false;
                 },
                 
                 closeCart() {
                     this.showCartStep1 = false;
-                    this.showCartStep2 = false;
+                    this.showPaymentModal = false;
+                },
+
+                closePaymentModal() {
+                    this.showPaymentModal = false;
                 },
                 
                 async submitOrder() {
@@ -592,21 +595,16 @@
                         return;
                     }
                     
-                    if (!this.paymentMethod) {
-                        this.$message.warning('请选择支付方式');
-                        return;
-                    }
-                    
+                    // 第一步：确认下单（不选择支付方式）
                     try {
-                        // 构造订单数据
+                        // 构造订单数据（不含支付方式）
                         const orderData = {
                             table_id: this.selectedTable.id,
                             items: this.cart.map(item => ({
                                 menu_item_id: item.id,
                                 quantity: item.qty,
                                 special_instructions: ''
-                            })),
-                            payment_method: this.paymentMethod
+                            }))
                         };
                         
                         console.log('提交订单数据:', orderData);
@@ -616,6 +614,7 @@
                         
                         console.log('订单提交成功:', response.data);
                         
+                        // 保存当前订单信息
                         this.currentOrder = {
                             ...response.data,
                             status: response.data.status || 'pending',
@@ -623,16 +622,19 @@
                             created_at: response.data.created_at || new Date().toISOString()
                         };
                         
+                        // 清空购物车
                         this.cart = [];
-                        this.closeCart();
                         
-                        const paymentText = this.paymentMethod === 'immediate' ? '支付成功' : '订单已提交';
-                        this.$message.success(`${paymentText}！订单号：${this.currentOrder.order_id}`);
+                        // 关闭购物车弹窗，显示支付弹窗
+                        this.showCartStep1 = false;
+                        this.showPaymentModal = true;
                         
                         // 保存订单到本地
                         const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
                         savedOrders.unshift(this.currentOrder);
                         localStorage.setItem('orders', JSON.stringify(savedOrders));
+                        
+                        this.$message.success(`订单提交成功！订单号：${this.currentOrder.order_id}`);
                         
                     } catch (error) {
                         console.error('提交订单失败:', error);
@@ -650,6 +652,60 @@
                         } else {
                             errorMsg += '，请检查网络连接或联系店员';
                         }
+                        
+                        this.$message.error(errorMsg);
+                    }
+                },
+                
+                async confirmPayment() {
+                    // 第二步：确认支付（选择支付方式）
+                    if (!this.currentOrder) {
+                        this.$message.warning('没有订单需要支付');
+                        return;
+                    }
+                    
+                    if (!this.paymentMethod) {
+                        this.$message.warning('请选择支付方式');
+                        return;
+                    }
+                    
+                    try {
+                        // 调用确认支付接口
+                        const response = await axios.post(`/api/orders/${this.currentOrder.id}/confirm-payment`, {
+                            payment_method: this.paymentMethod
+                        });
+                        
+                        console.log('确认支付成功:', response.data);
+                        
+                        // 更新当前订单信息
+                        this.currentOrder.payment_method = response.data.payment_method;
+                        this.currentOrder.payment_status = response.data.payment_status;
+                        
+                        // 关闭支付弹窗
+                        this.closePaymentModal();
+                        
+                        const paymentText = this.paymentMethod === 'immediate' ? '支付成功' : '已选择餐后柜台支付';
+                        this.$message.success(`${paymentText}！订单号：${this.currentOrder.order_id}`);
+                        
+                    } catch (error) {
+                        console.error('确认支付失败:', error);
+                        console.error('错误详情:', {
+                            message: error.message,
+                            response: error.response?.data,
+                            status: error.response?.status
+                        });
+                        
+                        let errorMsg = '确认支付失败';
+                        if (error.response?.data?.detail) {
+                            errorMsg += ': ' + error.response.data.detail;
+                        } else if (error.message) {
+                            errorMsg += ': ' + error.message;
+                        } else {
+                            errorMsg += '，请稍后重试或联系店员';
+                        }
+                        
+                        this.$message.error(errorMsg);
+                    }
                         
                         this.$message.error(errorMsg);
                     }
