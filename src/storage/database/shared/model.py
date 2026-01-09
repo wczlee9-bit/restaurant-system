@@ -665,3 +665,58 @@ class PointExchangeLogs(Base):
     agreement: Mapped['ThirdPartyPointAgreements'] = relationship('ThirdPartyPointAgreements')
     order: Mapped[Optional['Orders']] = relationship('Orders')
 
+
+class DiscountConfig(Base):
+    """优惠配置表 - 店铺或公司设置的优惠规则"""
+    __tablename__ = 'discount_config'
+    __table_args__ = (
+        ForeignKeyConstraint(['store_id'], ['stores.id'], ondelete='CASCADE', name='discount_config_store_id_fkey'),
+        ForeignKeyConstraint(['company_id'], ['companies.id'], ondelete='CASCADE', name='discount_config_company_id_fkey'),
+        PrimaryKeyConstraint('id', name='discount_config_pkey'),
+        Index('ix_discount_config_store', 'store_id'),
+        Index('ix_discount_config_company', 'company_id')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    store_id: Mapped[Optional[int]] = mapped_column(Integer, comment='店铺ID（店铺级别优惠）')
+    company_id: Mapped[Optional[int]] = mapped_column(Integer, comment='公司ID（公司级别优惠）')
+    discount_type: Mapped[str] = mapped_column(String(50), nullable=False, comment='优惠类型: percentage(百分比), fixed(固定金额), points(积分抵扣)')
+    discount_value: Mapped[float] = mapped_column(Double(53), nullable=False, comment='优惠值')
+    min_amount: Mapped[Optional[float]] = mapped_column(Double(53), comment='最低消费金额')
+    max_discount: Mapped[Optional[float]] = mapped_column(Double(53), comment='最大优惠金额')
+    member_level: Mapped[Optional[int]] = mapped_column(Integer, comment='适用会员等级(不填则所有等级)')
+    points_required: Mapped[Optional[int]] = mapped_column(Integer, comment='所需积分')
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否启用')
+    valid_from: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='生效日期')
+    valid_until: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='到期日期')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    description: Mapped[Optional[str]] = mapped_column(Text, comment='优惠描述')
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    store: Mapped[Optional['Stores']] = relationship('Stores')
+    company: Mapped[Optional['Companies']] = relationship('Companies')
+
+
+class MemberQRCodes(Base):
+    """会员二维码表 - 存储会员的二维码信息"""
+    __tablename__ = 'member_qrcodes'
+    __table_args__ = (
+        ForeignKeyConstraint(['member_id'], ['members.id'], ondelete='CASCADE', name='member_qrcodes_member_id_fkey'),
+        PrimaryKeyConstraint('id', name='member_qrcodes_pkey'),
+        UniqueConstraint('member_id', name='member_qrcodes_member_id_key')
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    member_id: Mapped[int] = mapped_column(Integer, nullable=False, comment='会员ID')
+    qr_code_url: Mapped[str] = mapped_column(String(500), nullable=False, comment='二维码URL（存储在S3）')
+    qr_code_key: Mapped[str] = mapped_column(String(255), nullable=False, comment='二维码对象键')
+    valid_from: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'), comment='生效时间')
+    valid_until: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='到期时间')
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment='是否有效')
+    scan_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, comment='扫描次数')
+    last_scan_time: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True), comment='最后扫描时间')
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(True), nullable=False, server_default=text('now()'))
+    updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(True))
+
+    member: Mapped['Members'] = relationship('Members')
+

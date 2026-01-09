@@ -135,6 +135,13 @@
                     <div class="portal-desc">店铺营收、人员管理、数据统计</div>
                     <button class="btn" style="background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); color: #333;">总公司后台</button>
                 </div>
+
+                <div class="portal-card" @click="goToDiscountManagement">
+                    <div class="portal-icon">🎁</div>
+                    <div class="portal-title">优惠管理</div>
+                    <div class="portal-desc">配置优惠规则、会员折扣、积分抵扣</div>
+                    <button class="btn" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333;">优惠管理</button>
+                </div>
             </div>
 
             <!-- 桌号选择 -->
@@ -197,6 +204,9 @@
                 },
                 goToHeadquarters() {
                     window.location.href = 'headquarters_dashboard.html';
+                },
+                goToDiscountManagement() {
+                    window.location.href = 'discount_management.html';
                 },
                 selectTable(tableNumber) {
                     // 使用生产版本 customer_order_v3.html

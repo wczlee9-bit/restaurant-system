@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优惠管理</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .discount-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .discount-type-tag {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>优惠管理</h1>
+                <el-button type="primary" @click="showAddDialog">添加优惠</el-button>
+            </div>
+
+            <div v-loading="loading">
+                <div v-if="discounts.length === 0" style="text-align: center; padding: 60px; color: #999;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">🎁</div>
+                    <p>暂无优惠配置</p>
+                    <el-button type="primary" @click="showAddDialog" style="margin-top: 20px;">
+                        添加第一个优惠
+                    </el-button>
+                </div>
+
+                <div v-else>
+                    <div class="discount-card" v-for="discount in discounts" :key="discount.id">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <el-tag 
+                                        :type="discount.is_active ? 'success' : 'info'"
+                                        size="large"
+                                        class="discount-type-tag">
+                                        {{ getDiscountTypeText(discount.discount_type) }}
+                                    </el-tag>
+                                    <span style="font-size: 20px; font-weight: bold;">
+                                        {{ formatDiscountValue(discount) }}
+                                    </span>
+                                    <el-tag v-if="discount.member_level" type="warning" style="margin-left: 10px;">
+                                        Lv.{{ discount.member_level }}会员专享
+                                    </el-tag>
+                                </div>
+                                <p v-if="discount.description" style="color: #666; margin-bottom: 10px;">
+                                    {{ discount.description }}
+                                </p>
+                                <div style="color: #999; font-size: 14px;">
+                                    <span v-if="discount.min_amount">
+                                        最低消费: ¥{{ discount.min_amount }} |
+                                    </span>
+                                    <span v-if="discount.max_discount">
+                                        最大优惠: ¥{{ discount.max_discount }} |
+                                    </span>
+                                    <span v-if="discount.points_required">
+                                        需积分: {{ discount.points_required }} |
+                                    </span>
+                                    <span v-if="discount.valid_from || discount.valid_until">
+                                        有效期: {{ discount.valid_from ? formatDate(discount.valid_from) : '开始' }} 
+                                        ~ {{ discount.valid_until ? formatDate(discount.valid_until) : '永久' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <el-button-group>
+                                    <el-button size="small" @click="editDiscount(discount)">编辑</el-button>
+                                    <el-button 
+                                        size="small" 
+                                        :type="discount.is_active ? 'warning' : 'success'"
+                                        @click="toggleStatus(discount)">
+                                        {{ discount.is_active ? '禁用' : '启用' }}
+                                    </el-button>
+                                    <el-button size="small" type="danger" @click="deleteDiscount(discount)">删除</el-button>
+                                </el-button-group>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加/编辑优惠对话框 -->
+        <el-dialog
+            v-model="dialogVisible"
+            :title="isEdit ? '编辑优惠' : '添加优惠'"
+            width="500px">
+            <el-form :model="form" label-width="100px">
+                <el-form-item label="优惠类型" required>
+                    <el-select v-model="form.discount_type" placeholder="选择优惠类型">
+                        <el-option label="百分比折扣" value="percentage"></el-option>
+                        <el-option label="固定金额" value="fixed"></el-option>
+                        <el-option label="积分兑换" value="points"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="优惠值" required>
+                    <el-input-number 
+                        v-model="form.discount_value" 
+                        :min="0" 
+                        :step="0.01"
+                        :precision="form.discount_type === 'percentage' ? 0 : 2"
+                        style="width: 100%;">
+                    </el-input-number>
+                    <span style="margin-left: 10px; color: #999;">
+                        {{ form.discount_type === 'percentage' ? '%' : '元' }}
+                    </span>
+                </el-form-item>
+                <el-form-item label="最低消费">
+                    <el-input-number 
+                        v-model="form.min_amount" 
+                        :min="0" 
+                        :precision="2"
+                        style="width: 100%;">
+                    </el-input-number>
+                </el-form-item>
+                <el-form-item label="最大优惠">
+                    <el-input-number 
+                        v-model="form.max_discount" 
+                        :min="0" 
+                        :precision="2"
+                        style="width: 100%;">
+                    </el-input-number>
+                </el-form-item>
+                <el-form-item label="会员等级">
+                    <el-select v-model="form.member_level" placeholder="不限制" clearable>
+                        <el-option label="不限制" :value="null"></el-option>
+                        <el-option label="1级会员" :value="1"></el-option>
+                        <el-option label="2级会员" :value="2"></el-option>
+                        <el-option label="3级会员" :value="3"></el-option>
+                        <el-option label="4级会员" :value="4"></el-option>
+                        <el-option label="5级会员" :value="5"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="所需积分">
+                    <el-input-number 
+                        v-model="form.points_required" 
+                        :min="0"
+                        style="width: 100%;">
+                    </el-input-number>
+                </el-form-item>
+                <el-form-item label="生效日期">
+                    <el-date-picker
+                        v-model="form.valid_from"
+                        type="datetime"
+                        placeholder="选择生效日期"
+                        style="width: 100%;">
+                    </el-date-picker>
+                </el-form-item>
+                <el-form-item label="到期日期">
+                    <el-date-picker
+                        v-model="form.valid_until"
+                        type="datetime"
+                        placeholder="选择到期日期"
+                        style="width: 100%;">
+                    </el-date-picker>
+                </el-form-item>
+                <el-form-item label="描述">
+                    <el-input 
+                        v-model="form.description"
+                        type="textarea"
+                        :rows="3"
+                        placeholder="请输入优惠描述">
+                    </el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <el-button @click="dialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
+
+        const app = createApp({
+            setup() {
+                const loading = ref(false);
+                const dialogVisible = ref(false);
+                const isEdit = ref(false);
+                const submitting = ref(false);
+                const discounts = ref([]);
+                const editingId = ref(null);
+
+                const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://localhost:8007'
+                    : '/api/enhanced';
+
+                const form = reactive({
+                    discount_type: 'percentage',
+                    discount_value: 10,
+                    min_amount: null,
+                    max_discount: null,
+                    member_level: null,
+                    points_required: null,
+                    valid_from: null,
+                    valid_until: null,
+                    description: '',
+                    is_active: true
+                });
+
+                const loadDiscounts = async () => {
+                    loading.value = true;
+                    try {
+                        const response = await fetch(`${apiBase}/discount-config`);
+                        if (response.ok) {
+                            discounts.value = await response.json();
+                        }
+                    } catch (error) {
+                        console.error('加载优惠失败:', error);
+                        ElementPlus.ElMessage.error('加载优惠失败');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const showAddDialog = () => {
+                    isEdit.value = false;
+                    editingId.value = null;
+                    Object.assign(form, {
+                        discount_type: 'percentage',
+                        discount_value: 10,
+                        min_amount: null,
+                        max_discount: null,
+                        member_level: null,
+                        points_required: null,
+                        valid_from: null,
+                        valid_until: null,
+                        description: '',
+                        is_active: true
+                    });
+                    dialogVisible.value = true;
+                };
+
+                const editDiscount = (discount) => {
+                    isEdit.value = true;
+                    editingId.value = discount.id;
+                    Object.assign(form, discount);
+                    dialogVisible.value = true;
+                };
+
+                const handleSubmit = async () => {
+                    submitting.value = true;
+                    try {
+                        const data = {
+                            ...form,
+                            valid_from: form.valid_from ? form.valid_from.toISOString() : null,
+                            valid_until: form.valid_until ? form.valid_until.toISOString() : null
+                        };
+
+                        if (isEdit.value) {
+                            const response = await fetch(`${apiBase}/discount-config/${editingId.value}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                            if (response.ok) {
+                                ElementPlus.ElMessage.success('更新成功');
+                            } else {
+                                throw new Error('更新失败');
+                            }
+                        } else {
+                            const response = await fetch(`${apiBase}/discount-config`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                            if (response.ok) {
+                                ElementPlus.ElMessage.success('添加成功');
+                            } else {
+                                throw new Error('添加失败');
+                            }
+                        }
+
+                        dialogVisible.value = false;
+                        await loadDiscounts();
+                    } catch (error) {
+                        console.error('提交失败:', error);
+                        ElementPlus.ElMessage.error('操作失败');
+                    } finally {
+                        submitting.value = false;
+                    }
+                };
+
+                const toggleStatus = async (discount) => {
+                    try {
+                        const response = await fetch(`${apiBase}/discount-config/${discount.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ is_active: !discount.is_active })
+                        });
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success(discount.is_active ? '已禁用' : '已启用');
+                            await loadDiscounts();
+                        }
+                    } catch (error) {
+                        console.error('更新状态失败:', error);
+                        ElementPlus.ElMessage.error('操作失败');
+                    }
+                };
+
+                const deleteDiscount = async (discount) => {
+                    try {
+                        await ElementPlus.ElMessageBox.confirm(
+                            `确定要删除优惠"${formatDiscountValue(discount)}"吗？`,
+                            '确认删除',
+                            { type: 'warning' }
+                        );
+
+                        const response = await fetch(`${apiBase}/discount-config/${discount.id}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            ElementPlus.ElMessage.success('删除成功');
+                            await loadDiscounts();
+                        }
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            console.error('删除失败:', error);
+                            ElementPlus.ElMessage.error('删除失败');
+                        }
+                    }
+                };
+
+                const getDiscountTypeText = (type) => {
+                    const map = {
+                        'percentage': '百分比',
+                        'fixed': '固定金额',
+                        'points': '积分兑换'
+                    };
+                    return map[type] || type;
+                };
+
+                const formatDiscountValue = (discount) => {
+                    if (discount.discount_type === 'percentage') {
+                        return `${discount.discount_value}%`;
+                    } else if (discount.discount_type === 'fixed') {
+                        return `¥${discount.discount_value}`;
+                    } else {
+                        return `${discount.discount_value}积分`;
+                    }
+                };
+
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                };
+
+                onMounted(() => {
+                    loadDiscounts();
+                });
+
+                return {
+                    loading,
+                    dialogVisible,
+                    isEdit,
+                    submitting,
+                    discounts,
+                    form,
+                    loadDiscounts,
+                    showAddDialog,
+                    editDiscount,
+                    handleSubmit,
+                    toggleStatus,
+                    deleteDiscount,
+                    getDiscountTypeText,
+                    formatDiscountValue,
+                    formatDate
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
