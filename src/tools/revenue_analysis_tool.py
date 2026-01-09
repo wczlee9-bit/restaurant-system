@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from langchain.tools import tool
 from storage.database.db import get_session
-from storage.database.shared.model import Order, Payment, DailyRevenue
+from storage.database.shared.model import Orders, Payments, DailyRevenue
 from datetime import datetime, timedelta, date
 import json
 from sqlalchemy import func, and_
@@ -37,10 +37,10 @@ def calculate_daily_revenue(store_id: int, target_date: Optional[str] = None, ru
         db = get_session()
         try:
             # 查询当日订单
-            orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.created_at >= start_datetime,
-                Order.created_at <= end_datetime
+            orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.created_at >= start_datetime,
+                Orders.created_at <= end_datetime
             ).all()
             
             # 计算基础数据
@@ -49,11 +49,11 @@ def calculate_daily_revenue(store_id: int, target_date: Optional[str] = None, ru
             total_discount = sum(o.discount_amount for o in orders)
             
             # 查询当日退款
-            refunded_orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.created_at >= start_datetime,
-                Order.created_at <= end_datetime,
-                Order.order_status == "cancelled"
+            refunded_orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.created_at >= start_datetime,
+                Orders.created_at <= end_datetime,
+                Orders.order_status == "cancelled"
             ).all()
             total_refund = sum(o.final_amount for o in refunded_orders)
             
@@ -110,7 +110,7 @@ def calculate_daily_revenue(store_id: int, target_date: Optional[str] = None, ru
                 "success": True,
                 "message": f"成功计算并更新店铺 {store_id} 在 {target_date} 的营收数据",
                 "store_id": store_id,
-                "date": target_date.isoformat() if isinstance(target_date, datetime) else target_date.strftime("%Y-%m-%d"),
+                "date": target_date.isoformat() if isinstance(target_date, datetime) else target_date.strftime("%Y-%m-%d") if isinstance(target_date, date) else str(target_date),
                 "total_orders": total_orders,
                 "total_amount": total_amount,
                 "total_discount": total_discount,

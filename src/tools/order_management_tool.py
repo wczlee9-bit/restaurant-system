@@ -5,7 +5,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from langchain.tools import tool
 from storage.database.db import get_session
-from storage.database.shared.model import Order, OrderItem, OrderStatusLog, Payment
+from storage.database.shared.model import Orders, OrderItems, OrderStatusLogs, Payments
 from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 
@@ -42,30 +42,30 @@ def query_orders(params: str, runtime=None) -> str:
         
         db = get_session()
         try:
-            query = db.query(Order)
+            query = db.query(Orders)
             
             # 应用过滤条件
             filters = []
             if query_params.get("store_id"):
-                filters.append(Order.store_id == query_params["store_id"])
+                filters.append(Orders.store_id == query_params["store_id"])
             if query_params.get("table_id"):
-                filters.append(Order.table_id == query_params["table_id"])
+                filters.append(Orders.table_id == query_params["table_id"])
             if query_params.get("order_status"):
-                filters.append(Order.order_status == query_params["order_status"])
+                filters.append(Orders.order_status == query_params["order_status"])
             if query_params.get("payment_status"):
-                filters.append(Order.payment_status == query_params["payment_status"])
+                filters.append(Orders.payment_status == query_params["payment_status"])
             if query_params.get("start_date"):
                 start_date = datetime.strptime(query_params["start_date"], "%Y-%m-%d")
-                filters.append(Order.created_at >= start_date)
+                filters.append(Orders.created_at >= start_date)
             if query_params.get("end_date"):
                 end_date = datetime.strptime(query_params["end_date"], "%Y-%m-%d") + timedelta(days=1)
-                filters.append(Order.created_at < end_date)
+                filters.append(Orders.created_at < end_date)
             
             if filters:
                 query = query.filter(and_(*filters))
             
             # 限制返回数量，避免数据过多
-            orders = query.order_by(Order.created_at.desc()).limit(100).all()
+            orders = query.order_by(Orders.created_at.desc()).limit(100).all()
             
             # 构建返回结果
             result = []
@@ -142,7 +142,7 @@ def update_order_status(order_id: int, new_status: str, operator_id: Optional[in
         db = get_session()
         try:
             # 查询订单
-            order = db.query(Order).filter(Order.id == order_id).first()
+            order = db.query(Orders).filter(Orders.id == order_id).first()
             if not order:
                 return json.dumps({
                     "success": False,
@@ -157,7 +157,7 @@ def update_order_status(order_id: int, new_status: str, operator_id: Optional[in
             order.updated_at = datetime.now()
             
             # 创建状态变更日志
-            log = OrderStatusLog(
+            log = OrderStatusLogs(
                 order_id=order_id,
                 from_status=old_status,
                 to_status=new_status,
@@ -219,11 +219,11 @@ def analyze_order_anomalies(store_id: int, runtime=None) -> str:
             anomalies = []
             
             # 查询长时间未支付的订单（超过30分钟）
-            pending_payment_orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.payment_status == "unpaid",
-                Order.created_at < now - timedelta(minutes=30),
-                Order.order_status != "cancelled"
+            pending_payment_orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.payment_status == "unpaid",
+                Orders.created_at < now - timedelta(minutes=30),
+                Orders.order_status != "cancelled"
             ).all()
             
             for order in pending_payment_orders:
@@ -239,10 +239,10 @@ def analyze_order_anomalies(store_id: int, runtime=None) -> str:
                 })
             
             # 查询长时间未处理的订单（超过15分钟）
-            pending_orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.order_status == "pending",
-                Order.created_at < now - timedelta(minutes=15)
+            pending_orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.order_status == "pending",
+                Orders.created_at < now - timedelta(minutes=15)
             ).all()
             
             for order in pending_orders:
@@ -258,10 +258,10 @@ def analyze_order_anomalies(store_id: int, runtime=None) -> str:
                 })
             
             # 查询烹饪时间过长的订单（超过60分钟）
-            preparing_orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.order_status == "preparing",
-                Order.created_at < now - timedelta(minutes=60)
+            preparing_orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.order_status == "preparing",
+                Orders.created_at < now - timedelta(minutes=60)
             ).all()
             
             for order in preparing_orders:
@@ -277,10 +277,10 @@ def analyze_order_anomalies(store_id: int, runtime=None) -> str:
                 })
             
             # 查询已准备好但未上菜的订单（超过10分钟）
-            ready_orders = db.query(Order).filter(
-                Order.store_id == store_id,
-                Order.order_status == "ready",
-                Order.created_at < now - timedelta(minutes=10)
+            ready_orders = db.query(Orders).filter(
+                Orders.store_id == store_id,
+                Orders.order_status == "ready",
+                Orders.created_at < now - timedelta(minutes=10)
             ).all()
             
             for order in ready_orders:
@@ -332,7 +332,7 @@ def get_order_detail(order_id: int, runtime=None) -> str:
         db = get_session()
         try:
             # 查询订单
-            order = db.query(Order).filter(Order.id == order_id).first()
+            order = db.query(Orders).filter(Orders.id == order_id).first()
             if not order:
                 return json.dumps({
                     "success": False,
@@ -389,7 +389,7 @@ def get_order_detail(order_id: int, runtime=None) -> str:
                 })
             
             # 获取状态变更历史
-            for log in order.status_logs:
+            for log in order.order_status_logs:
                 order_data["status_logs"].append({
                     "id": log.id,
                     "from_status": log.from_status,
