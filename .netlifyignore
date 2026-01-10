@@ -1,3 +1,0 @@
-# Skip node_modules and build files
-node_modules
-package-lock.json
