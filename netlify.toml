@@ -21,15 +21,6 @@
   html.pretty_urls = true
   images.compress = true
 
-[build.processing]
-  skip_processing = false
-  css.bundle = false
-  css.minify = false
-  js.bundle = false
-  js.minify = false
-  html.pretty_urls = true
-  images.compress = true
-
 # ========================================
 # 路由重定向规则
 # ========================================
