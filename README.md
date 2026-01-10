@@ -1,24 +1,82 @@
-# 🍽️ 餐饮点餐系统 - 测试入口
+# 🍽️ 餐饮点餐系统 - 多店铺扫码点餐系统
 
-## 🚀 新功能：部署到 Netlify（推荐！）
+## 🎯 系统概述
 
-### 为什么选择 Netlify？
+支持多角色权限管理、扫码点餐、订单流转、库存管理、会员积分、营收分析、实时通信及小票打印的全流程餐饮管理系统。
 
-✅ **公开访问**：任何人都可以访问您的网站  
-✅ **HTTPS加密**：自动配置SSL证书  
-✅ **CDN加速**：全球快速访问  
-✅ **手机访问**：支持移动设备  
-✅ **易于分享**：可以分享给他人测试  
+**最新版本**: v2.0.0
 
-### 快速部署（3分钟）
+**核心功能**:
+- ✅ 扫码点餐（支持多店铺）
+- ✅ 多角色管理（顾客、厨师、传菜员、收银员、店长、系统管理员、总公司）
+- ✅ 订单状态流转（待确认→制作中→待传菜→上菜中→已完成）
+- ✅ 会员系统（积分、等级、二维码）
+- ✅ 库存管理
+- ✅ 营收分析
+- ✅ 实时通信（WebSocket）
+- ✅ 小票打印
+- ✅ 跨店铺结算
+- ✅ 菜品图片上传
+- ✅ 优惠配置系统
 
-**方法一：手动上传**
-```bash
-bash scripts/deploy_netlify.sh
-```
-然后访问 https://app.netlify.com，上传生成的 `restaurant-system.zip` 文件
+---
 
-**详细指南**：请查看 [NETLIFY_QUICKSTART.md](NETLIFY_QUICKSTART.md)
+## 🚀 新功能：GitHub Actions 自动部署（推荐！）
+
+### 为什么使用 GitHub Actions？
+
+✅ **一键部署**：推送代码自动部署，无需手动操作  
+✅ **自动化流程**：拉取代码、更新依赖、重启服务全自动  
+✅ **可追溯**：完整的部署日志和历史记录  
+✅ **团队协作**：统一的部署流程  
+✅ **服务稳定**：systemd 自动重启，崩溃自动恢复  
+
+### 快速开始（5分钟配置）
+
+1. 📖 阅读 [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md)
+2. ⚙️ 配置 GitHub Secrets（4个步骤）
+3. 🚀 测试自动部署
+4. ✅ 享受自动化的便捷！
+
+**详细文档**：
+- [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md) - 5 分钟快速配置
+- [GitHub Actions 详细文档](GITHUB_ACTIONS_DEPLOYMENT.md) - 完整部署指南
+- [GitHub Actions 更新总结](GITHUB_ACTIONS_UPDATE_SUMMARY.md) - 本次更新内容
+
+---
+
+## 🌐 Netlify 部署（前端）
+
+---
+
+## 📚 文档索引
+
+### 快速开始
+- [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md) - 5 分钟配置自动部署 ⭐
+- [Netlify 快速开始](NETLIFY_QUPLOYMENT.md) - 3 分钟部署前端
+- [快速开始指南](QUICK_START.md) - 30 分钟完整部署流程
+
+### 部署文档
+- [GitHub Actions 自动部署](GITHUB_ACTIONS_DEPLOYMENT.md) - 完整自动部署指南 ⭐
+- [Netlify 部署指南](NETLIFY_DEPLOYMENT.md) - 前端部署详细说明
+- [服务器部署指南](SERVER_FRONTEND_DEPLOYMENT.md) - 服务器端部署
+- [商用部署文档](COMMERCIAL_DEPLOYMENT.md) - 完整部署架构
+
+### 系统文档
+- [系统架构文档](COMMERCIAL_DEPLOYMENT.md) - 系统架构和技术栈
+- [用户使用手册](USER_MANUAL.md) - 系统使用指南
+- [故障排查指南](TROUBLESHOOTING_GUIDE.md) - 常见问题解决
+- [跨店铺结算系统](CROSS_STORE_SETTLEMENT.md) - 结算系统说明
+
+### 功能文档
+- [会员系统](USER_MANUAL.md#会员中心) - 会员功能说明
+- [优惠配置系统](VERSION_2.0.0_UPDATE_SUMMARY.md) - v2.0.0 新功能
+- [订单流程](NEW_ORDER_FLOW.md) - 订单流程说明
+- [权限管理](SYSTEM_ADMIN_COMPANY_ACCOUNTS.md) - 角色权限说明
+
+### 测试相关
+- [测试指南](TESTING_GUIDE.md) - 系统测试指南
+- [账号快速参考](ACCOUNTS_QUICK_REFERENCE.md) - 测试账号信息
 
 ---
 

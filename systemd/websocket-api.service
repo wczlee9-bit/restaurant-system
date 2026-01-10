@@ -1,0 +1,17 @@
+[Unit]
+Description=WebSocket API Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/workspace/projects
+Environment="PATH=/workspace/projects/venv/bin"
+ExecStart=/workspace/projects/venv/bin/python -m uvicorn src.api.websocket_api:app --host 0.0.0.0 --port 8008
+Restart=always
+RestartSec=10
+StandardOutput=append:/workspace/projects/logs/websocket.log
+StandardError=append:/workspace/projects/logs/websocket.error.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Member API Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/workspace/projects
+Environment="PATH=/workspace/projects/venv/bin"
+ExecStart=/workspace/projects/venv/bin/python -m uvicorn src.api.member_api:app --host 0.0.0.0 --port 8001
+Restart=always
+RestartSec=10
+StandardOutput=append:/workspace/projects/logs/member_api.log
+StandardError=append:/workspace/projects/logs/member_api.error.log
+
+[Install]
+WantedBy=multi-user.target
