@@ -6,3 +6,4 @@ Database connection failed, retrying... (elapsed: 2.9s)
 INFO:     127.0.0.1:35516 - "GET /api/tables/ HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56778 - "POST /api/orders/ HTTP/1.1" 200 OK
 INFO:     127.0.0.1:56766 - "GET /api/menu-items/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56794 - "GET /health HTTP/1.1" 200 OK
