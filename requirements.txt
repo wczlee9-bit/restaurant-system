@@ -23,9 +23,6 @@ httpcore==1.0.9
 
 # LangGraph
 langgraph==1.0.2
-langgraph-core==1.0.2
-langgraph-checkpoint==3.0.0
-langgraph-checkpoint-postgres==3.0.1
 
 # S3 Storage
 boto3==1.40.61
