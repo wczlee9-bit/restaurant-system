@@ -21,7 +21,37 @@
 
 ---
 
-## 🚀 GitHub Actions 自动部署（推荐！）
+## 🚀 从沙盒到 Netlify 完整部署流程（推荐！）
+
+### 架构说明
+
+```
+沙盒环境（开发）
+    ↓ git push
+GitHub（代码仓库）
+    ├─→ GitHub Actions → 服务器 115.191.1.219（后端 API）
+    └─→ Netlify → mellow-rabanadas-877f3e.netlify.app（前端）
+```
+
+### 快速开始（15分钟配置）
+
+**选择一个指南跟着做**：
+
+1. 🎯 **[从沙盒到 Netlify 完整指南](SANDBOX_TO_NETLIFY_GUIDE.md)** - 详细说明完整流程 ⭐
+2. ⚡ **[快速命令清单](QUICK_START_SANDBOX_TO_NETLIFY.md)** - 直接复制粘贴执行 ⭐
+
+### 日常开发流程
+
+```bash
+git add .
+git commit -m "更新功能"
+git push origin main
+# 自动部署到后端服务器和 Netlify 前端 ✨
+```
+
+---
+
+## 🚀 GitHub Actions 自动部署（后端）
 
 ### 为什么使用 GitHub Actions？
 
