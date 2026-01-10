@@ -32,12 +32,19 @@
 ✅ **服务稳定**：systemd 自动重启，崩溃自动恢复
 ✅ **配置安全**：使用 GitHub Secrets 保护敏感信息
 
-### 快速开始（5分钟配置）
+### 快速开始（10分钟配置）
 
-1. 📖 阅读 [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md)
-2. 🔑 配置 GitHub Secrets（3个步骤：SSH密钥、用户名、服务器地址）
-3. 🚀 测试自动部署
-4. ✅ 享受自动化的便捷！
+**选择一个指南跟着做**：
+
+1. 🎯 **[一步一步超详细教程](GITHUB_ACTIONS_STEP_BY_STEP.md)** - 最详细，每一步都有说明和验证
+2. ⚡ **[快速命令清单](QUICK_COMMANDS.md)** - 直接复制粘贴命令执行
+3. 📖 **[快速开始](GITHUB_ACTIONS_QUICKSTART.md)** - 5分钟快速配置
+
+**配置步骤**：
+1. 在服务器上生成 SSH 密钥
+2. 在 GitHub 配置 3 个 Secrets（SSH_PRIVATE_KEY, SERVER_USER, SERVER_HOST）
+3. 推送代码触发自动部署
+4. 验证部署成功
 
 ### 配置 Secrets
 
