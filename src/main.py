@@ -6,10 +6,24 @@ import logging
 from typing import Any, Dict, Iterable, AsyncIterable, AsyncGenerator, Optional
 import threading
 import contextvars
-import cozeloop
 import uvicorn
 import time
 from fastapi import FastAPI, HTTPException, Request
+
+# 条件导入 cozeloop（仅沙盒环境使用）
+try:
+    import cozeloop
+    COZELOOP_AVAILABLE = True
+except ImportError:
+    COZELOOP_AVAILABLE = False
+
+def flush_cozeloop():
+    """安全地调用 cozeloop.flush()"""
+    if COZELOOP_AVAILABLE:
+        try:
+            cozeloop.flush()
+        except:
+            pass
 from fastapi.responses import StreamingResponse, JSONResponse
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
@@ -164,7 +178,7 @@ class GraphService:
         finally:
             # 清理任务记录
             self.running_tasks.pop(run_id, None)
-            cozeloop.flush()
+            flush_cozeloop()
 
     # 取消执行 - 使用asyncio的标准方式
     def cancel_run(self, run_id: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
@@ -369,7 +383,7 @@ async def http_run(request: Request) -> Dict[str, Any]:
         logger.error(f"Unexpected error in http_run: {e}, traceback: {traceback.format_exc()}", exc_info=True)
         raise HTTPException(status_code=500, detail=extract_core_stack())
     finally:
-        cozeloop.flush()
+        flush_cozeloop()
 
 
 @app.post("/stream_run")
@@ -489,7 +503,7 @@ async def http_node_run(node_id: str, request: Request):
         logger.error(f"Unexpected error in http_node_run: {e}, traceback: {traceback.format_exc()}", exc_info=True)
         raise HTTPException(status_code=500, detail=extract_core_stack())
     finally:
-        cozeloop.flush()
+        flush_cozeloop()
 
 
 @app.get("/health")
