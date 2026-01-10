@@ -1,0 +1,180 @@
+# ========================================
+# 测试环境配置 - Netlify
+# 用于在沙盒环境测试后端连接
+# ========================================
+# 当前配置指向沙盒环境：9.129.157.122:8000
+# 测试完成后，请切换回 production 配置
+# ========================================
+
+[build]
+  publish = "assets"
+  command = "true"
+  functions = ""
+
+[build.environment]
+  NODE_VERSION = "18"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# ========================================
+# API 代理配置 - 沙盒测试环境
+# ========================================
+
+# 会员 API (端口 8004) - 暂未启动
+[[redirects]]
+  from = "/api/member*"
+  to = "http://9.129.157.122:8004/api/member:splat"
+  status = 200
+  force = true
+
+# 总公司管理 API (端口 8006) - 暂未启动
+[[redirects]]
+  from = "/api/headquarters*"
+  to = "http://9.129.157.122:8006/api/headquarters:splat"
+  status = 200
+  force = true
+
+# 餐饮系统增强 API (端口 8007) - 暂未启动
+[[redirects]]
+  from = "/api/enhanced*"
+  to = "http://9.129.157.122:8007/api/:splat"
+  status = 200
+  force = true
+
+# 订单相关接口代理到 customer_api (端口 8001) - 暂未启动
+[[redirects]]
+  from = "/api/orders*"
+  to = "http://9.129.157.122:8001/api/orders:splat"
+  status = 200
+  force = true
+
+# WebSocket 代理 - 暂未启动
+[[redirects]]
+  from = "/ws/*"
+  to = "http://9.129.157.122:8001/ws/:splat"
+  status = 200
+  force = true
+
+# 主 API 代理到 restaurant_api (端口 8000) - ✅ 已启动
+[[redirects]]
+  from = "/api/*"
+  to = "http://9.129.157.122:8000/api/:splat"
+  status = 200
+  force = true
+
+# ========================================
+# 其他配置保持不变
+# ========================================
+
+[build.processing]
+  skip_processing = true
+  css.bundle = false
+  css.minify = false
+  js.bundle = false
+  js.minify = false
+  html.pretty_urls = true
+  images.compress = true
+
+[[redirects]]
+  from = "/"
+  to = "/portal.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/login"
+  to = "/login_standalone.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/staff-workflow"
+  to = "/staff_workflow.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/shop-settings"
+  to = "/shop_settings.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/customer-order"
+  to = "/customer_order_v3.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/member-center"
+  to = "/member_center.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/headquarters"
+  to = "/headquarters_dashboard.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/menu-management"
+  to = "/menu_management.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/inventory-management"
+  to = "/inventory_management.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/settlement-management"
+  to = "/settlement_management.html"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "/discount-management"
+  to = "/discount_management.html"
+  status = 302
+  force = false
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.json"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/*.{jpg,jpeg,png,gif,webp,svg}"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
