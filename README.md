@@ -21,27 +21,71 @@
 
 ---
 
-## 🚀 新功能：GitHub Actions 自动部署（推荐！）
+## 🚀 GitHub Actions 自动部署（推荐！）
 
 ### 为什么使用 GitHub Actions？
 
-✅ **一键部署**：推送代码自动部署，无需手动操作  
-✅ **自动化流程**：拉取代码、更新依赖、重启服务全自动  
-✅ **可追溯**：完整的部署日志和历史记录  
-✅ **团队协作**：统一的部署流程  
-✅ **服务稳定**：systemd 自动重启，崩溃自动恢复  
+✅ **一键部署**：推送代码自动部署，无需手动操作
+✅ **自动化流程**：拉取代码、更新依赖、重启服务全自动
+✅ **可追溯**：完整的部署日志和历史记录
+✅ **团队协作**：统一的部署流程
+✅ **服务稳定**：systemd 自动重启，崩溃自动恢复
+✅ **配置安全**：使用 GitHub Secrets 保护敏感信息
 
 ### 快速开始（5分钟配置）
 
 1. 📖 阅读 [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md)
-2. ⚙️ 配置 GitHub Secrets（4个步骤）
+2. 🔑 配置 GitHub Secrets（3个步骤：SSH密钥、用户名、服务器地址）
 3. 🚀 测试自动部署
 4. ✅ 享受自动化的便捷！
 
-**详细文档**：
-- [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md) - 5 分钟快速配置
-- [GitHub Actions 详细文档](GITHUB_ACTIONS_DEPLOYMENT.md) - 完整部署指南
-- [GitHub Actions 更新总结](GITHUB_ACTIONS_UPDATE_SUMMARY.md) - 本次更新内容
+### 配置 Secrets
+
+在 GitHub 仓库中配置以下 Secrets：
+
+| Name | Value | 说明 |
+|------|-------|------|
+| `SSH_PRIVATE_KEY` | 服务器SSH私钥 | 参考 [GITHUB_SECRETS_SETUP.md](GITHUB_SECRETS_SETUP.md) |
+| `SERVER_USER` | `root` | SSH登录用户名 |
+| `SERVER_HOST` | `115.191.1.219` | 服务器IP地址 |
+
+### 使用方法
+
+**自动部署**（推荐）：
+```bash
+git add .
+git commit -m "描述你的更改"
+git push origin main
+# 推送后自动触发部署 ✨
+```
+
+**手动触发部署**：
+1. 打开 GitHub 仓库
+2. 进入 **Actions** 标签
+3. 选择 **"🚀 Auto Deploy to Server"** 工作流
+4. 点击 **"Run workflow"** 按钮
+
+### 验证部署
+
+**GitHub Actions 页面**：
+- 查看工作流执行状态
+- 查看详细日志
+
+**服务器端验证**：
+```bash
+# 检查服务状态
+bash scripts/verify_github_actions.sh
+
+# 查看日志
+tail -f /workspace/projects/logs/api.log
+```
+
+### 详细文档
+
+- ⭐ [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md) - 5分钟快速配置
+- 📖 [GitHub Secrets 配置指南](GITHUB_SECRETS_SETUP.md) - 详细配置步骤
+- 📘 [GitHub Actions 使用指南](GITHUB_ACTIONS_USAGE.md) - 完整使用文档
+- 🔍 [系统验证脚本](scripts/verify_github_actions.sh) - 配置验证工具
 
 ---
 

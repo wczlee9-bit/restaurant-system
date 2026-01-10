@@ -142,6 +142,20 @@ verify_services() {
     log_info "所有服务运行正常！"
 }
 
+# 备份重要文件
+backup_files() {
+    log_info "📦 备份重要文件..."
+    
+    BACKUP_DIR="${PROJECT_PATH}/.backup/$(date +%Y%m%d_%H%M%S)"
+    mkdir -p "$BACKUP_DIR"
+    
+    # 备份配置文件
+    [ -f "${PROJECT_PATH}/.env" ] && cp "${PROJECT_PATH}/.env" "$BACKUP_DIR/" 2>/dev/null || true
+    [ -f "${PROJECT_PATH}/config/agent_llm_config.json" ] && cp "${PROJECT_PATH}/config/agent_llm_config.json" "$BACKUP_DIR/" 2>/dev/null || true
+    
+    log_info "备份完成: $BACKUP_DIR"
+}
+
 # 主函数
 main() {
     log_info "========================================="
@@ -150,11 +164,19 @@ main() {
     
     cd "$PROJECT_PATH"
     
+    # 备份重要文件
+    backup_files
+    
     # 拉取最新代码
     log_info "📥 拉取最新代码..."
     git fetch origin
-    git reset --hard origin/main
-    git clean -fd
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    git reset --hard origin/${CURRENT_BRANCH:-main}
+    
+    # 恢复配置文件
+    log_info "📤 恢复配置文件..."
+    [ -f "${BACKUP_DIR}/.env" ] && cp "$BACKUP_DIR/.env" "${PROJECT_PATH}/" 2>/dev/null || true
+    [ -f "${BACKUP_DIR}/agent_llm_config.json" ] && cp "$BACKUP_DIR/agent_llm_config.json" "${PROJECT_PATH}/config/" 2>/dev/null || true
     
     # 更新依赖
     setup_venv
