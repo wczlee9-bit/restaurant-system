@@ -1,0 +1,56 @@
+name: 🚀 Auto Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  deploy:
+    name: 📦 Deploy to Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📡 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: 🚀 Deploy to Server
+        env:
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+        run: |
+          echo "========================================="
+          echo "🚀 开始部署到服务器 ${{ secrets.SERVER_HOST }}"
+          echo "========================================="
+          
+          # 连接到服务器并执行部署
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            'bash -s' < scripts/auto_deploy.sh
+          
+          echo "========================================="
+          echo "✅ 部署完成！"
+          echo "========================================="
+      
+      - name: 🔍 Verify Deployment
+        run: |
+          echo "验证服务状态..."
+          
+          # 检查餐厅 API
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_rsa \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "curl -f http://localhost:8000/api/health || exit 1"
+          
+          echo "✅ 所有服务运行正常"
