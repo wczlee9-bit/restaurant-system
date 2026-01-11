@@ -18,23 +18,12 @@ def get_db_url() -> str:
     """Build database URL from environment."""
     url = os.getenv("PGDATABASE_URL") or ""
     if url is not None and url != "":
+        logger.info(f"PGDATABASE_URL loaded from environment variable")
         return url
-    from coze_workload_identity import Client
-    try:
-        client = Client()
-        env_vars = client.get_project_env_vars()
-        client.close()
-        for env_var in env_vars:
-            if env_var.key == "PGDATABASE_URL":
-                url = env_var.value.replace("'", "'\\''")
-                return url
-    except Exception as e:
-        logger.error(f"Error loading PGDATABASE_URL: {e}")
-        raise e
-    finally:
-        if url is None or url == "":
-            logger.error("PGDATABASE_URL is not set")
-    return url
+    
+    # 生产环境：仅使用环境变量
+    logger.error("PGDATABASE_URL is not set in environment variables")
+    raise ValueError("PGDATABASE_URL is not set. Please set PGDATABASE_URL environment variable.")
 _engine = None
 _SessionLocal = None
 
