@@ -29,7 +29,12 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph, END
 from langgraph.graph.state import CompiledStateGraph
 
-from coze_coding_utils.runtime_ctx.context import new_context, Context
+# 条件导入 coze_coding_utils（沙盒环境）或使用模拟实现（生产环境）
+try:
+    from coze_coding_utils.runtime_ctx.context import new_context, Context
+except ImportError:
+    from utils.context_shim import new_context, Context
+
 from utils.helper import graph_helper
 from utils.log.node_log import LOG_FILE
 from utils.log.write_log import setup_logging, request_context

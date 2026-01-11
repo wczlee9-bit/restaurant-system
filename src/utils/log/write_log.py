@@ -6,7 +6,12 @@ from contextvars import ContextVar
 from typing import Optional
 from pathlib import Path
 
-from coze_coding_utils.runtime_ctx.context import Context
+# 条件导入 Context
+try:
+    from coze_coding_utils.runtime_ctx.context import Context
+except ImportError:
+    from utils.context_shim import Context
+
 from utils.log.config import LOG_DIR
 
 request_context: ContextVar[Optional[Context]] = ContextVar('request_context', default=None)

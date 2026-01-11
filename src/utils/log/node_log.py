@@ -6,7 +6,13 @@ from utils.log.config import LOG_DIR
 from utils.log.common import get_execute_mode, is_prod
 import uuid
 from langchain_core.callbacks import BaseCallbackHandler
-from coze_coding_utils.runtime_ctx.context import Context
+
+# 条件导入 Context
+try:
+    from coze_coding_utils.runtime_ctx.context import Context
+except ImportError:
+    from utils.context_shim import Context
+
 import os
 import sys
 import json
