@@ -8,6 +8,15 @@ import threading
 import contextvars
 import uvicorn
 import time
+import sys
+import os
+from pathlib import Path
+
+# 添加 src 目录到 Python path（支持 Render 等生产环境）
+current_dir = Path(__file__).parent
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+
 from fastapi import FastAPI, HTTPException, Request
 
 # 条件导入 cozeloop（仅沙盒环境使用）
