@@ -335,6 +335,12 @@ service = GraphService()
 app = FastAPI()
 
 
+@app.get("/health")
+async def health_check():
+    """健康检查端点，用于 Render 等平台的健康检查"""
+    return {"status": "healthy", "service": "restaurant-system"}
+
+
 @app.post("/run")
 async def http_run(request: Request) -> Dict[str, Any]:
     global result

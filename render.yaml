@@ -2,5 +2,13 @@ services:
   - type: web
     name: restaurant-system
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: cd src && uvicorn main:app --host 0.0.0.0 --port 8000
+    startCommand: cd src && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        value: 8000
+    healthCheckPath: /health
+    autoDeploy: true

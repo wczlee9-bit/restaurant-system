@@ -97,49 +97,51 @@
 # API 代理配置
 # ========================================
 # 重要：后端服务器地址
-# 使用当前环境的公网IP
-# 示例：http://9.128.251.82:8000
-# 或使用域名：https://api.yourdomain.com
+# 当前配置：Render 部署的后端服务
+# 地址：https://restaurant-system-vzj0.onrender.com
+#
+# 注意：Render 免费实例只有一个服务端口（8000），
+# 所有 API 接口都通过同一个服务提供
 
-# 会员 API (端口 8004)
+# 会员 API
 [[redirects]]
   from = "/api/member*"
-  to = "http://115.191.1.219:8004/api/member:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/api/member:splat"
   status = 200
   force = true
 
-# 总公司管理 API (端口 8006)
+# 总公司管理 API
 [[redirects]]
   from = "/api/headquarters*"
-  to = "http://115.191.1.219:8006/api/headquarters:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/api/headquarters:splat"
   status = 200
   force = true
 
-# 餐饮系统增强 API (端口 8007) - 菜品图片、会员二维码、优惠系统
+# 餐饮系统增强 API - 菜品图片、会员二维码、优惠系统
 [[redirects]]
   from = "/api/enhanced*"
-  to = "http://115.191.1.219:8007/api/:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/api/:splat"
   status = 200
   force = true
 
-# 订单相关接口代理到 customer_api (端口 8001)
+# 订单相关接口
 [[redirects]]
   from = "/api/orders*"
-  to = "http://115.191.1.219:8001/api/orders:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/api/orders:splat"
   status = 200
   force = true
 
 # WebSocket 代理
 [[redirects]]
   from = "/ws/*"
-  to = "http://115.191.1.219:8001/ws/:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/ws/:splat"
   status = 200
   force = true
 
-# 其他 API 接口代理到 restaurant_api (端口 8000)
+# 其他 API 接口
 [[redirects]]
   from = "/api/*"
-  to = "http://115.191.1.219:8000/api/:splat"
+  to = "https://restaurant-system-vzj0.onrender.com/api/:splat"
   status = 200
   force = true
 
