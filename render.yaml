@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: restaurant-system
+    env: python
+    buildCommand: pip install -r requirements-prod.txt
+    startCommand: python start_server.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.1
+      - key: PORT
+        value: 8000

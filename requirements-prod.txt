@@ -1,0 +1,29 @@
+# 餐饮系统生产环境依赖
+# 只包含运行餐饮 API 服务所需的核心依赖
+
+# FastAPI 核心依赖
+fastapi==0.121.2
+uvicorn==0.38.0
+starlette==0.49.3
+pydantic==2.12.3
+pydantic-core==2.41.4
+typing-extensions==4.15.0
+
+# 数据库相关
+SQLAlchemy==2.0.44
+psycopg2-binary==2.9.9
+python-dotenv==1.2.1
+
+# 工具库
+python-multipart==0.0.21
+qrcode==8.2
+Pillow>=10.4.0  # 兼容 Python 3.13
+
+# S3 对象存储（用于菜品图片上传）
+boto3==1.40.61
+botocore==1.40.61
+
+# 其他依赖
+requests==2.32.5
+httpx==0.28.1
+pytz==2025.2
