@@ -39,7 +39,7 @@ app.add_middleware(
 
 # 包含诊断路由
 try:
-    from api.diagnostic import router as diagnostic_router
+    from diagnostic import router as diagnostic_router
     app.include_router(diagnostic_router)
     logger.info("✓ Diagnostic routes included")
 except ImportError as e:
