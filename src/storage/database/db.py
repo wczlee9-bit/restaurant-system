@@ -18,10 +18,7 @@ def get_db_url() -> str:
     """Build database URL from environment."""
     url = os.getenv("PGDATABASE_URL") or ""
     if url is not None and url != "":
-        # 明确指定使用 psycopg3 驱动（兼容 psycopg 和 psycopg-binary）
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-            logger.info(f"Using psycopg3 driver for database connection")
+        # 不指定驱动，让 SQLAlchemy 自动选择可用的 psycopg2 或 psycopg3
         logger.info(f"PGDATABASE_URL loaded from environment variable")
         return url
     
