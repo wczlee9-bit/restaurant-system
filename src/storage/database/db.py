@@ -43,6 +43,7 @@ def _create_engine_with_retry():
     timeout = 30
     engine = create_engine(
         url,
+        module_import="psycopg",
         pool_size=size,
         max_overflow=overflow,
         pool_pre_ping=True,
