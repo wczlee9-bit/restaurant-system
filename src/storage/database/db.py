@@ -18,10 +18,10 @@ def get_db_url() -> str:
     """Build database URL from environment."""
     url = os.getenv("PGDATABASE_URL") or ""
     if url is not None and url != "":
-        # 明确指定使用 psycopg3 驱动
+        # 使用 pg8000 驱动（纯 Python，兼容性最好）
         if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
-            logger.info(f"Using psycopg3 driver for database connection")
+            url = url.replace("postgresql://", "postgresql+pg8000://", 1)
+            logger.info(f"Using pg8000 driver for database connection")
         logger.info(f"PGDATABASE_URL loaded from environment variable")
         return url
     
