@@ -2,7 +2,7 @@ services:
   - type: web
     name: restaurant-system
     env: python
-    buildCommand: rm -rf .venv && pip install --no-cache-dir -r requirements-prod.txt
+    buildCommand: bash install.sh
     startCommand: python start_server.py
     envVars:
       - key: PYTHON_VERSION
