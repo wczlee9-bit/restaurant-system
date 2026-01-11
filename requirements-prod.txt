@@ -6,7 +6,7 @@ python-multipart==0.0.21
 pydantic==2.12.3
 python-dotenv==1.2.1
 
-# Database (pg8000 通过 install.sh 单独安装)
+# Database (数据库驱动通过 Procfile 安装)
 sqlalchemy==2.0.44
 alembic==1.16.5
 

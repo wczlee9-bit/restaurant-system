@@ -18,13 +18,24 @@ def get_db_url() -> str:
     """Build database URL from environment."""
     url = os.getenv("PGDATABASE_URL") or ""
     if url is not None and url != "":
-        # 使用 pg8000 驱动（纯 Python，兼容性最好）
-        if url.startswith("postgresql://"):
-            url = url.replace("postgresql://", "postgresql+pg8000://", 1)
-            logger.info(f"Using pg8000 driver for database connection")
+        # 尝试自动检测可用的数据库驱动
+        drivers_to_try = ["pg8000", "psycopg2", "psycopg"]
+        for driver in drivers_to_try:
+            try:
+                __import__(driver)
+                logger.info(f"Found available driver: {driver}")
+                if url.startswith("postgresql://"):
+                    url = url.replace("postgresql://", f"postgresql+{driver}://", 1)
+                    logger.info(f"Using {driver} driver for database connection")
+                return url
+            except ImportError:
+                logger.debug(f"Driver {driver} not available, trying next one...")
+
+        # 如果所有驱动都不可用，使用默认配置
+        logger.warning("No database driver found, using default configuration")
         logger.info(f"PGDATABASE_URL loaded from environment variable")
         return url
-    
+
     # 生产环境：仅使用环境变量
     logger.error("PGDATABASE_URL is not set in environment variables")
     raise ValueError("PGDATABASE_URL is not set. Please set PGDATABASE_URL environment variable.")
