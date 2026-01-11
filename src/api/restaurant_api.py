@@ -1274,7 +1274,30 @@ def generate_styled_qrcode(
 @app.get("/health")
 def health_check():
     """健康检查"""
-    return {"status": "ok", "message": "餐饮系统API服务运行正常"}
+    # Check database connection
+    db_status = {"connected": False, "error": None}
+    try:
+        from storage.database.db import get_engine
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_status["connected"] = True
+            db_status["message"] = "数据库连接成功"
+    except Exception as e:
+        db_status["error"] = str(e)
+        db_status["message"] = f"数据库连接失败: {str(e)}"
+    
+    # Check environment variables
+    env_status = {
+        "PGDATABASE_URL": "✓ 已设置" if os.getenv("PGDATABASE_URL") else "✗ 未设置",
+    }
+    
+    return {
+        "status": "ok" if db_status["connected"] else "error",
+        "message": "餐饮系统API服务运行正常",
+        "database": db_status,
+        "environment": env_status
+    }
 
 
 # ============ 诊断端点 ============
