@@ -1301,11 +1301,21 @@ def health_check():
         "PGDATABASE_URL": "✓ 已设置" if os.getenv("PGDATABASE_URL") else "✗ 未设置",
     }
     
+    # Check installed packages
+    packages_status = {}
+    for pkg_name in ["pg8000", "psycopg2", "psycopg"]:
+        try:
+            __import__(pkg_name)
+            packages_status[pkg_name] = "✓ 已安装"
+        except ImportError:
+            packages_status[pkg_name] = "✗ 未安装"
+    
     return {
         "status": "ok" if db_status["connected"] else "error",
         "message": "餐饮系统API服务运行正常",
         "database": db_status,
-        "environment": env_status
+        "environment": env_status,
+        "packages": packages_status
     }
 
 

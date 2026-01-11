@@ -2,7 +2,13 @@ services:
   - type: web
     name: restaurant-system
     env: python
-    buildCommand: bash install.sh
+    buildCommand: |
+      echo "=== 开始安装依赖 ===" && \
+      pip install pg8000==1.31.2 && \
+      pip install -r requirements-prod.txt && \
+      echo "=== 依赖安装完成 ===" && \
+      echo "已安装的数据库驱动:" && \
+      python -c "import pg8000; print('pg8000:', pg8000.__version__)" 2>&1 || echo "pg8000 未安装"
     startCommand: python start_server.py
     envVars:
       - key: PYTHON_VERSION
