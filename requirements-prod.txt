@@ -1,32 +1,55 @@
-# 餐饮系统生产环境依赖
-# 只包含运行餐饮 API 服务所需的核心依赖
-
-# FastAPI 核心依赖
+# 餐饮系统生产环境核心依赖
+# FastAPI and server
 fastapi==0.121.2
 uvicorn==0.38.0
-starlette==0.49.3
+python-multipart==0.0.21
 pydantic==2.12.3
-pydantic-core==2.41.4
-typing-extensions==4.15.0
-
-# 数据库相关
-SQLAlchemy==2.0.44
-# 使用 psycopg3 作为主要驱动（支持 Python 3.13）
-# 同时保留 psycopg2-binary 作为备选
-psycopg[binary]==3.2.3
-psycopg2-binary==2.9.9
 python-dotenv==1.2.1
 
-# 工具库
-python-multipart==0.0.21
-qrcode==8.2
-Pillow>=10.4.0  # 兼容 Python 3.13
+# Database
+sqlalchemy==2.0.44
+psycopg2-binary==2.9.9
+alembic==1.16.5
 
-# S3 对象存储（用于菜品图片上传）
+# Object storage
 boto3==1.40.61
-botocore==1.40.61
 
-# 其他依赖
-requests==2.32.5
+# Image processing
+pillow==10.3.0
+qrcode==8.2
+
+# HTTP client
 httpx==0.28.1
+requests==2.32.5
+
+# Utilities
+pydantic-core
+typing-extensions
+anyio
+h11
+starlette
+
+# LLM integration
+openai==2.14.0
+langchain==1.0.3
+langchain-openai==1.0.1
+langchain-core
+
+# WebSocket
+websockets==15.0.1
+
+# Date/time
+python-dateutil==2.9.0.post0
 pytz==2025.2
+
+# File format
+openpyxl==3.1.5
+
+# JSON
+orjson==3.11.5
+
+# JWT
+PyJWT==2.10.1
+
+# CORS
+requests-toolbelt==1.0.0
