@@ -1276,6 +1276,54 @@ def health_check():
     return {"status": "ok", "message": "餐饮系统API服务运行正常"}
 
 
+# ============ 诊断端点 ============
+
+@app.get("/api/diagnostic/env")
+def check_env():
+    """检查环境变量"""
+    return {
+        "PGDATABASE_URL": "✓ 已设置" if os.getenv("PGDATABASE_URL") else "✗ 未设置",
+        "PORT": os.getenv("PORT", "8000"),
+        "PYTHON_VERSION": os.getenv("PYTHON_VERSION", "未设置"),
+    }
+
+
+@app.get("/api/diagnostic/database")
+def check_db():
+    """检查数据库连接"""
+    result = {
+        "connection_successful": False,
+        "error": None
+    }
+
+    try:
+        from storage.database.db import get_engine
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            result["connection_successful"] = True
+            result["message"] = "数据库连接成功"
+    except Exception as e:
+        result["error"] = str(e)
+        result["message"] = f"数据库连接失败: {str(e)}"
+        import traceback
+        result["traceback"] = traceback.format_exc()
+
+    return result
+
+
+@app.get("/api/diagnostic/health")
+def full_health_check():
+    """完整健康检查"""
+    db_status = check_db()
+
+    return {
+        "status": "healthy" if db_status["connection_successful"] else "unhealthy",
+        "database": db_status,
+        "environment": check_env()
+    }
+
+
 # ============ WebSocket 接口 ============
 
 @app.websocket("/ws/store/{store_id}")
