@@ -6,9 +6,9 @@ python-multipart==0.0.21
 pydantic==2.12.3
 python-dotenv==1.2.1
 
-# Database
+# Database - 使用 psycopg3 (兼容性更好)
 sqlalchemy==2.0.44
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.3
 alembic==1.16.5
 
 # Object storage
