@@ -46,7 +46,13 @@ def get_graph_node_func_with_inout(graph, node_name):
     return None, None, None
 
 def is_agent_proj() -> bool:
-    return os.getenv("COZE_PROJECT_TYPE", "workflow") == "agent"
+    # 在沙盒环境中，由环境变量控制
+    # 在生产环境（如 Render），默认使用 Agent 模式
+    env_type = os.getenv("COZE_PROJECT_TYPE")
+    if env_type:
+        return env_type == "agent"
+    # 默认使用 Agent 模式（支持生产环境部署）
+    return True
 
 def is_dev_env() -> bool:
     return os.getenv("COZE_PROJECT_ENV", "") == "DEV"
