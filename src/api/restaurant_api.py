@@ -1279,7 +1279,7 @@ def health_check():
 
 # ============ 诊断端点 ============
 
-@app.get("/api/diagnostic/env")
+@app.get("/diagnostic/env")
 def check_env():
     """检查环境变量"""
     return {
@@ -1289,7 +1289,7 @@ def check_env():
     }
 
 
-@app.get("/api/diagnostic/database")
+@app.get("/diagnostic/database")
 def check_db():
     """检查数据库连接"""
     result = {
@@ -1313,7 +1313,7 @@ def check_db():
     return result
 
 
-@app.get("/api/diagnostic/health")
+@app.get("/diagnostic/health")
 def full_health_check():
     """完整健康检查"""
     db_status = check_db()
