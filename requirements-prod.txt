@@ -11,7 +11,10 @@ typing-extensions==4.15.0
 
 # 数据库相关
 SQLAlchemy==2.0.44
+# 使用 psycopg3 作为主要驱动（支持 Python 3.13）
+# 同时保留 psycopg2-binary 作为备选
 psycopg[binary]==3.2.3
+psycopg2-binary==2.9.9
 python-dotenv==1.2.1
 
 # 工具库
