@@ -18,6 +18,10 @@ def get_db_url() -> str:
     """Build database URL from environment."""
     url = os.getenv("PGDATABASE_URL") or ""
     if url is not None and url != "":
+        # 明确指定使用 psycopg2 驱动
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            logger.info(f"Using psycopg2 driver for database connection")
         logger.info(f"PGDATABASE_URL loaded from environment variable")
         return url
     
