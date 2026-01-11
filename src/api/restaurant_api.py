@@ -37,6 +37,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 包含诊断路由
+try:
+    from api.diagnostic import router as diagnostic_router
+    app.include_router(diagnostic_router)
+    logger.info("✓ Diagnostic routes included")
+except ImportError as e:
+    logger.warning(f"Could not include diagnostic routes: {e}")
+
 
 # ============ 应用启动事件 ============
 
