@@ -6,7 +6,8 @@ python-multipart==0.0.21
 pydantic==2.12.3
 python-dotenv==1.2.1
 
-# Database (数据库驱动通过 Procfile 安装)
+# Database - 先安装 psycopg2-binary（最稳定）
+psycopg2-binary==2.9.9
 sqlalchemy==2.0.44
 alembic==1.16.5
 
