@@ -1278,14 +1278,23 @@ def health_check():
     db_status = {"connected": False, "error": None}
     try:
         from storage.database.db import get_engine
+        from storage.database.check_tables import check_tables_exist
+        
         engine = get_engine()
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
             db_status["connected"] = True
             db_status["message"] = "数据库连接成功"
+            
+            # Check tables
+            table_status = check_tables_exist(engine)
+            db_status["tables"] = table_status
+            
     except Exception as e:
         db_status["error"] = str(e)
         db_status["message"] = f"数据库连接失败: {str(e)}"
+        import traceback
+        db_status["traceback"] = traceback.format_exc()
     
     # Check environment variables
     env_status = {
