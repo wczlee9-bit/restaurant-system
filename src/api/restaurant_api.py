@@ -38,6 +38,34 @@ app.add_middleware(
 )
 
 
+# ============ 应用启动事件 ============
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时初始化数据库"""
+    logger.info("=" * 60)
+    logger.info("Starting Restaurant API...")
+    logger.info("=" * 60)
+
+    # 初始化数据库表结构
+    from storage.database.init_db import init_database, ensure_test_data
+
+    if init_database():
+        logger.info("✓ Database schema initialized")
+    else:
+        logger.warning("⚠ Failed to initialize database schema")
+
+    # 初始化测试数据
+    if ensure_test_data():
+        logger.info("✓ Test data ensured")
+    else:
+        logger.warning("⚠ Failed to ensure test data")
+
+    logger.info("=" * 60)
+    logger.info("Restaurant API started successfully!")
+    logger.info("=" * 60)
+
+
 # ============ WebSocket 连接管理 ============
 
 class ConnectionManager:
