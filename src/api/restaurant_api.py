@@ -5,6 +5,7 @@
 from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime
