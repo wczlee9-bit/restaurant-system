@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初始化数据</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+        }
+        .section h2 {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        button.check {
+            background: #2196F3;
+        }
+        button.check:hover {
+            background: #0b7dda;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .data-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ 餐饮系统数据初始化</h1>
+
+        <div class="info">
+            <strong>说明：</strong><br>
+            此页面用于初始化餐饮系统的测试数据，包括公司、店铺、菜品分类、菜品和桌号。
+        </div>
+
+        <div class="section">
+            <h2>1. 检查后端状态</h2>
+            <button class="check" onclick="checkBackend()">检查后端</button>
+            <div id="checkStatus" class="status"></div>
+        </div>
+
+        <div class="section">
+            <h2>2. 初始化数据</h2>
+            <button onclick="initData()" id="initBtn">初始化数据</button>
+            <button onclick="reinitData()" id="reinitBtn" style="background: #ff9800;">重新初始化</button>
+            <div id="initStatus" class="status"></div>
+            <div id="initData" class="data-display"></div>
+        </div>
+
+        <div class="section">
+            <h2>3. 验证数据</h2>
+            <button onclick="checkData()">验证数据</button>
+            <div id="dataStatus" class="status"></div>
+            <div id="dataInfo" class="data-display"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        function showData(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.style.display = 'block';
+        }
+
+        async function checkBackend() {
+            showStatus('checkStatus', '正在检查后端状态...', 'loading');
+
+            try {
+                const response = await axios.get('/health', { timeout: 10000 });
+                showStatus('checkStatus', `✅ 后端正常运行\n${JSON.stringify(response.data, null, 2)}`, 'success');
+            } catch (error) {
+                showStatus('checkStatus', `❌ 后端连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function initData() {
+            const btn = document.getElementById('initBtn');
+            btn.disabled = true;
+            showStatus('initStatus', '正在初始化数据，请稍候...', 'loading');
+
+            try {
+                const response = await axios.post(`${API_BASE}/simple-init`, {}, { timeout: 60000 });
+                showStatus('initStatus', `✅ 数据初始化成功！`, 'success');
+                showData('initData', response.data);
+            } catch (error) {
+                showStatus('initStatus', `❌ 初始化失败: ${error.message}`, 'error');
+                if (error.response) {
+                    showData('initData', error.response.data);
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function reinitData() {
+            const btn = document.getElementById('reinitBtn');
+            btn.disabled = true;
+            showStatus('initStatus', '正在重新初始化数据（清空旧数据），请稍候...', 'loading');
+
+            try {
+                // 先获取现有数据
+                const tablesResponse = await axios.get(`${API_BASE}/tables/`);
+                const tables = tablesResponse.data;
+
+                // 删除所有桌号
+                for (const table of tables) {
+                    await axios.delete(`${API_BASE}/tables/${table.id}`);
+                }
+
+                // 初始化新数据
+                const response = await axios.post(`${API_BASE}/simple-init`, {}, { timeout: 60000 });
+                showStatus('initStatus', `✅ 数据重新初始化成功！`, 'success');
+                showData('initData', response.data);
+            } catch (error) {
+                showStatus('initStatus', `❌ 重新初始化失败: ${error.message}`, 'error');
+                if (error.response) {
+                    showData('initData', error.response.data);
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function checkData() {
+            showStatus('dataStatus', '正在检查数据...', 'loading');
+
+            try {
+                const [tables, categories, menuItems] = await Promise.all([
+                    axios.get(`${API_BASE}/tables/`),
+                    axios.get(`${API_BASE}/menu-categories/`),
+                    axios.get(`${API_BASE}/menu-items/`)
+                ]);
+
+                const data = {
+                    tables: `桌号: ${tables.data.length} 个`,
+                    categories: `分类: ${categories.data.length} 个`,
+                    menuItems: `菜品: ${menuItems.data.length} 道`,
+                    tableList: tables.data.map(t => `${t.table_number}号桌 (${t.seats}座)`),
+                    categoryList: categories.data.map(c => c.name),
+                    menuList: menuItems.data.map(m => `${m.name} - ¥${m.price}`)
+                };
+
+                showStatus('dataStatus', `✅ 数据验证完成`, 'success');
+                showData('dataInfo', data);
+            } catch (error) {
+                showStatus('dataStatus', `❌ 数据检查失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时自动检查后端
+        window.addEventListener('load', () => {
+            setTimeout(checkBackend, 500);
+        });
+    </script>
+</body>
+</html>
