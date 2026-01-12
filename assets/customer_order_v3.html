@@ -518,7 +518,15 @@
                     const tableNumber = params.get('table');
                     
                     if (tableNumber) {
-                        const table = this.tables.find(t => t.table_number == tableNumber || t.table_number === parseInt(tableNumber));
+                        // 尝试直接匹配
+                        let table = this.tables.find(t => t.table_number == tableNumber || t.table_number === parseInt(tableNumber));
+                        
+                        // 如果没有找到，尝试匹配 "A01" 格式（将 1 转为 A01）
+                        if (!table && !isNaN(tableNumber)) {
+                            const paddedNumber = String(tableNumber).padStart(2, '0');
+                            table = this.tables.find(t => t.table_number === `A${paddedNumber}`);
+                        }
+                        
                         if (table) {
                             this.selectTable(table);
                             this.confirmTable();

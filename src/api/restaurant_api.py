@@ -70,6 +70,31 @@ async def startup_event():
     else:
         logger.warning("⚠ Failed to ensure test data")
 
+    # 修复桌号格式：将 'A01', 'A02' 等格式改为 '1', '2'
+    try:
+        from storage.database.db import get_session
+        from storage.database.shared.model import Tables
+
+        db = get_session()
+        tables = db.query(Tables).filter(Tables.table_number.like('A%')).all()
+
+        for table in tables:
+            # 提取数字部分
+            old_number = table.table_number
+            new_number = old_number.replace('A', '').lstrip('0')
+            if new_number == '':
+                new_number = '0'
+
+            table.table_number = new_number
+            logger.info(f"Updated table number: {old_number} -> {new_number}")
+
+        if tables:
+            db.commit()
+            logger.info(f"✓ Updated {len(tables)} table numbers")
+        db.close()
+    except Exception as e:
+        logger.warning(f"Failed to update table numbers: {e}")
+
     logger.info("=" * 60)
     logger.info("Restaurant API started successfully!")
     logger.info("=" * 60)
