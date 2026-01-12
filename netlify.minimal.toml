@@ -1,0 +1,7 @@
+# 极简版 Netlify 配置
+
+# 仅保留重定向规则，不使用 [build] 配置
+
+# API 代理到 Render 后端
+/api/* https://restaurant-system-vzj0.onrender.com/api/:splat 200
+/ws/* https://restaurant-system-vzj0.onrender.com/ws/:splat 200
