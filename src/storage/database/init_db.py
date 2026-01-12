@@ -33,13 +33,13 @@ def ensure_test_data():
 
         db = get_session()
 
-        # 检查是否已有店铺数据
-        store_count = db.query(Stores).count()
-        if store_count == 0:
-            # 如果没有店铺数据，创建所有基础数据
-            logger.info("Initializing test data...")
+        # 检查是否已有公司数据
+        company_count = db.query(Companies).count()
+        company = None
 
+        if company_count == 0:
             # 创建公司
+            logger.info("Creating company...")
             company = Companies(
                 name="测试餐饮公司",
                 is_active=True,
@@ -49,8 +49,19 @@ def ensure_test_data():
             )
             db.add(company)
             db.flush()
+            logger.info(f"Created company: {company.name} (id={company.id})")
+        else:
+            # 使用现有公司
+            company = db.query(Companies).first()
+            logger.info(f"Using existing company: {company.name} (id={company.id})")
 
-            # 创建店铺
+        # 检查是否已有店铺数据
+        store_count = db.query(Stores).count()
+        if store_count == 0:
+            # 如果没有店铺数据，创建店铺
+            logger.info("Creating store...")
+
+            # 创建店铺（使用刚创建或获取的公司ID）
             store = Stores(
                 company_id=company.id,
                 name="美味餐厅",
@@ -69,6 +80,7 @@ def ensure_test_data():
             )
             db.add(store)
             db.flush()
+            logger.info(f"Created store: {store.name} (id={store.id})")
         else:
             # 使用现有店铺
             store = db.query(Stores).first()
