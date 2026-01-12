@@ -160,7 +160,7 @@ def ensure_test_data():
         table_count = db.query(Tables).filter(Tables.store_id == store.id).count()
         if table_count == 0:
             logger.info("Creating tables...")
-            
+
             seats_map = [4, 4, 6, 4, 2, 6, 4, 4, 8, 10]
             for i in range(1, 11):
                 table = Tables(
@@ -174,6 +174,23 @@ def ensure_test_data():
                 logger.info(f"Created table: {i}号桌")
         else:
             logger.info(f"Tables already exist ({table_count} tables), skipping creation")
+
+            # 检查桌号格式，如果不是数字格式，进行转换
+            non_standard_tables = db.query(Tables).filter(
+                Tables.store_id == store.id,
+                Tables.table_number.like('A%')
+            ).all()
+
+            if non_standard_tables:
+                logger.info(f"Found {len(non_standard_tables)} tables with A-prefix format, converting...")
+                for table in non_standard_tables:
+                    old_number = table.table_number
+                    new_number = old_number.replace('A', '').lstrip('0')
+                    if new_number == '':
+                        new_number = '0'
+                    table.table_number = new_number
+                    logger.info(f"Updated table number: {old_number} -> {new_number}")
+                db.commit()
 
         db.commit()
         logger.info("✓ Test data initialized successfully")

@@ -189,8 +189,18 @@
             <!-- 桌号选择器 -->
             <div v-if="!selectedTable" class="table-selector">
                 <h2 style="margin-bottom: 10px;">欢迎光临！</h2>
-                <p style="color: #909399; margin-bottom: 20px;">请选择您的桌号</p>
-                
+                <p style="color: #909399; margin-bottom: 10px;">请选择您的桌号</p>
+
+                <!-- 调试信息 -->
+                <div v-if="tables.length === 0" style="margin-bottom: 20px; padding: 15px; background: #fff7e6; border-radius: 8px; border-left: 4px solid #e6a23c;">
+                    <p style="font-size: 14px; color: #e6a23c; margin-bottom: 10px;">
+                        ⚠️ 未加载到桌号数据
+                    </p>
+                    <el-button type="primary" size="small" @click="reloadTables">
+                        🔄 重新加载桌号
+                    </el-button>
+                </div>
+
                 <div class="table-grid">
                     <div v-for="table in tables" :key="table.id"
                          class="table-cell"
@@ -199,15 +209,16 @@
                         {{ table.table_number }}号
                     </div>
                 </div>
-                
+
                 <el-button type="primary" size="large" style="width: 100%; margin-top: 30px; height: 50px;"
                            :disabled="!tempTableId" @click="confirmTable()">
                     确认桌号，开始点餐
                 </el-button>
-                
-                <p style="margin-top: 20px; font-size: 12px; color: #909399;">
-                    * 已被占用的桌号无法选择
-                </p>
+
+                <div style="margin-top: 20px; font-size: 12px; color: #909399;">
+                    <p style="margin-bottom: 5px;">* 已被占用的桌号无法选择</p>
+                    <p v-if="tables.length > 0">当前共 {{ tables.length }} 个桌号</p>
+                </div>
             </div>
             
             <!-- 菜单和订单状态 -->
@@ -491,12 +502,41 @@
                 
                 async loadTables() {
                     try {
+                        console.log('Loading tables...');
                         const response = await axios.get('/api/tables/');
                         this.tables = response.data;
                         console.log('加载桌号成功:', this.tables);
+                        console.log(`共加载 ${this.tables.length} 个桌号`);
+
+                        if (this.tables.length === 0) {
+                            console.warn('No tables loaded, this might be a data initialization issue');
+                            this.$message.warning('未加载到桌号数据，请检查后端服务');
+                        }
                     } catch (error) {
                         console.error('加载桌号失败:', error);
+                        console.error('Error details:', {
+                            message: error.message,
+                            response: error.response?.data,
+                            status: error.response?.status
+                        });
+                        this.$message.error('加载桌号失败，请检查网络连接');
                         throw error;
+                    }
+                },
+
+                async reloadTables() {
+                    this.$message.info('正在重新加载桌号...');
+                    try {
+                        await this.loadTables();
+                        if (this.tables.length > 0) {
+                            this.$message.success(`成功加载 ${this.tables.length} 个桌号`);
+                            // 如果 URL 中有桌号参数，重新尝试匹配
+                            this.checkTableFromUrl();
+                        } else {
+                            this.$message.warning('仍然没有桌号数据，请检查后端服务或联系店员');
+                        }
+                    } catch (error) {
+                        this.$message.error('重新加载桌号失败');
                     }
                 },
                 
@@ -540,21 +580,60 @@
                 checkTableFromUrl() {
                     const params = new URLSearchParams(window.location.search);
                     const tableNumber = params.get('table');
-                    
-                    if (tableNumber) {
-                        // 尝试直接匹配
-                        let table = this.tables.find(t => t.table_number == tableNumber || t.table_number === parseInt(tableNumber));
-                        
-                        // 如果没有找到，尝试匹配 "A01" 格式（将 1 转为 A01）
+
+                    console.log('checkTableFromUrl called, tableNumber from URL:', tableNumber);
+                    console.log('Available tables:', this.tables);
+
+                    if (tableNumber && this.tables.length > 0) {
+                        // 尝试多种匹配方式
+                        let table = null;
+
+                        // 1. 尝试直接匹配字符串
+                        table = this.tables.find(t => t.table_number === tableNumber);
+                        if (table) {
+                            console.log('Matched with direct string comparison');
+                        }
+
+                        // 2. 尝试将 URL 参数转换为数字后匹配
+                        if (!table && !isNaN(tableNumber)) {
+                            const numTableNumber = parseInt(tableNumber);
+                            table = this.tables.find(t => t.table_number === String(numTableNumber) || t.table_number === numTableNumber);
+                            if (table) {
+                                console.log('Matched with number comparison');
+                            }
+                        }
+
+                        // 3. 如果 URL 参数是 "A01" 格式，尝试提取数字部分匹配
+                        if (!table && tableNumber.startsWith('A')) {
+                            const numPart = tableNumber.substring(1);
+                            if (!isNaN(numPart)) {
+                                table = this.tables.find(t => t.table_number === numPart || t.table_number === parseInt(numPart));
+                                if (table) {
+                                    console.log('Matched with A-prefixed format');
+                                }
+                            }
+                        }
+
+                        // 4. 如果 URL 参数是数字，尝试匹配 "A01" 格式的后端数据
                         if (!table && !isNaN(tableNumber)) {
                             const paddedNumber = String(tableNumber).padStart(2, '0');
                             table = this.tables.find(t => t.table_number === `A${paddedNumber}`);
+                            if (table) {
+                                console.log('Matched with A-prefixed backend format');
+                            }
                         }
-                        
+
                         if (table) {
+                            console.log('Table found from URL:', table);
                             this.selectTable(table);
                             this.confirmTable();
+                        } else {
+                            console.warn('No matching table found for tableNumber:', tableNumber);
+                            this.$message.warning(`URL 中的桌号 "${tableNumber}" 无效，请手动选择桌号`);
                         }
+                    } else if (tableNumber && this.tables.length === 0) {
+                        console.warn('Table number in URL but no tables loaded');
+                        this.$message.warning('桌号数据未加载，请刷新页面或联系店员');
                     }
                 },
                 
@@ -563,11 +642,22 @@
                 },
                 
                 confirmTable() {
+                    console.log('confirmTable called, tempTableId:', this.tempTableId);
+                    console.log('Available tables:', this.tables);
+
+                    if (!this.tempTableId) {
+                        this.$message.error('请先选择桌号');
+                        return;
+                    }
+
                     const table = this.tables.find(t => t.id === this.tempTableId);
                     if (table) {
                         this.selectedTable = table;
                         this.$message.success(`已选择${table.table_number}号桌`);
                         this.connectWebSocket(table.id);
+                    } else {
+                        console.error('Table not found with id:', this.tempTableId);
+                        this.$message.error('确认桌号失败，请重新选择桌号');
                     }
                 },
                 
