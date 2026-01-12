@@ -64,11 +64,28 @@ async def startup_event():
     else:
         logger.warning("⚠ Failed to initialize database schema")
 
-    # 初始化测试数据
+    # 初始化测试数据（强制检查和更新）
     if ensure_test_data():
         logger.info("✓ Test data ensured")
     else:
         logger.warning("⚠ Failed to ensure test data")
+
+    # 检查是否有菜品数据，如果没有则再次尝试
+    from storage.database.db import get_session
+    from storage.database.shared.model import MenuItems
+
+    db = get_session()
+    menu_item_count = db.query(MenuItems).count()
+    db.close()
+
+    if menu_item_count == 0:
+        logger.warning("⚠ No menu items found, attempting to reinitialize...")
+        if ensure_test_data():
+            logger.info("✓ Test data reinitialized successfully")
+        else:
+            logger.error("✗ Failed to reinitialize test data")
+    else:
+        logger.info(f"✓ Database contains {menu_item_count} menu items")
 
     # 修复桌号格式：将 'A01', 'A02' 等格式改为 '1', '2'
     try:

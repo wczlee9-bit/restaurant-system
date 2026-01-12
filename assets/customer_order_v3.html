@@ -244,6 +244,9 @@
                     <div v-if="filteredMenuItems.length === 0" style="text-align: center; padding: 40px; color: #909399;">
                         <div style="font-size: 48px;">📭</div>
                         <p style="margin-top: 10px;">暂无菜品</p>
+                        <el-button type="primary" @click="reloadMenu" style="margin-top: 15px;">
+                            🔄 重新加载
+                        </el-button>
                     </div>
                     
                     <div v-else>
@@ -447,6 +450,7 @@
             },
             methods: {
                 async initData() {
+                    this.loading = true;
                     try {
                         await Promise.all([
                             this.loadShopInfo(),
@@ -454,6 +458,11 @@
                             this.loadCategories(),
                             this.loadMenuItems()
                         ]);
+                        
+                        // 检查是否有菜品数据
+                        if (this.menuItems.length === 0) {
+                            this.$message.warning('暂无菜品数据，请联系店员初始化系统');
+                        }
                     } catch (error) {
                         console.error('初始化失败:', error);
                         this.$message.error('加载失败，请刷新页面');
@@ -510,6 +519,21 @@
                     } catch (error) {
                         console.error('加载菜品失败:', error);
                         throw error;
+                    }
+                },
+
+                async reloadMenu() {
+                    this.$message.info('正在重新加载菜品...');
+                    try {
+                        await this.loadMenuItems();
+                        await this.loadCategories();
+                        if (this.menuItems.length > 0) {
+                            this.$message.success(`成功加载 ${this.menuItems.length} 道菜品`);
+                        } else {
+                            this.$message.warning('仍然没有菜品数据，请检查后端服务');
+                        }
+                    } catch (error) {
+                        this.$message.error('重新加载失败');
                     }
                 },
                 
