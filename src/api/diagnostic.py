@@ -100,3 +100,23 @@ def health_check():
         "database": db_status,
         "environment": check_environment()["environment"]
     }
+
+
+@router.post("/api/diagnostic/reinit-data")
+def reinitialize_data():
+    """重新初始化测试数据"""
+    from storage.database.init_db import ensure_test_data
+
+    logger.info("Reinitializing test data...")
+    success = ensure_test_data()
+
+    if success:
+        return {
+            "status": "success",
+            "message": "Test data reinitialized successfully"
+        }
+    else:
+        return {
+            "status": "error",
+            "message": "Failed to reinitialize test data"
+        }, 500
