@@ -4,9 +4,32 @@
 
 **问题根源**：Netlify 检测到项目根目录下的 `requirements.txt` 文件，自动识别为 **Python 项目**，并尝试安装 Python 依赖。
 
-**失败原因**：`dbus-python==1.3.2` 在安装时缺少系统依赖 `dbus-1`
+**失败原因**：
+```
+Collecting dbus-python==1.3.2 (from -r requirements.txt (line 24))
+ERROR: Dependency "dbus-1" not found, tried pkgconfig and cmake
+```
+`dbus-python==1.3.2` 在安装时缺少系统依赖 `dbus-1`，无法在 Netlify 的构建环境中编译。
 
-**解决方案**：删除或重命名 `requirements.txt` 文件，并创建 `package.json` 明确标识为静态站点。
+**解决方案**：
+1. 备份 `requirements.txt` 和 `requirements-prod.txt` 文件（添加 `.backup` 后缀）
+2. 创建 `package.json` 文件明确标识为静态站点
+3. 将这些依赖文件添加到 `.gitignore` 避免重新提交
+
+**关键文件**：
+- ✅ `package.json` - 明确标识为 Node.js/静态站点
+- ✅ `assets/_redirects` - 重定向配置
+- 💾 `requirements.txt.backup` - Python 依赖备份
+- 💾 `requirements-prod.txt.backup` - 生产依赖备份
+
+---
+
+## 为什么 Netlify 识别为 Python 项目？
+
+Netlify 的自动检测机制会扫描项目根目录：
+- 发现 `requirements.txt` → 自动识别为 Python 项目
+- 尝试执行 `pip install -r requirements.txt`
+- 失败是因为 `dbus-python` 需要系统级依赖
 
 ---
 
