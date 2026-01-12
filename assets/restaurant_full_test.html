@@ -567,7 +567,7 @@
             </div>
         </div>
 
-        <!-- 购物车弹窗 -->
+        <!-- 购物车弹窗 - 步骤1：确认订单 -->
         <div v-if="showCart" class="modal-overlay" @click.self="showCart = false">
             <div class="modal-content">
                 <h3 style="margin-bottom: 20px;">🛒 购物车</h3>
@@ -589,9 +589,44 @@
                     </div>
                 </div>
                 <el-button type="primary" size="large" style="width: 100%; margin-top: 20px;"
-                           @click="submitOrder()">
-                    提交订单
+                           @click="showPaymentSelection = true; showCart = false;">
+                    确认订单
                 </el-button>
+            </div>
+        </div>
+
+        <!-- 支付方式选择弹窗 -->
+        <div v-if="showPaymentSelection" class="modal-overlay" @click.self="showPaymentSelection = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 20px;">💳 选择支付方式</h3>
+                <div style="margin-bottom: 20px;">
+                    <el-radio v-model="selectedPaymentMethod" label="immediate" style="display: block; margin-bottom: 15px; padding: 15px; background: #f5f7fa; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 16px;">💳 马上付款</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">在线支付（微信/支付宝）</div>
+                            </div>
+                            <span style="color: #67c23a; font-size: 14px; font-weight: bold;">立即结算</span>
+                        </div>
+                    </el-radio>
+                    <el-radio v-model="selectedPaymentMethod" label="counter" style="display: block; padding: 15px; background: #f5f7fa; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 16px;">🏪 餐后付款</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">先用餐，离店时到收银台支付</div>
+                            </div>
+                            <span style="color: #e6a23c; font-size: 14px; font-weight: bold;">灵活便捷</span>
+                        </div>
+                    </el-radio>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <el-button size="large" style="flex: 1;" @click="showPaymentSelection = false">返回</el-button>
+                    <el-button type="primary" size="large" style="flex: 1;"
+                               :disabled="!selectedPaymentMethod"
+                               @click="submitOrder()">
+                        {{ selectedPaymentMethod === 'immediate' ? '马上付款' : '餐后付款' }}
+                    </el-button>
+                </div>
             </div>
         </div>
 
@@ -628,6 +663,7 @@
                 const currentRole = ref('customer');
                 const showCart = ref(false);
                 const showServingConfirm = ref(false);
+                const showPaymentSelection = ref(false);
                 const selectedCategory = ref(null);
                 const selectedTable = ref(null);
                 const tempTableId = ref(null);
@@ -864,14 +900,19 @@
                             items: cart.value.map(item => ({
                                 menu_item_id: item.id,
                                 quantity: item.quantity
-                            })),
-                            payment_method: 'wechat'
+                            }))
                         };
 
                         const response = await axios.post(`${API_BASE}/api/orders/`, orderData);
                         currentOrder.value = response.data;
+
+                        // 确认支付
+                        await axios.post(`${API_BASE}/api/orders/${response.data.id}/confirm-payment`, {
+                            payment_method: selectedPaymentMethod.value
+                        });
+
                         cart.value = [];
-                        showCart.value = false;
+                        showPaymentSelection.value = false;
                         ElMessage.success('订单提交成功！');
                         showNotification('新订单已提交，厨房正在准备', 'success');
                         await loadOrders();
