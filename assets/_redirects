@@ -1,0 +1,8 @@
+# Netlify 重定向规则
+
+# 主页 -> 门户
+/ /portal.html 302
+
+# API 代理到 Render 后端
+/api/* https://restaurant-system-vzj0.onrender.com/api/:splat 200
+/ws/* https://restaurant-system-vzj0.onrender.com/ws/:splat 200
