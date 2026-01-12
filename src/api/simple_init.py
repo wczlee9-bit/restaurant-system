@@ -5,7 +5,7 @@
 from fastapi import APIRouter, HTTPException
 from storage.database.db import get_session
 from storage.database.shared.model import (
-    Stores, MenuCategories, MenuItems, Tables
+    Companies, Stores, MenuCategories, MenuItems, Tables
 )
 
 router = APIRouter(tags=["simple-init"])
@@ -16,12 +16,29 @@ def simple_init():
     db = get_session()
 
     try:
+        # 先检查是否已有公司
+        company = db.query(Companies).first()
+        if not company:
+            # 创建公司
+            company = Companies(
+                name="测试餐饮公司",
+                is_active=True,
+                contact_person="管理员",
+                contact_phone="13800138000",
+                address="测试地址"
+            )
+            db.add(company)
+            db.flush()
+            print(f"Created company: {company.name} (id={company.id})")
+        else:
+            print(f"Using existing company: {company.name} (id={company.id})")
+
         # 检查是否已有店铺
         store = db.query(Stores).first()
         if not store:
             # 创建店铺
             store = Stores(
-                company_id=1,  # 使用固定ID
+                company_id=company.id,  # 使用刚创建的公司ID
                 name="美味餐厅",
                 is_active=True,
                 address="北京市海淀区测试街88号",

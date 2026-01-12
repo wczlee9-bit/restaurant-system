@@ -109,15 +109,46 @@ def reinitialize_data():
     from storage.database.init_db import ensure_test_data
 
     logger.info("Reinitializing test data...")
-    success = ensure_test_data()
 
-    if success:
-        return {
-            "status": "success",
-            "message": "Test data reinitialized successfully"
-        }
-    else:
+    # 先重置数据库表
+    from storage.database.db import get_engine
+    from storage.database.shared.model import Base
+    from storage.database.init_db import init_database
+
+    try:
+        engine = get_engine()
+        # 删除所有表并重新创建
+        Base.metadata.drop_all(bind=engine)
+        logger.info("Dropped all tables")
+
+        # 重新创建表
+        if init_database():
+            logger.info("Database schema recreated")
+
+            # 初始化测试数据
+            success = ensure_test_data()
+
+            if success:
+                return {
+                    "status": "success",
+                    "message": "Database reset and test data initialized successfully"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Database schema recreated but failed to initialize test data",
+                    "detail": "Check server logs for more information"
+                }, 500
+        else:
+            return {
+                "status": "error",
+                "message": "Failed to recreate database schema"
+            }, 500
+    except Exception as e:
+        logger.error(f"Failed to reinitialize data: {e}")
+        import traceback
         return {
             "status": "error",
-            "message": "Failed to reinitialize test data"
+            "message": str(e),
+            "traceback": traceback.format_exc()
         }, 500
