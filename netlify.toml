@@ -5,7 +5,7 @@
 
 [build]
   publish = "assets"
-  command = "true"
+  command = "npm run build"
   functions = ""
 
 [build.environment]
