@@ -3,6 +3,9 @@
 # 主页 -> 门户
 / /portal.html 302
 
+# 健康检查端点
+/health https://restaurant-system-vzj0.onrender.com/health 200
+
 # API 代理到 Render 后端
 /api/* https://restaurant-system-vzj0.onrender.com/api/:splat 200
 /ws/* https://restaurant-system-vzj0.onrender.com/ws/:splat 200
