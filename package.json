@@ -1,0 +1,10 @@
+{
+  "name": "restaurant-order-system-frontend",
+  "version": "1.0.0",
+  "description": "Restaurant Order System - Frontend Static Site",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

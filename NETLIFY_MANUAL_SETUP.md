@@ -1,15 +1,25 @@
 # Netlify 手动部署配置指南
 
-如果自动部署继续失败，请按照以下步骤在 Netlify 控制台手动配置：
+## 根本问题发现 ✅
+
+**问题根源**：Netlify 检测到项目根目录下的 `requirements.txt` 文件，自动识别为 **Python 项目**，并尝试安装 Python 依赖。
+
+**失败原因**：`dbus-python==1.3.2` 在安装时缺少系统依赖 `dbus-1`
+
+**解决方案**：删除或重命名 `requirements.txt` 文件，并创建 `package.json` 明确标识为静态站点。
+
+---
 
 ## 问题症状
 ```
 Failed during stage 'Install dependencies': dependency_installation script returned non-zero exit code: 1
+
+Error: Dependency "dbus-1" not found, tried pkgconfig and cmake
 ```
 
 ## 解决方案（按推荐顺序）
 
-### 方法 1：在 Netlify 控制台配置构建设置 ⭐ 推荐
+### 方法 1：在 Netlify 控制台配置构建设置 ⭐⭐⭐ 最推荐
 
 这是最简单且最可能成功的方法。
 
@@ -32,6 +42,23 @@ Build command: (留空，不要填写任何内容)
 9. 点击 `Save` 保存
 
 **保存后，Netlify 会自动触发新的部署。**
+
+---
+
+### 方法 1.5：完全禁用自动构建（如果方法 1 不生效）⭐⭐ 次推荐
+
+如果 Netlify 仍然尝试安装依赖，尝试完全禁用构建流程。
+
+**步骤：**
+
+1. 进入 `Site configuration` -> `Build & deploy`
+2. 在 `Continuous deployment` 部分，找到 `Build settings`
+3. 点击 `Edit settings`
+4. **取消勾选**任何自动构建选项
+5. 或者尝试设置 `Build command` 为 `exit 0`（跳过构建）
+6. 点击 `Save`
+
+**原理**：告诉 Netlify 这是一个不需要构建的纯静态站点。
 
 ---
 

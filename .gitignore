@@ -14,4 +14,4 @@ __pycache__/
 .env
 
 # 用户凭据（不要提交到公开仓库）
-USER_CREDENTIALS.md
+USER_CREDENTIALS.md*.txt.backup
