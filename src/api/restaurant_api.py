@@ -46,6 +46,14 @@ try:
 except ImportError as e:
     logger.warning(f"Could not include diagnostic routes: {e}")
 
+# 包含简化初始化路由
+try:
+    from api.simple_init import router as simple_init_router
+    app.include_router(simple_init_router)
+    logger.info("✓ Simple init routes included")
+except ImportError as e:
+    logger.warning(f"Could not include simple init routes: {e}")
+
 
 # ============ 应用启动事件 ============
 
