@@ -275,7 +275,7 @@
                         <div class="cart-count">{{ cartTotalQty }}件商品</div>
                         <div class="cart-total">¥{{ cartTotal }}</div>
                     </div>
-                    <button class="cart-btn">去结算</button>
+                    <button class="cart-btn">确认订单</button>
                 </div>
             </div>
         </div>
@@ -372,8 +372,8 @@
                              @click="paymentMethod = method">
                             <div class="payment-option-header">
                                 <div>
-                                    <div class="payment-title" v-if="method === 'immediate'">💳 马上支付</div>
-                                    <div class="payment-title" v-else-if="method === 'counter'">🏪 柜台支付</div>
+                                    <div class="payment-title" v-if="method === 'immediate'">💳 马上付款</div>
+                                    <div class="payment-title" v-else-if="method === 'counter'">🏪 餐后付款</div>
                                     <div class="payment-title" v-else>💳 其他支付</div>
 
                                     <div class="payment-desc" v-if="method === 'immediate'">使用微信或支付宝在线支付</div>
@@ -394,7 +394,7 @@
                     </el-button>
                     <el-button type="primary" size="default" style="width: 48%;"
                                :disabled="!paymentMethod" @click="confirmPayment()">
-                        {{ paymentMethod === 'immediate' ? '立即支付' : '确认支付（餐后柜台）' }}
+                        {{ paymentMethod === 'immediate' ? '马上付款' : '餐后付款' }}
                     </el-button>
                 </div>
             </div>
