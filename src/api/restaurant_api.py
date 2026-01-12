@@ -117,6 +117,42 @@ async def startup_event():
     logger.info("=" * 60)
 
 
+# ============ 诊断端点 ============
+
+@app.get("/api/system/reinit")
+def reinit_system():
+    """手动触发系统重新初始化"""
+    logger.info("Manual reinitialization triggered...")
+    
+    try:
+        from storage.database.init_db import init_database, ensure_test_data
+        
+        # 初始化数据库表结构
+        if init_database():
+            logger.info("✓ Database schema reinitialized")
+        else:
+            logger.warning("⚠ Failed to reinitialize database schema")
+        
+        # 初始化测试数据
+        if ensure_test_data():
+            logger.info("✓ Test data reinitialized")
+        else:
+            logger.warning("⚠ Failed to reinitialize test data")
+        
+        return {
+            "status": "success",
+            "message": "System reinitialized successfully"
+        }
+    except Exception as e:
+        logger.error(f"Failed to reinitialize system: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": str(e)
+        }, 500
+
+
 # ============ WebSocket 连接管理 ============
 
 class ConnectionManager:
