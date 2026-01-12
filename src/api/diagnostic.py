@@ -57,7 +57,8 @@ def check_database():
 
         # 检查表是否存在
         from storage.database.shared.model import Base
-        inspector = engine.dialect.get_inspector(engine)
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
         tables = inspector.get_table_names()
         result["tables"] = tables
         result["tables_count"] = len(tables)
