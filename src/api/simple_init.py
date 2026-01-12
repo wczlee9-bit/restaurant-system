@@ -153,8 +153,7 @@ def simple_init():
                     store_id=store.id,
                     table_number=str(i),
                     seats=seats_map[i-1],
-                    is_active=True,
-                    status="available"
+                    is_active=True
                 )
                 db.add(table)
                 print(f"Created table: {i}号桌")
