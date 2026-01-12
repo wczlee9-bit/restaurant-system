@@ -1,206 +1,279 @@
-# 🎉 部署摘要 - 更新完成
+# 部署总结
 
-## 📋 本次更新内容
+## 当前部署状态（2025-01-12）
 
-### ✅ 核心修复
-- **修复顾客端订单提交失败问题**
-  - 启用后端 API 调用（`http://localhost:8000/api/orders/`）
-  - 移除仅使用 localStorage 的模拟逻辑
-  - 确保订单数据正确提交到数据库
+### ✅ 后端服务 - 正常运行
 
-### 🆕 新增功能
-- **支付方式选择**
-  - 马上支付（immediate）：在线支付，立即标记为已支付
-  - 柜台支付（counter）：先用餐，离店时到收银台支付
-- **订单号自动生成**
-  - 格式：ORD + 日期时间 + 随机数（如：ORD20240108143055001）
-- **双订单打印**
-  - 厨师单：包含桌号、订单号、菜品清单、备注
-  - 传菜员单：包含桌号、订单号、菜品清单、金额、支付状态、备注
+**部署平台**: Render（免费实例）
 
----
+**服务地址**:
+- 后端 API: `https://restaurant-system-vzj0.onrender.com`
+- 健康检查: `https://restaurant-system-vzj0.onrender.com/health`
 
-## 📦 部署文件准备
+**数据库状态**:
+- 连接状态: ✅ 成功
+- 数据库: PostgreSQL (Render 免费实例)
+- 数据完整性:
+  - 60 个菜品 ✅
+  - 43 个桌号 ✅
+  - 4 个公司 ✅
+  - 5 个店铺 ✅
 
-### 文件位置
-所有部署文件已准备在 `deploy_temp/` 目录中
+**诊断端点**:
+- `/health` - 健康检查
+- `/diagnostic/database` - 数据库诊断
+- `/diagnostic/tables` - 表结构检查
+- `/diagnostic/data` - 数据统计
 
-### 部署文件清单
+### 🔄 前端服务 - 待部署到 GitHub Pages
+
+**之前部署**: Netlify
+- 问题: 免费计划带宽/构建分钟数已用完
+- 状态: "Site not available"
+
+**新部署方案**: GitHub Pages
+- 优点: 完全免费，无带宽限制，自动 HTTPS
+- 配置: 已创建 GitHub Actions 工作流
+- 状态: 等待用户配置并推送代码
+
+### 📊 系统架构
+
 ```
-deploy_temp/
-├── assets/                          # 前端文件目录
-│   ├── portal.html                 # 统一门户入口
-│   ├── customer_order.html          # 顾客点餐页面 ✅ 已修复
-│   ├── staff_workflow.html         # 工作人员端页面
-│   ├── login_standalone.html       # 独立登录页面
-│   ├── menu_management.html        # 菜品管理页面
-│   ├── shop_settings.html          # 店铺设置页面
-│   ├── inventory_management.html   # 库存管理页面
-│   └── ... (其他页面 20 个文件)
-├── netlify.toml                    # Netlify 配置 ✅ 已优化
-└── DEPLOYMENT_GUIDE.md             # 详细部署指南
+┌─────────────────────────────────────────────────────────┐
+│                      用户浏览器                          │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      │ HTTP/HTTPS
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              GitHub Pages (前端静态站点)                  │
+│                    assets/* 目录                        │
+│                    _redirects 配置                      │
+└─────────────────────┬───────────────────────────────────┘
+                      │
+                      │ API 代理
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              Render 后端 (FastAPI)                       │
+│         https://restaurant-system-vzj0.onrender.com      │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │          PostgreSQL 数据库 (Render)               │   │
+│  │  - 60 个菜品                                     │   │
+│  │  - 43 个桌号                                     │   │
+│  │  - 4 个公司                                      │   │
+│  │  - 5 个店铺                                      │   │
+│  └──────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### 文件统计
-- HTML 文件：20 个
-- 配置文件：1 个（netlify.toml）
-- 文档文件：1 个（DEPLOYMENT_GUIDE.md）
+## 已完成的配置
 
----
+### 1. 后端配置 ✅
 
-## 🚀 部署步骤（推荐）
+**Render 配置**:
+- ✅ Python 3.12.7
+- ✅ PostgreSQL 数据库
+- ✅ 自动启动脚本 (`start_server.py`)
+- ✅ 环境变量配置 (`PGDATABASE_URL`)
+- ✅ 数据库驱动 (`psycopg2-binary==2.9.9`)
+- ✅ 数据库表结构自动创建
+- ✅ 初始化数据脚本 (`init_db.py`, `simple_init.py`)
 
-### 方法 A：拖拽部署（最简单）
-1. 访问 https://app.netlify.com/
-2. 登录账号，点击 "Add new site" → "Deploy manually"
-3. 将 `deploy_temp` 整个文件夹拖拽到页面
-4. 等待 1-2 分钟，部署完成！
+**数据库表**:
+```
+member_level_rules, companies, stores, users, roles, user_roles,
+members, member_qrcodes, daily_revenue, inventory, suppliers,
+menu_categories, purchase_orders, staff, tables, role_config,
+order_flow_config, store_point_settlements, third_party_point_agreements,
+discount_config, inventory_logs, menu_items, orders, purchase_items,
+order_items, order_status_logs, payments, point_logs, point_exchange_logs
+```
 
-### 方法 B：Git 集成部署（推荐用于持续更新）
-1. 将代码推送到 GitHub
-2. 在 Netlify 中连接 GitHub 仓库
-3. 配置构建：
-   - Build command: `echo 'No build needed'`
-   - Publish directory: `assets`
-4. 点击 "Deploy site"
+### 2. 前端配置 ✅
 
----
+**GitHub Pages 配置**:
+- ✅ GitHub Actions 工作流 (`.github/workflows/deploy.yml`)
+- ✅ 自动部署 `assets` 目录
+- ✅ API 代理配置 (`assets/_redirects`)
+- ✅ 部署指南 (`GITHUB_PAGES_SETUP.md`)
+- ✅ 快速开始指南 (`QUICK_START.md`)
 
-## ⚠️ 重要提示
+**前端文件**:
+- ✅ `portal.html` - 门户入口
+- ✅ `customer_order_v3.html` - 顾客点餐页面
+- ✅ `login.html` - 登录页面
+- ✅ `headquarters_dashboard.html` - 总部仪表盘
+- ✅ `menu_management.html` - 菜单管理
+- ✅ `inventory_management.html` - 库存管理
+- ✅ `member_center.html` - 会员中心
+- ✅ `discount_management.html` - 优惠管理
+- ✅ 其他功能页面...
 
-### 前端已部署，但后端需要本地运行！
+### 3. API 代理配置 ✅
 
-**部署后必须启动后端服务才能正常使用所有功能！**
+**assets/_redirects**:
+```
+/ /portal.html 302
+/health https://restaurant-system-vzj0.onrender.com/health 200
+/api/* https://restaurant-system-vzj0.onrender.com/api/:splat 200
+/ws/* https://restaurant-system-vzj0.onrender.com/ws/:splat 200
+```
 
-### 启动后端服务（必须）
+### 4. 文档更新 ✅
+
+- ✅ `README.md` - 更新部署架构和文档索引
+- ✅ `GITHUB_PAGES_SETUP.md` - GitHub Pages 完整配置指南
+- ✅ `QUICK_START.md` - 3 分钟快速部署指南
+- ✅ `DEPLOYMENT_SUMMARY.md` - 本文档
+
+## 用户需要完成的步骤
+
+### 步骤 1：推送代码到 GitHub
+
 ```bash
-# 进入项目目录
-cd /workspace/projects
-
-# 启动餐饮系统 API 服务
-python scripts/start_restaurant_api.py
+git add .
+git commit -m "chore: 配置 GitHub Pages 自动部署"
+git push origin main
 ```
 
-服务信息：
-- 🌐 API 地址: http://localhost:8000
-- 📚 API 文档: http://localhost:8000/docs
-- 💚 健康检查: http://localhost:8000/health
+### 步骤 2：在 GitHub 上启用 GitHub Pages
 
-### 启动 WebSocket 服务（推荐，用于实时通知）
-```bash
-# 在另一个终端窗口
-python scripts/start_api_services.py
-```
+1. 打开 GitHub 仓库
+2. 进入 **Settings** → **Pages**
+3. 在 **Build and deployment** 部分：
+   - **Source**: 选择 `GitHub Actions`
+4. 点击 **Save**
+
+### 步骤 3：等待自动部署
+
+- GitHub Actions 会自动运行 `.github/workflows/deploy.yml`
+- 部署完成后，访问：`https://<你的用户名>.github.io/<仓库名>/`
+
+### 步骤 4：测试功能
+
+1. 测试后端健康检查：`https://restaurant-system-vzj0.onrender.com/health`
+2. 测试前端访问：`https://<你的用户名>.github.io/<仓库名>/`
+3. 测试点餐功能：`customer_order_v3.html`
+
+## 系统功能清单
+
+### ✅ 已实现的核心功能
+
+1. **用户系统**
+   - ✅ 多角色支持（开发者、总公司、店长、店员）
+   - ✅ 登录/注册
+   - ✅ 权限管理
+   - ✅ 角色配置
+
+2. **点餐系统**
+   - ✅ 扫码点餐
+   - ✅ 菜单展示（60 个菜品）
+   - ✅ 购物车功能
+   - ✅ 订单提交
+   - ✅ 支付方式选择
+
+3. **订单管理**
+   - ✅ 订单状态流转
+   - ✅ 订单查询
+   - ✅ 订单状态日志
+
+4. **会员系统**
+   - ✅ 会员注册
+   - ✅ 积分管理
+   - ✅ 等级规则
+   - ✅ 会员二维码
+
+5. **库存管理**
+   - ✅ 库存查询
+   - ✅ 库存记录
+   - ✅ 供应商管理
+   - ✅ 采购订单
+
+6. **营收分析**
+   - ✅ 日营收统计
+   - ✅ 跨店铺结算
+   - ✅ 积分结算
+
+7. **优惠系统**
+   - ✅ 优惠配置
+   - ✅ 会员折扣规则
+
+8. **数据初始化**
+   - ✅ 自动表结构创建
+   - ✅ 初始化数据脚本
+   - ✅ 数据诊断端点
+
+### 🔧 技术栈
+
+**后端**:
+- Python 3.12.7
+- FastAPI
+- PostgreSQL
+- SQLAlchemy
+- Uvicorn
+
+**前端**:
+- Vue 3
+- Element Plus
+- ECharts
+- QRCode.js
+
+**部署**:
+- Render (后端 + 数据库)
+- GitHub Pages (前端)
+- GitHub Actions (自动化部署)
+
+## 成本分析
+
+### Render 免费实例
+- ✅ 后端 API: 免费
+- ✅ PostgreSQL 数据库: 免费
+- ⚠️ 限制: 750 小时/月，睡眠模式（无访问15分钟后进入睡眠）
+
+### GitHub Pages
+- ✅ 前端静态站点: 完全免费
+- ✅ 无带宽限制
+- ✅ 无构建分钟数限制
+- ✅ 自动 HTTPS
+
+### 总成本
+- **月成本**: $0（完全免费）
+- **年度成本**: $0
+
+## 下一步建议
+
+1. ✅ **立即部署**: 按照上述步骤部署到 GitHub Pages
+2. 🧪 **功能测试**: 完整测试所有功能模块
+3. 👥 **创建账号**: 创建各角色测试账号
+4. 📊 **数据分析**: 查看营收报表和统计数据
+5. 🔧 **优化调整**: 根据实际使用优化功能
+
+## 常见问题
+
+### Q: Render 免费实例会睡眠怎么办？
+A: 无访问 15 分钟后进入睡眠，首次请求需要等待约 30 秒唤醒。可以：
+1. 使用 Cron-job 定时 ping 保持唤醒
+2. 升级到付费实例（$7/月起）
+
+### Q: GitHub Pages 访问速度如何？
+A: GitHub Pages 使用全球 CDN，访问速度非常快，并且自动 HTTPS。
+
+### Q: 可以切换到 Netlify 吗？
+A: 可以。Netlify 免费计划下月会重置，届时可以重新启用。或者升级到 Pro 计划（$19/月起）。
+
+### Q: 数据库数据会丢失吗？
+A: Render 免费实例的数据库在重启后数据会保留，但建议定期备份数据。
+
+## 联系支持
+
+如遇到问题，请：
+1. 查看 [故障排查指南](TROUBLESHOOTING_GUIDE.md)
+2. 查看 [GitHub Pages 配置指南](GITHUB_PAGES_SETUP.md)
+3. 检查 GitHub Actions 日志
 
 ---
 
-## 📱 部署后测试清单
-
-### 1. 顾客端测试
-- [ ] 访问 `customer_order.html?table=8`
-- [ ] 选择桌号
-- [ ] 添加菜品到购物车
-- [ ] 选择支付方式（马上支付/柜台支付）
-- [ ] 提交订单 ✅ **应成功提交**
-- [ ] 查看订单状态实时更新
-
-### 2. 工作人员端测试
-- [ ] 访问 `staff_workflow.html`
-- [ ] 登录系统
-- [ ] 切换到厨师角色
-- [ ] 查看订单并打印厨师单
-- [ ] 切换到传菜员角色
-- [ ] 打印传菜员单
-
-### 3. 功能验证
-- [ ] 订单号生成正确（格式：ORD + 日期时间 + 随机数）
-- [ ] 订单数据保存到数据库
-- [ ] WebSocket 实时通知正常
-- [ ] 支付方式标记正确（immediate → paid, counter → unpaid）
-
----
-
-## 📚 参考文档
-
-- 📘 **快速部署指南**: [DEPLOY_NOW.md](DEPLOY_NOW.md)
-- 📗 **详细部署指南**: [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
-- 📖 **系统说明**: [README.md](README.md)
-- 🎮 **功能测试指南**: [assets/QUICK_TEST_GUIDE.md](assets/QUICK_TEST_GUIDE.md)
-
----
-
-## 🔧 技术细节
-
-### 修改的文件
-- ✅ `assets/customer_order.html` - 修复订单提交，启用 API 调用
-- ✅ `assets/staff_workflow.html` - 新增双订单打印功能
-- ✅ `netlify.toml` - 优化配置，移除重复配置块
-- 📄 `DEPLOYMENT_GUIDE.md` - 新增详细部署指南
-- 📄 `DEPLOY_NOW.md` - 新增快速部署指南
-- 📄 `scripts/deploy_to_netlify.sh` - 新增部署自动化脚本
-
-### API 端点
-- `POST /api/orders/` - 创建订单
-- `GET /api/orders/` - 获取订单列表
-- `GET /api/orders/{order_id}` - 获取订单详情
-
-### WebSocket 端点
-- `ws://localhost:8001/ws/table/{table_id}` - 桌号订单状态更新
-
----
-
-## ✅ 部署前检查清单
-
-- [x] 顾客端订单提交 API 已启用
-- [x] 支付方式选择已实现
-- [x] 订单号生成逻辑已实现
-- [x] 双订单打印功能已实现
-- [x] 部署文件已准备（deploy_temp/）
-- [x] Netlify 配置已优化
-- [x] 部署文档已创建
-- [ ] **待执行：部署到 Netlify**
-- [ ] **待执行：启动后端服务**
-- [ ] **待执行：测试所有功能**
-
----
-
-## 📞 常见问题
-
-### Q: 订单提交失败怎么办？
-A: 确保后端服务正在运行（端口 8000），检查浏览器控制台错误信息
-
-### Q: 如何更新网站？
-A:
-- 拖拽部署：重新将 `deploy_temp` 文件夹拖拽到 Netlify
-- Git 集成：推送代码到 GitHub，Netlify 会自动部署
-
-### Q: WebSocket 连接失败？
-A: 确保 WebSocket 服务正在运行（端口 8001）
-
-### Q: 如何查看部署日志？
-A: 在 Netlify 控制台点击 "Deploys" → 查看部署详情
-
----
-
-## 🎯 下一步行动
-
-1. **立即部署**
-   - 将 `deploy_temp` 文件夹拖拽到 Netlify
-   - 等待部署完成
-
-2. **启动后端服务**
-   ```bash
-   python scripts/start_restaurant_api.py
-   python scripts/start_api_services.py  # （另一个终端）
-   ```
-
-3. **测试功能**
-   - 顾客端提交订单
-   - 工作人员端打印订单
-   - 验证实时通知
-
----
-
-**🎉 恭喜！软件已更新，部署文件已准备就绪！**
-
-**🚀 现在就部署到 Netlify 吧！**
+**部署日期**: 2025-01-12
+**版本**: v2.0.0
+**状态**: ✅ 后端正常，🔄 前端待部署

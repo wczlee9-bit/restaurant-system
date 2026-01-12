@@ -21,7 +21,33 @@
 
 ---
 
-## 🚀 从沙盒到 Netlify 完整部署流程（推荐！）
+## 🚀 在线部署地址（推荐）
+
+### 当前部署状态
+
+✅ **后端服务**：Render (https://restaurant-system-vzj0.onrender.com)
+- PostgreSQL 数据库已连接
+- 包含完整数据（60个菜品，43个桌号，4个公司，5个店铺）
+- API 健康检查：https://restaurant-system-vzj0.onrender.com/health
+
+🔄 **前端服务**：GitHub Pages（配置后自动部署）
+- 完全免费，无带宽限制
+- 自动 HTTPS，稳定可靠
+
+### 快速部署到 GitHub Pages
+
+**3 分钟完成部署**：[查看快速开始指南](QUICK_START.md)
+
+**完整配置指南**：[查看 GitHub Pages 部署指南](GITHUB_PAGES_SETUP.md)
+
+**部署步骤**：
+1. 推送代码到 GitHub
+2. 在 Settings → Pages 中选择 Source 为 `GitHub Actions`
+3. 自动部署完成，访问你的 GitHub Pages URL
+
+---
+
+## 🚀 从沙盒到生产环境
 
 ### 架构说明
 
@@ -29,16 +55,17 @@
 沙盒环境（开发）
     ↓ git push
 GitHub（代码仓库）
-    ├─→ GitHub Actions → 服务器 115.191.1.219（后端 API）
-    └─→ Netlify → mellow-rabanadas-877f3e.netlify.app（前端）
+    ├─→ GitHub Actions → Render 后端 API
+    └─→ GitHub Pages → 前端（完全免费）
 ```
 
-### 快速开始（15分钟配置）
+### 部署选项
 
-**选择一个指南跟着做**：
-
-1. 🎯 **[从沙盒到 Netlify 完整指南](SANDBOX_TO_NETLIFY_GUIDE.md)** - 详细说明完整流程 ⭐
-2. ⚡ **[快速命令清单](QUICK_START_SANDBOX_TO_NETLIFY.md)** - 直接复制粘贴执行 ⭐
+| 部署方式 | 状态 | 说明 |
+|---------|------|------|
+| **GitHub Pages** | ✅ 推荐 | 完全免费，自动 HTTPS，CDN 加速 |
+| **Netlify** | ⚠️ 受限 | 免费计划带宽已用完，需升级或下月重置 |
+| **本地环境** | ✅ 可用 | 适合开发和测试 |
 
 ### 日常开发流程
 
@@ -46,7 +73,7 @@ GitHub（代码仓库）
 git add .
 git commit -m "更新功能"
 git push origin main
-# 自动部署到后端服务器和 Netlify 前端 ✨
+# 自动部署到 GitHub Pages ✨
 ```
 
 ---
@@ -133,13 +160,15 @@ tail -f /workspace/projects/logs/api.log
 ## 📚 文档索引
 
 ### 快速开始
-- [GitHub Actions 快速开始](GITHUB_ACTIONS_QUICKSTART.md) - 5 分钟配置自动部署 ⭐
-- [Netlify 快速开始](NETLIFY_QUPLOYMENT.md) - 3 分钟部署前端
-- [快速开始指南](QUICK_START.md) - 30 分钟完整部署流程
+- [GitHub Pages 快速开始](QUICK_START.md) - 3 分钟部署到 GitHub Pages ⭐⭐⭐
+- [GitHub Pages 完整配置](GITHUB_PAGES_SETUP.md) - GitHub Pages 详细配置指南
+- [本地快速测试](LOCALHOST_START.md) - 本地环境快速测试
 
 ### 部署文档
-- [GitHub Actions 自动部署](GITHUB_ACTIONS_DEPLOYMENT.md) - 完整自动部署指南 ⭐
-- [Netlify 部署指南](NETLIFY_DEPLOYMENT.md) - 前端部署详细说明
+- [GitHub Pages 部署指南](GITHUB_PAGES_SETUP.md) - 前端部署到 GitHub Pages ⭐
+- [Render 后端部署](RENDER_DEPLOYMENT.md) - 后端部署到 Render
+- [GitHub Actions 自动部署](GITHUB_ACTIONS_DEPLOYMENT.md) - 自动部署到生产服务器
+- [Netlify 部署指南](NETLIFY_DEPLOYMENT.md) - 前端部署到 Netlify（当前受限）
 - [服务器部署指南](SERVER_FRONTEND_DEPLOYMENT.md) - 服务器端部署
 - [商用部署文档](COMMERCIAL_DEPLOYMENT.md) - 完整部署架构
 
