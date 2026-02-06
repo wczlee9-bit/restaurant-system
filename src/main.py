@@ -342,6 +342,14 @@ try:
 except ImportError as e:
     logger.warning(f"Failed to import restaurant_api: {e}")
 
+# 注册会员 API 路由
+try:
+    from api.member_api import app as member_router
+    app.mount("/api/member", member_router)
+    logger.info("Member API routes registered at /api/member")
+except ImportError as e:
+    logger.warning(f"Failed to import member_api: {e}")
+
 @app.get("/health")
 async def health_check():
     """健康检查端点，用于 Render 等平台的健康检查"""
