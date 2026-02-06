@@ -2,10 +2,9 @@
 餐饮系统完整 API 服务
 整合顾客端、管理端、厨房端、传菜端等所有接口
 """
-from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Query, Body, Form, UploadFile, WebSocket, WebSocketDisconnect, APIRouter
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, func
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime
@@ -26,17 +25,8 @@ from storage.database.shared.model import (
 
 logger = logging.getLogger(__name__)
 
-# 创建 FastAPI 应用
-app = FastAPI(title="多店铺扫码点餐系统 - 完整API", version="1.0.0")
-
-# 配置 CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# 创建 FastAPI 路由
+app = APIRouter(prefix="/api", tags=["餐饮系统"])
 
 # 包含诊断路由
 try:
@@ -127,7 +117,7 @@ async def startup_event():
 
 # ============ 诊断端点 ============
 
-@app.get("/api/system/reinit")
+@app.get("/system/reinit")
 def reinit_system():
     """手动触发系统重新初始化"""
     logger.info("Manual reinitialization triggered...")
@@ -469,7 +459,7 @@ def generate_order_number():
 
 # ============ 店铺和基础信息 ============
 
-@app.get("/api/store")
+@app.get("/store")
 def get_store_info():
     """获取店铺信息（默认返回第一个店铺）"""
     db = get_session()
@@ -491,7 +481,7 @@ def get_store_info():
 
 # ============ 菜品分类 ============
 
-@app.get("/api/menu-categories/", response_model=List[CategoryInfo])
+@app.get("/menu-categories/", response_model=List[CategoryInfo])
 def get_menu_categories(store_id: Optional[int] = None):
     """获取菜品分类列表"""
     db = get_session()
@@ -521,7 +511,7 @@ def get_menu_categories(store_id: Optional[int] = None):
 
 # ============ 菜品管理 ============
 
-@app.get("/api/menu-items/", response_model=List[MenuItemInfo])
+@app.get("/menu-items/", response_model=List[MenuItemInfo])
 def get_menu_items(
     category_id: Optional[int] = None,
     store_id: Optional[int] = None
@@ -564,7 +554,7 @@ def get_menu_items(
         db.close()
 
 
-@app.post("/api/menu-items/", response_model=MenuItemInfo)
+@app.post("/menu-items/", response_model=MenuItemInfo)
 def create_menu_item(item: MenuItemCreate):
     """创建菜品"""
     db = get_session()
@@ -613,7 +603,7 @@ def create_menu_item(item: MenuItemCreate):
         db.close()
 
 
-@app.patch("/api/menu-items/{item_id}", response_model=MenuItemInfo)
+@app.patch("/menu-items/{item_id}", response_model=MenuItemInfo)
 def update_menu_item(item_id: int, item: MenuItemUpdate):
     """更新菜品"""
     db = get_session()
@@ -646,7 +636,7 @@ def update_menu_item(item_id: int, item: MenuItemUpdate):
         db.close()
 
 
-@app.delete("/api/menu-items/{item_id}")
+@app.delete("/menu-items/{item_id}")
 def delete_menu_item(item_id: int):
     """删除菜品"""
     db = get_session()
@@ -664,7 +654,7 @@ def delete_menu_item(item_id: int):
 
 # ============ 桌号管理 ============
 
-@app.get("/api/tables/", response_model=List[TableInfo])
+@app.get("/tables/", response_model=List[TableInfo])
 def get_tables(store_id: Optional[int] = None):
     """获取桌号列表"""
     db = get_session()
@@ -702,7 +692,7 @@ def get_tables(store_id: Optional[int] = None):
         db.close()
 
 
-@app.post("/api/tables/", response_model=TableInfo)
+@app.post("/tables/", response_model=TableInfo)
 def create_table(table: TableCreate):
     """创建桌号"""
     db = get_session()
@@ -733,7 +723,7 @@ def create_table(table: TableCreate):
         db.close()
 
 
-@app.patch("/api/tables/{table_id}", response_model=TableInfo)
+@app.patch("/tables/{table_id}", response_model=TableInfo)
 def update_table(table_id: int, table: TableUpdate):
     """更新桌号"""
     db = get_session()
@@ -760,7 +750,7 @@ def update_table(table_id: int, table: TableUpdate):
         db.close()
 
 
-@app.delete("/api/tables/{table_id}")
+@app.delete("/tables/{table_id}")
 def delete_table(table_id: int):
     """删除桌号"""
     db = get_session()
@@ -776,7 +766,7 @@ def delete_table(table_id: int):
         db.close()
 
 
-@app.post("/api/tables/generate-qr")
+@app.post("/tables/generate-qr")
 def generate_qrcode(data: Dict[str, int]):
     """生成桌号二维码（模拟）"""
     table_id = data.get("table_id")
@@ -803,7 +793,7 @@ def generate_qrcode(data: Dict[str, int]):
 
 # ============ 订单管理 ============
 
-@app.get("/api/orders/test")
+@app.get("/orders/test")
 def get_orders_test(
     status: Optional[str] = None,
     table_id: Optional[int] = None,
@@ -857,7 +847,7 @@ def get_orders_test(
         db.close()
 
 
-@app.get("/api/orders/", response_model=List[OrderResponse])
+@app.get("/orders/", response_model=List[OrderResponse])
 def get_orders(
     status: Optional[str] = None,
     table_id: Optional[int] = None,
@@ -939,7 +929,7 @@ def get_orders(
         db.close()
 
 
-@app.post("/api/orders/", response_model=OrderResponse)
+@app.post("/orders/", response_model=OrderResponse)
 async def create_order(order: CreateOrderRequest):
     """创建订单"""
     db = get_session()
@@ -1073,7 +1063,7 @@ async def create_order(order: CreateOrderRequest):
         db.close()
 
 
-@app.post("/api/orders/{order_id}/confirm-payment")
+@app.post("/orders/{order_id}/confirm-payment")
 async def confirm_payment(order_id: int, req: ConfirmPaymentRequest):
     """
     确认支付（第二步）
@@ -1141,7 +1131,7 @@ async def confirm_payment(order_id: int, req: ConfirmPaymentRequest):
         db.close()
 
 
-@app.get("/api/orders/{order_id}", response_model=OrderResponse)
+@app.get("/orders/{order_id}", response_model=OrderResponse)
 def get_order(order_id: int):
     """获取订单详情"""
     db = get_session()
@@ -1185,7 +1175,7 @@ def get_order(order_id: int):
         db.close()
 
 
-@app.patch("/api/orders/{order_id}/status")
+@app.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: int, req: UpdateOrderStatusRequest):
     """更新订单状态"""
     db = get_session()
@@ -1240,7 +1230,7 @@ async def update_order_status(order_id: int, req: UpdateOrderStatusRequest):
         db.close()
 
 
-@app.patch("/api/orders/{order_id}/items/{item_id}/status")
+@app.patch("/orders/{order_id}/items/{item_id}/status")
 async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemStatusRequest):
     """更新订单项状态"""
     db = get_session()
@@ -1312,7 +1302,7 @@ except ImportError:
 
 # ============ 二维码生成 API ============
 
-@app.post("/api/generate-styled-qrcode")
+@app.post("/generate-styled-qrcode")
 def generate_styled_qrcode(
     table_id: int = Form(...),
     base_url: str = Form(default="https://order.example.com"),
@@ -1628,6 +1618,484 @@ async def websocket_table(
     except Exception as e:
         logger.error(f"桌号WebSocket错误: {str(e)}")
         manager.disconnect(table_id=table_id, connection_id=connection_id)
+
+
+# ============ 厨师做菜流程 API ============
+
+@app.put("/orders/{order_id}/status")
+def update_order_status(order_id: int, request: UpdateOrderStatusRequest):
+    """更新订单状态（厨师使用）"""
+    db = get_session()
+    try:
+        order = db.query(Orders).filter(Orders.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail=f"订单ID {order_id} 不存在")
+        
+        # 验证状态值
+        valid_statuses = ['pending', 'confirmed', 'preparing', 'ready', 'serving', 'completed', 'cancelled']
+        if request.status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"无效的状态值: {request.status}")
+        
+        order.order_status = request.status
+        db.commit()
+        
+        logger.info(f"订单 {order_id} 状态更新为: {request.status}")
+        
+        return {
+            "message": "订单状态更新成功",
+            "order_id": order_id,
+            "status": request.status
+        }
+    finally:
+        db.close()
+
+
+@app.put("/order-items/{item_id}/status")
+def update_order_item_status(item_id: int, request: UpdateItemStatusRequest):
+    """更新订单项状态（厨师使用）"""
+    db = get_session()
+    try:
+        order_item = db.query(OrderItems).filter(OrderItems.id == item_id).first()
+        if not order_item:
+            raise HTTPException(status_code=404, detail=f"订单项ID {item_id} 不存在")
+        
+        # 验证状态值
+        valid_statuses = ['pending', 'confirmed', 'preparing', 'ready', 'serving', 'completed']
+        if request.item_status not in valid_statuses:
+            raise HTTPException(status_code=400, detail=f"无效的状态值: {request.item_status}")
+        
+        order_item.status = request.item_status
+        db.commit()
+        
+        logger.info(f"订单项 {item_id} 状态更新为: {request.item_status}")
+        
+        return {
+            "message": "订单项状态更新成功",
+            "item_id": item_id,
+            "status": request.item_status
+        }
+    finally:
+        db.close()
+
+
+# ============ 店铺设置流程 API ============
+
+@app.put("/store")
+def update_store(request: dict):
+    """更新店铺信息"""
+    db = get_session()
+    try:
+        first_store = db.query(Stores).first()
+        if not first_store:
+            raise HTTPException(status_code=404, detail="未找到店铺")
+        
+        # 更新可更新的字段
+        update_fields = ['name', 'address', 'phone', 'opening_hours']
+        for field in update_fields:
+            if field in request:
+                setattr(first_store, field, request[field])
+        
+        db.commit()
+        db.refresh(first_store)
+        
+        return {
+            "id": first_store.id,
+            "name": first_store.name,
+            "address": first_store.address,
+            "phone": first_store.phone,
+            "opening_hours": first_store.opening_hours
+        }
+    finally:
+        db.close()
+
+
+@app.post("/menu-items/", response_model=dict)
+def create_menu_item(item: MenuItemCreate):
+    """新增菜品"""
+    db = get_session()
+    try:
+        # 验证分类是否存在
+        category = db.query(MenuCategories).filter(MenuCategories.id == item.category_id).first()
+        if not category:
+            raise HTTPException(status_code=404, detail=f"分类ID {item.category_id} 不存在")
+        
+        db_item = MenuItems(
+            category_id=item.category_id,
+            name=item.name,
+            description=item.description,
+            price=item.price,
+            image_url=item.image_url,
+            stock=item.stock,
+            is_available=item.is_available,
+            is_recommended=item.is_recommended,
+            sort_order=item.sort_order
+        )
+        
+        db.add(db_item)
+        db.commit()
+        db.refresh(db_item)
+        
+        return {
+            "id": db_item.id,
+            "message": "菜品创建成功"
+        }
+    finally:
+        db.close()
+
+
+@app.put("/menu-items/{item_id}")
+def update_menu_item(item_id: int, item: MenuItemUpdate):
+    """修改菜品"""
+    db = get_session()
+    try:
+        db_item = db.query(MenuItems).filter(MenuItems.id == item_id).first()
+        if not db_item:
+            raise HTTPException(status_code=404, detail=f"菜品ID {item_id} 不存在")
+        
+        # 更新字段
+        update_data = item.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_item, key, value)
+        
+        db.commit()
+        db.refresh(db_item)
+        
+        return {
+            "id": db_item.id,
+            "message": "菜品更新成功"
+        }
+    finally:
+        db.close()
+
+
+@app.delete("/menu-items/{item_id}")
+def delete_menu_item(item_id: int):
+    """删除菜品"""
+    db = get_session()
+    try:
+        db_item = db.query(MenuItems).filter(MenuItems.id == item_id).first()
+        if not db_item:
+            raise HTTPException(status_code=404, detail=f"菜品ID {item_id} 不存在")
+        
+        db.delete(db_item)
+        db.commit()
+        
+        return {
+            "message": "菜品删除成功"
+        }
+    finally:
+        db.close()
+
+
+@app.post("/tables/", response_model=TableInfo)
+def create_table(table: TableCreate):
+    """创建桌号"""
+    db = get_session()
+    try:
+        first_store = db.query(Stores).first()
+        if not first_store:
+            raise HTTPException(status_code=404, detail="未找到店铺")
+        
+        db_table = Tables(
+            store_id=first_store.id,
+            table_number=table.table_number,
+            seats=table.seats,
+            is_active=table.is_active
+        )
+        
+        db.add(db_table)
+        db.commit()
+        db.refresh(db_table)
+        
+        return TableInfo(
+            id=db_table.id,
+            table_number=db_table.table_number,
+            seats=db_table.seats,
+            is_active=db_table.is_active,
+            is_occupied=False
+        )
+    finally:
+        db.close()
+
+
+@app.post("/tables/{table_id}")
+def update_table(table_id: int, table: TableUpdate):
+    """修改桌号"""
+    db = get_session()
+    try:
+        db_table = db.query(Tables).filter(Tables.id == table_id).first()
+        if not db_table:
+            raise HTTPException(status_code=404, detail=f"桌号不存在")
+        
+        # 更新字段
+        update_data = table.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_table, key, value)
+        
+        db.commit()
+        db.refresh(db_table)
+        
+        return TableInfo(
+            id=db_table.id,
+            table_number=db_table.table_number,
+            seats=db_table.seats,
+            is_active=db_table.is_active,
+            is_occupied=False
+        )
+    finally:
+        db.close()
+
+
+@app.delete("/tables/{table_id}")
+def delete_table(table_id: int):
+    """删除桌号"""
+    db = get_session()
+    try:
+        db_table = db.query(Tables).filter(Tables.id == table_id).first()
+        if not db_table:
+            raise HTTPException(status_code=404, detail="桌号不存在")
+        
+        db.delete(db_table)
+        db.commit()
+        
+        return {
+            "message": "桌号删除成功"
+        }
+    finally:
+        db.close()
+
+
+# ============ 财务统计流程 API ============
+
+@app.get("/stats/daily")
+def get_daily_stats(date: Optional[str] = None):
+    """今日营业额统计"""
+    db = get_session()
+    try:
+        from datetime import date as date_type
+        
+        # 默认查询今天
+        if not date:
+            query_date = date_type.today()
+        else:
+            query_date = date_type.fromisoformat(date)
+        
+        # 查询当天的订单
+        orders = db.query(Orders).filter(
+            Orders.created_at >= query_date,
+            Orders.created_at < query_date
+        ).all()
+        
+        # 计算统计数据
+        total_orders = len(orders)
+        total_amount = sum(o.total_amount for o in orders)
+        paid_orders = [o for o in orders if o.payment_status == "paid"]
+        paid_amount = sum(o.total_amount for o in paid_orders)
+        
+        return {
+            "date": query_date.isoformat(),
+            "total_orders": total_orders,
+            "total_amount": float(total_amount),
+            "paid_orders": len(paid_orders),
+            "paid_amount": float(paid_amount),
+            "unpaid_orders": total_orders - len(paid_orders),
+            "unpaid_amount": float(total_amount - paid_amount)
+        }
+    finally:
+        db.close()
+
+
+@app.get("/stats/tables")
+def get_table_stats(date: Optional[str] = None):
+    """桌次统计（翻台率）"""
+    db = get_session()
+    try:
+        from datetime import date as date_type
+        
+        # 默认查询今天
+        if not date:
+            query_date = date_type.today()
+        else:
+            query_date = date_type.fromisoformat(date)
+        
+        # 查询当天的订单
+        orders = db.query(Orders).filter(
+            Orders.created_at >= query_date,
+            Orders.created_at < query_date
+        ).all()
+        
+        # 统计每个桌号的使用次数
+        table_stats = {}
+        for order in orders:
+            table_id = order.table_id
+            if table_id not in table_stats:
+                table_stats[table_id] = {
+                    "table_id": table_id,
+                    "table_number": order.table_number if hasattr(order, 'table_number') else str(table_id),
+                    "order_count": 0,
+                    "total_amount": 0.0
+                }
+            table_stats[table_id]["order_count"] += 1
+            table_stats[table_id]["total_amount"] += float(order.total_amount)
+        
+        # 转换为列表
+        result = list(table_stats.values())
+        result.sort(key=lambda x: x["order_count"], reverse=True)
+        
+        return {
+            "date": query_date.isoformat(),
+            "total_tables": len(result),
+            "table_stats": result
+        }
+    finally:
+        db.close()
+
+
+@app.get("/stats/menu-sales")
+def get_menu_sales_stats(date: Optional[str] = None):
+    """菜品销售统计"""
+    db = get_session()
+    try:
+        from datetime import date as date_type
+        from sqlalchemy import func
+        
+        # 默认查询今天
+        if not date:
+            query_date = date_type.today()
+        else:
+            query_date = date_type.fromisoformat(date)
+        
+        # 查询当天的订单项
+        order_items = db.query(OrderItems).join(Orders).filter(
+            Orders.created_at >= query_date,
+            Orders.created_at < query_date
+        ).all()
+        
+        # 统计每个菜品的销量
+        menu_stats = {}
+        for item in order_items:
+            menu_item_id = item.menu_item_id
+            if menu_item_id not in menu_stats:
+                menu_stats[menu_item_id] = {
+                    "menu_item_id": menu_item_id,
+                    "menu_item_name": item.menu_item_name,
+                    "total_quantity": 0,
+                    "total_amount": 0.0
+                }
+            menu_stats[menu_item_id]["total_quantity"] += item.quantity
+            menu_stats[menu_item_id]["total_amount"] += float(item.subtotal)
+        
+        # 转换为列表
+        result = list(menu_stats.values())
+        result.sort(key=lambda x: x["total_quantity"], reverse=True)
+        
+        return {
+            "date": query_date.isoformat(),
+            "total_items": len(result),
+            "menu_stats": result
+        }
+    finally:
+        db.close()
+
+
+@app.get("/stats/inventory")
+def get_inventory_stats():
+    """库存统计"""
+    db = get_session()
+    try:
+        # 查询所有菜品
+        menu_items = db.query(MenuItems).all()
+        
+        result = []
+        for item in menu_items:
+            # 查询今天的销量
+            from datetime import date as date_type, timedelta
+            today = date_type.today()
+            tomorrow = today + timedelta(days=1)
+            
+            sold_quantity = db.query(func.sum(OrderItems.quantity)).join(Orders).filter(
+                OrderItems.menu_item_id == item.id,
+                Orders.created_at >= today,
+                Orders.created_at < tomorrow
+            ).scalar() or 0
+            
+            result.append({
+                "menu_item_id": item.id,
+                "menu_item_name": item.name,
+                "category_name": item.category.name if item.category else "",
+                "stock": item.stock,
+                "sold_today": int(sold_quantity),
+                "remaining": item.stock - int(sold_quantity),
+                "price": float(item.price)
+            })
+        
+        return {
+            "total_items": len(result),
+            "inventory_stats": result
+        }
+    finally:
+        db.close()
+
+
+@app.get("/revenue/")
+def get_revenue(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """收入报表"""
+    db = get_session()
+    try:
+        from datetime import date as date_type, timedelta
+        
+        # 默认查询最近7天
+        if not start_date:
+            end_date_obj = date_type.today()
+            start_date_obj = end_date_obj - timedelta(days=7)
+        else:
+            start_date_obj = date_type.fromisoformat(start_date)
+            end_date_obj = date_type.fromisoformat(end_date) if end_date else date_type.today()
+        
+        # 查询日期范围内的订单
+        orders = db.query(Orders).filter(
+            Orders.created_at >= start_date_obj,
+            Orders.created_at < end_date_obj
+        ).all()
+        
+        # 按日期统计
+        daily_revenue = {}
+        for order in orders:
+            order_date = order.created_at.date().isoformat()
+            if order_date not in daily_revenue:
+                daily_revenue[order_date] = {
+                    "date": order_date,
+                    "order_count": 0,
+                    "total_amount": 0.0,
+                    "paid_amount": 0.0
+                }
+            daily_revenue[order_date]["order_count"] += 1
+            daily_revenue[order_date]["total_amount"] += float(order.total_amount)
+            if order.payment_status == "paid":
+                daily_revenue[order_date]["paid_amount"] += float(order.total_amount)
+        
+        # 转换为列表并排序
+        result = list(daily_revenue.values())
+        result.sort(key=lambda x: x["date"])
+        
+        total_revenue = sum(r["total_amount"] for r in result)
+        total_paid = sum(r["paid_amount"] for r in result)
+        total_orders = sum(r["order_count"] for r in result)
+        
+        return {
+            "start_date": start_date_obj.isoformat(),
+            "end_date": end_date_obj.isoformat(),
+            "total_orders": total_orders,
+            "total_revenue": float(total_revenue),
+            "total_paid": float(total_paid),
+            "unpaid_amount": float(total_revenue - total_paid),
+            "daily_revenue": result
+        }
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

@@ -334,6 +334,13 @@ class GraphService:
 service = GraphService()
 app = FastAPI()
 
+# 注册餐饮系统 API 路由
+try:
+    from api.restaurant_api import app as restaurant_router
+    app.include_router(restaurant_router)
+    logger.info("Restaurant API routes registered at /api")
+except ImportError as e:
+    logger.warning(f"Failed to import restaurant_api: {e}")
 
 @app.get("/health")
 async def health_check():
