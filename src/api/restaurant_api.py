@@ -831,37 +831,50 @@ def get_orders(
         
         result = []
         for order in orders:
-            # 获取桌号
-            table = db.query(Tables).filter(Tables.id == order.table_id).first()
-            table_number = table.table_number if table else ""
-            
-            # 构建订单项
-            order_items = []
-            for oi in order.order_items:
-                order_items.append(OrderItemResponse(
-                    id=oi.id,
-                    menu_item_id=oi.menu_item_id,
-                    menu_item_name=oi.menu_item_name,
-                    price=float(oi.menu_item_price),
-                    quantity=oi.quantity,
-                    subtotal=float(oi.subtotal),
-                    special_instructions=oi.special_instructions,
-                    item_status=oi.item_status or order.order_status
+            try:
+                # 获取桌号
+                table = db.query(Tables).filter(Tables.id == order.table_id).first()
+                table_number = table.table_number if table else ""
+                
+                # 构建订单项
+                order_items = []
+                for oi in order.order_items:
+                    order_items.append(OrderItemResponse(
+                        id=oi.id,
+                        menu_item_id=oi.menu_item_id,
+                        menu_item_name=oi.menu_item_name,
+                        price=float(oi.menu_item_price),
+                        quantity=oi.quantity,
+                        subtotal=float(oi.subtotal),
+                        special_instructions=oi.special_instructions,
+                        item_status=oi.item_status or order.order_status
+                    ))
+                
+                result.append(OrderResponse(
+                    id=order.id,
+                    order_number=order.order_number or "",
+                    store_id=order.store_id,
+                    table_id=order.table_id,
+                    table_number=table_number,
+                    total_amount=float(order.total_amount),
+                    payment_method=order.payment_method or "",
+                    payment_status=order.payment_status or "unpaid",
+                    status=order.order_status,
+                    created_at=order.created_at.isoformat() if order.created_at else "",
+                    items=order_items
                 ))
-            
-            result.append(OrderResponse(
-                id=order.id,
-                store_id=order.store_id,
-                table_id=order.table_id,
-                table_number=table_number,
-                total_amount=float(order.total_amount),
-                payment_method=order.payment_method,
-                status=order.order_status,
-                created_at=order.created_at.isoformat() if order.created_at else "",
-                items=order_items
-            ))
+            except Exception as e:
+                import traceback
+                print(f"Error processing order {order.id}: {e}")
+                traceback.print_exc()
+                continue
         
         return result
+    except Exception as e:
+        import traceback
+        print(f"Error in get_orders: {e}")
+        traceback.print_exc()
+        raise
     finally:
         db.close()
 

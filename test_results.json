@@ -1,0 +1,74 @@
+[
+  {
+    "name": "健康检查",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.889535"
+  },
+  {
+    "name": "环境检查",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.892671"
+  },
+  {
+    "name": "数据库检查",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.908679"
+  },
+  {
+    "name": "获取店铺信息",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.926303"
+  },
+  {
+    "name": "获取分类列表",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.948670"
+  },
+  {
+    "name": "获取菜品列表",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:08.990379"
+  },
+  {
+    "name": "获取桌号列表",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.057265"
+  },
+  {
+    "name": "创建订单",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.127423"
+  },
+  {
+    "name": "获取订单详情",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.154330"
+  },
+  {
+    "name": "确认支付",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.192713"
+  },
+  {
+    "name": "获取订单列表",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.766723"
+  },
+  {
+    "name": "API 文档",
+    "status": "✅ 通过",
+    "status_code": 200,
+    "timestamp": "2026-02-06T18:41:09.769128"
+  }
+]
