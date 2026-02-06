@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ 餐饮点餐系统 - v3.2 修复版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
+
+        .mobile-container {
+            max-width: 414px; margin: 0 auto; min-height: 100vh; background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; text-align: center; position: sticky;
+            top: 0; z-index: 100;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .header-info { font-size: 14px; opacity: 0.9; }
+
+        .table-selector {
+            padding: 40px 20px; text-align: center;
+        }
+        .table-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            margin-top: 20px;
+        }
+        .table-cell {
+            padding: 25px 15px; border: 3px solid #eee; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s; font-size: 20px; font-weight: bold;
+            color: #333;
+        }
+        .table-cell:hover { border-color: #667eea; transform: translateY(-3px); }
+        .table-cell.selected { border-color: #667eea; background: #ecf5ff; }
+        .table-cell.occupied { border-color: #f56c6c; background: #fef0f0; color: #f56c6c; }
+
+        .category-tabs {
+            display: flex; gap: 10px; overflow-x: auto; padding: 15px;
+            border-bottom: 1px solid #eee; position: sticky; top: 80px;
+            background: white; z-index: 90;
+        }
+        .category-tab {
+            padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+            cursor: pointer; transition: all 0.3s; font-size: 14px;
+            border: 1px solid #eee; background: white; flex-shrink: 0;
+        }
+        .category-tab.active { background: #667eea; color: white; border-color: #667eea; }
+
+        .menu-list { padding: 15px; padding-bottom: 80px; }
+        .menu-item {
+            display: flex; gap: 15px; padding: 15px; margin-bottom: 15px;
+            background: white; border-radius: 12px; border: 1px solid #eee;
+            transition: all 0.3s;
+        }
+        .menu-item:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .menu-item-info { flex: 1; }
+        .menu-item-name { font-size: 16px; font-weight: bold; margin-bottom: 8px; }
+        .menu-item-desc { font-size: 12px; color: #909399; margin-bottom: 8px; }
+        .menu-item-price { color: #f56c6c; font-size: 18px; font-weight: bold; }
+        .menu-item-stock { font-size: 12px; color: #909399; margin-left: 10px; }
+
+        .menu-item-actions {
+            display: flex; align-items: center; gap: 10px; margin-top: 10px;
+        }
+        .qty-control {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .qty-btn {
+            width: 30px; height: 30px; border-radius: 50%; border: none;
+            background: #f0f0f0; cursor: pointer; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .qty-btn:active { transform: scale(0.95); }
+        .qty-btn.add { background: #667eea; color: white; }
+        .qty-btn.minus { background: #f0f0f0; }
+        .qty-display { font-size: 16px; font-weight: bold; min-width: 30px; text-align: center; }
+
+        .cart-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 414px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 15px 20px; display: flex; justify-content: space-between;
+            align-items: center; cursor: pointer; box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            z-index: 200;
+        }
+        .cart-info { flex: 1; }
+        .cart-count { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .cart-total { font-size: 14px; opacity: 0.9; }
+        .cart-btn {
+            padding: 10px 25px; background: white; color: #667eea;
+            border-radius: 20px; font-weight: bold; border: none; cursor: pointer;
+        }
+
+        .cart-modal {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+            align-items: flex-end;
+        }
+        .cart-content {
+            background: white; width: 100%; max-width: 414px; margin: 0 auto;
+            border-radius: 20px 20px 0 0; max-height: 90vh; overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .cart-header {
+            padding: 20px; border-bottom: 1px solid #eee; display: flex;
+            justify-content: space-between; align-items: center;
+            background: #f8f9fa; position: sticky; top: 0;
+        }
+        .cart-header h3 { font-size: 18px; display: flex; align-items: center; gap: 10px; }
+        .step-number {
+            width: 30px; height: 30px; background: #667eea; color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+        }
+        .cart-body { padding: 20px; }
+        .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+
+        .cart-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0; border-bottom: 1px solid #f0f0f0;
+        }
+        .cart-item-info { flex: 1; }
+        .cart-item-name { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .cart-item-price { color: #909399; font-size: 14px; }
+
+        .order-summary { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .summary-row {
+            display: flex; justify-content: space-between; margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .summary-row.total { font-size: 18px; font-weight: bold; border-top: 1px solid #e0e0e0; padding-top: 10px; margin-bottom: 0; }
+        .total-price { color: #f56c6c; font-size: 22px; }
+
+        .payment-option {
+            padding: 15px; border: 2px solid #e0e0e0; border-radius: 12px;
+            margin-bottom: 15px; cursor: pointer; transition: all 0.3s;
+        }
+        .payment-option:hover { border-color: #667eea; background: #f0f7ff; }
+        .payment-option.selected { border-color: #667eea; background: #ecf5ff; }
+        .payment-option-header { display: flex; justify-content: space-between; align-items: center; }
+        .payment-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
+        .payment-desc { font-size: 13px; color: #909399; }
+        .payment-badge {
+            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+        }
+        .badge-immediate { background: #67c23a; color: white; }
+        .badge-counter { background: #e6a23c; color: white; }
+
+        .empty-cart { text-align: center; padding: 60px 20px; }
+        .empty-icon { font-size: 64px; margin-bottom: 20px; }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9); display: flex; align-items: center;
+            justify-content: center; z-index: 2000;
+        }
+
+        .order-status {
+            margin: 15px; padding: 15px; background: #fff7e6; border-radius: 8px;
+            border-left: 4px solid #e6a23c;
+        }
+        .order-status h3 { margin-bottom: 10px; font-size: 16px; }
+
+        .debug-info {
+            padding: 15px; background: #fff7e6; border-radius: 8px; margin: 15px;
+            border-left: 4px solid #e6a23c; font-size: 12px;
+        }
+        .debug-info h4 { margin-bottom: 10px; color: #e6a23c; }
+        .debug-info p { margin: 5px 0; color: #666; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 加载状态 -->
+        <div class="loading-overlay" v-if="loading">
+            <div>
+                <div style="font-size: 48px; margin-bottom: 20px;">🍽️</div>
+                <div style="font-size: 18px; color: #666;">{{ loadingMessage }}</div>
+                <div style="margin-top: 10px; color: #999; font-size: 14px;">{{ loadingProgress }}</div>
+            </div>
+        </div>
+
+        <div class="mobile-container">
+            <!-- 桌号选择器 -->
+            <div v-if="!selectedTable" class="table-selector">
+                <h2 style="margin-bottom: 10px;">欢迎光临！</h2>
+                <p style="color: #909399; margin-bottom: 10px;">请选择您的桌号</p>
+
+                <!-- 调试信息 -->
+                <div v-if="tables.length === 0 && !loading" class="debug-info">
+                    <h4>⚠️ 未加载到桌号数据</h4>
+                    <p>API 状态: {{ apiStatus }}</p>
+                    <p>错误信息: {{ errorMessage }}</p>
+                    <el-button type="primary" size="small" @click="reloadTables">
+                        🔄 重新加载桌号
+                    </el-button>
+                </div>
+
+                <!-- 桌号网格 -->
+                <div class="table-grid" v-if="tables.length > 0">
+                    <div
+                        v-for="table in tables"
+                        :key="table.id"
+                        class="table-cell"
+                        :class="{selected: tempTableId === table.id, occupied: table.status === 'occupied'}"
+                        @click="selectTable(table)">
+                        {{ table.table_number }}号桌
+                    </div>
+                </div>
+
+                <!-- 确认按钮 -->
+                <el-button
+                    v-if="tempTableId && tables.length > 0"
+                    type="primary"
+                    size="large"
+                    style="margin-top: 30px; width: 80%; height: 50px; font-size: 18px;"
+                    @click="confirmTable()">
+                    确认选择
+                </el-button>
+            </div>
+
+            <!-- 菜单页面 -->
+            <div v-else>
+                <div class="header">
+                    <h1>{{ selectedTable.table_number }}号桌</h1>
+                    <div class="header-info">{{ shopInfo.name }}</div>
+                </div>
+
+                <!-- 分类标签 -->
+                <div class="category-tabs" v-if="categories.length > 0">
+                    <div
+                        v-for="cat in categories"
+                        :key="cat.id"
+                        class="category-tab"
+                        :class="{active: selectedCategory === cat.id}"
+                        @click="selectedCategory = selectedCategory === cat.id ? null : cat.id">
+                        {{ cat.name }}
+                    </div>
+                </div>
+
+                <!-- 调试信息 -->
+                <div v-if="menuItems.length === 0 && !loading" class="debug-info">
+                    <h4>⚠️ 未加载到菜品数据</h4>
+                    <p>API 状态: {{ apiStatus }}</p>
+                    <p>错误信息: {{ errorMessage }}</p>
+                    <el-button type="primary" size="small" @click="reloadMenu">
+                        🔄 重新加载菜品
+                    </el-button>
+                </div>
+
+                <!-- 菜品列表 -->
+                <div class="menu-list">
+                    <div v-if="filteredMenuItems.length === 0" style="text-align: center; padding: 40px; color: #909399;">
+                        <div style="font-size: 48px;">📭</div>
+                        <p style="margin-top: 10px;">暂无菜品</p>
+                        <el-button type="primary" @click="reloadMenu" style="margin-top: 15px;">
+                            🔄 重新加载
+                        </el-button>
+                    </div>
+
+                    <div v-else>
+                        <div v-for="item in filteredMenuItems" :key="item.id" class="menu-item">
+                            <div class="menu-item-info">
+                                <div class="menu-item-name">{{ item.name }}</div>
+                                <div class="menu-item-desc">{{ item.description || '' }}</div>
+                                <div class="menu-item-price">¥{{ item.price }}
+                                    <span class="menu-item-stock" v-if="item.stock <= 10">库存：{{ item.stock }}</span>
+                                </div>
+                            </div>
+                            <div v-if="item.is_available && item.stock > 0" class="qty-control">
+                                <button class="qty-btn minus" @click="removeFromCart(item)">-</button>
+                                <span class="qty-display">{{ getCartItemQty(item) }}</span>
+                                <button class="qty-btn add" @click="addToCart(item)">+</button>
+                            </div>
+                            <div v-else class="qty-control">
+                                <span style="color: #f56c6c; font-size: 12px;">
+                                    {{ !item.is_available ? '已下架' : '售罄' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 购物车栏 -->
+                <div class="cart-bar" v-if="cartTotal > 0" @click="openCartStep1()">
+                    <div class="cart-info">
+                        <div class="cart-count">{{ cartTotalQty }}件商品</div>
+                        <div class="cart-total">¥{{ cartTotal }}</div>
+                    </div>
+                    <button class="cart-btn">确认订单</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 购物车弹窗 - 步骤1：确认订单 -->
+        <div class="cart-modal" v-if="showCartStep1" @click.self="closeCart()">
+            <div class="cart-content">
+                <div class="cart-header">
+                    <h3><span class="step-number">1</span>确认订单</h3>
+                    <span style="cursor: pointer; font-size: 24px;" @click="closeCart()">×</span>
+                </div>
+
+                <div class="cart-body">
+                    <div v-if="cart.length === 0" class="empty-cart">
+                        <div class="empty-icon">🛒</div>
+                        <p>购物车是空的</p>
+                    </div>
+
+                    <div v-else>
+                        <div v-for="item in cart" :key="item.id" class="cart-item">
+                            <div class="cart-item-info">
+                                <div class="cart-item-name">{{ item.name }}</div>
+                                <div class="cart-item-price">¥{{ item.price }} × {{ item.qty }}</div>
+                            </div>
+                            <div style="font-weight: bold;">¥{{ (item.price * item.qty).toFixed(2) }}</div>
+                        </div>
+
+                        <div class="order-summary">
+                            <div class="summary-row">
+                                <span>桌号</span>
+                                <span>{{ selectedTable.table_number }}号桌</span>
+                            </div>
+                            <div class="summary-row">
+                                <span>商品数量</span>
+                                <span>{{ cartTotalQty }}件</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>合计</span>
+                                <span class="total-price">¥{{ cartTotal }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cart-footer">
+                    <el-button type="primary" size="large" style="width: 100%; height: 50px;"
+                               :disabled="cart.length === 0"
+                               @click="submitOrder()">
+                        确认下单
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 订单支付弹窗 -->
+        <div class="cart-modal" v-if="showPaymentModal" @click.self="closePaymentModal()">
+            <div class="cart-content">
+                <div class="cart-header">
+                    <h3>💰 选择支付方式</h3>
+                    <span style="cursor: pointer; font-size: 24px;" @click="closePaymentModal()">×</span>
+                </div>
+
+                <div class="cart-body">
+                    <div class="order-summary">
+                        <div class="summary-row">
+                            <span>订单号</span>
+                            <span>{{ currentOrder.order_id }}</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>桌号</span>
+                            <span>{{ selectedTable.table_number }}号桌</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>商品数量</span>
+                            <span>{{ cartTotalQty }}件</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>需支付</span>
+                            <span class="total-price">¥{{ cartTotal }}</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <div style="margin-bottom: 15px; font-weight: bold; color: #333;">请选择支付方式：</div>
+
+                        <div v-if="shopInfo.paymentMethods.length === 0" style="text-align: center; color: #999; padding: 20px;">
+                            暂无可用的支付方式
+                        </div>
+
+                        <div class="payment-option"
+                             v-for="method in shopInfo.paymentMethods"
+                             :key="method"
+                             :class="{selected: paymentMethod === method}"
+                             @click="paymentMethod = method">
+                            <div class="payment-option-header">
+                                <div>
+                                    <div class="payment-title" v-if="method === 'immediate'">💳 马上付款</div>
+                                    <div class="payment-title" v-else-if="method === 'counter'">🏪 餐后付款</div>
+                                    <div class="payment-title" v-else>💳 其他支付</div>
+
+                                    <div class="payment-desc" v-if="method === 'immediate'">使用微信或支付宝在线支付</div>
+                                    <div class="payment-desc" v-else-if="method === 'counter'">用餐后到收银台支付</div>
+                                    <div class="payment-desc" v-else>其他支付方式</div>
+                                </div>
+                                <span class="payment-badge badge-immediate" v-if="method === 'immediate'">立即支付</span>
+                                <span class="payment-badge badge-counter" v-else-if="method === 'counter'">灵活便捷</span>
+                                <span class="payment-badge badge-immediate" v-else>其他</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cart-footer">
+                    <el-button type="warning" size="default" style="width: 48%; margin-right: 4%;" @click="goToConfirmStep()">
+                        返回
+                    </el-button>
+                    <el-button type="primary" size="default" style="width: 48%;"
+                               :disabled="!paymentMethod" @click="confirmPayment()">
+                        {{ paymentMethod === 'immediate' ? '马上付款' : '餐后付款' }}
+                    </el-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置 axios 超时设置
+        axios.defaults.timeout = 10000; // 10秒超时
+        axios.defaults.baseURL = '';  // 使用相对路径
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: true,
+                    loadingMessage: '加载中...',
+                    loadingProgress: '',
+                    apiStatus: '等待中...',
+                    errorMessage: '',
+                    tables: [],
+                    categories: [],
+                    menuItems: [],
+                    selectedTable: null,
+                    tempTableId: null,
+                    selectedCategory: null,
+                    cart: [],
+                    showCartStep1: false,
+                    showPaymentModal: false,
+                    currentOrder: null,
+                    paymentMethod: '',
+                    ws: null,
+                    wsConnected: false,
+                    shopInfo: {
+                        name: '美味餐厅',
+                        paymentMethods: ['immediate', 'counter']
+                    },
+                    loadTimeout: null
+                };
+            },
+            computed: {
+                filteredMenuItems() {
+                    if (this.selectedCategory === null) {
+                        return this.menuItems;
+                    }
+                    return this.menuItems.filter(item => item.category_id === this.selectedCategory);
+                },
+                cartTotal() {
+                    return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0).toFixed(2);
+                },
+                cartTotalQty() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                }
+            },
+            async mounted() {
+                // 设置超时保护
+                this.loadTimeout = setTimeout(() => {
+                    if (this.loading) {
+                        console.warn('初始化超时，强制加载完成');
+                        this.loading = false;
+                        this.loadingMessage = '加载超时';
+                        this.apiStatus = '超时';
+                        this.$message.warning('加载超时，请刷新页面重试');
+                    }
+                }, 30000); // 30秒超时
+
+                await this.initData();
+                this.checkTableFromUrl();
+            },
+            beforeUnmount() {
+                if (this.loadTimeout) {
+                    clearTimeout(this.loadTimeout);
+                }
+            },
+            methods: {
+                async initData() {
+                    this.loading = true;
+                    this.loadingMessage = '正在初始化...';
+                    this.loadingProgress = '';
+                    this.apiStatus = '正在连接...';
+
+                    try {
+                        // 顺序加载，避免并发问题
+                        this.loadingProgress = '正在加载店铺信息...';
+                        await this.loadShopInfo();
+
+                        this.loadingProgress = '正在加载桌号...';
+                        this.apiStatus = '加载桌号中...';
+                        await this.loadTables();
+
+                        this.loadingProgress = '正在加载分类...';
+                        this.apiStatus = '加载分类中...';
+                        await this.loadCategories();
+
+                        this.loadingProgress = '正在加载菜品...';
+                        this.apiStatus = '加载菜品中...';
+                        await this.loadMenuItems();
+
+                        // 检查是否有菜品数据
+                        if (this.menuItems.length === 0) {
+                            this.$message.warning('暂无菜品数据，请联系店员初始化系统');
+                        }
+
+                        this.loadingProgress = '加载完成！';
+                        this.apiStatus = '成功';
+
+                    } catch (error) {
+                        console.error('初始化失败:', error);
+                        this.errorMessage = error.message || '未知错误';
+
+                        if (error.code === 'ECONNABORTED') {
+                            this.$message.error('请求超时，请检查网络连接或刷新页面');
+                        } else if (error.response) {
+                            this.$message.error(`服务器错误: ${error.response.status}`);
+                        } else {
+                            this.$message.error('加载失败，请刷新页面');
+                        }
+                    } finally {
+                        this.loading = false;
+                        if (this.loadTimeout) {
+                            clearTimeout(this.loadTimeout);
+                        }
+                    }
+                },
+
+                loadShopInfo() {
+                    const savedInfo = localStorage.getItem('shopInfo');
+                    if (savedInfo) {
+                        try {
+                            const parsed = JSON.parse(savedInfo);
+                            if (parsed.paymentMethods && parsed.paymentMethods.length > 0) {
+                                this.shopInfo.paymentMethods = parsed.paymentMethods;
+                            }
+                            if (parsed.name) {
+                                this.shopInfo.name = parsed.name;
+                            }
+                        } catch (error) {
+                            console.error('加载店铺信息失败:', error);
+                        }
+                    }
+                },
+
+                async loadTables() {
+                    try {
+                        console.log('Loading tables...');
+                        const response = await axios.get('/api/tables/');
+                        this.tables = response.data || [];
+                        console.log('加载桌号成功:', this.tables);
+                        console.log(`共加载 ${this.tables.length} 个桌号`);
+
+                        if (this.tables.length === 0) {
+                            console.warn('No tables loaded, this might be a data initialization issue');
+                            this.$message.warning('未加载到桌号数据，请检查后端服务');
+                        }
+                    } catch (error) {
+                        console.error('加载桌号失败:', error);
+                        console.error('Error details:', {
+                            message: error.message,
+                            code: error.code,
+                            response: error.response?.data,
+                            status: error.response?.status
+                        });
+                        throw error;
+                    }
+                },
+
+                async reloadTables() {
+                    this.$message.info('正在重新加载桌号...');
+                    try {
+                        await this.loadTables();
+                        if (this.tables.length > 0) {
+                            this.$message.success(`成功加载 ${this.tables.length} 个桌号`);
+                        } else {
+                            this.$message.warning('仍然没有桌号数据，请检查后端服务或联系店员');
+                        }
+                    } catch (error) {
+                        this.$message.error('重新加载桌号失败');
+                    }
+                },
+
+                async loadCategories() {
+                    try {
+                        const response = await axios.get('/api/menu-categories/');
+                        this.categories = response.data || [];
+                        console.log('加载分类成功:', this.categories);
+                    } catch (error) {
+                        console.error('加载分类失败:', error);
+                        // 分类加载失败不阻止继续
+                        this.categories = [];
+                    }
+                },
+
+                async loadMenuItems() {
+                    try {
+                        const response = await axios.get('/api/menu-items/');
+                        this.menuItems = response.data || [];
+                        console.log('加载菜品成功:', this.menuItems);
+                    } catch (error) {
+                        console.error('加载菜品失败:', error);
+                        throw error;
+                    }
+                },
+
+                async reloadMenu() {
+                    this.$message.info('正在重新加载菜品...');
+                    try {
+                        await this.loadMenuItems();
+                        await this.loadCategories();
+                        if (this.menuItems.length > 0) {
+                            this.$message.success(`成功加载 ${this.menuItems.length} 道菜品`);
+                        } else {
+                            this.$message.warning('仍然没有菜品数据，请检查后端服务');
+                        }
+                    } catch (error) {
+                        this.$message.error('重新加载失败');
+                    }
+                },
+
+                checkTableFromUrl() {
+                    const params = new URLSearchParams(window.location.search);
+                    const tableNumber = params.get('table');
+
+                    console.log('checkTableFromUrl called, tableNumber from URL:', tableNumber);
+                    console.log('Available tables:', this.tables);
+
+                    if (tableNumber && this.tables.length > 0) {
+                        let table = this.tables.find(t => t.table_number === tableNumber);
+
+                        if (!table && !isNaN(tableNumber)) {
+                            const numTableNumber = parseInt(tableNumber);
+                            table = this.tables.find(t =>
+                                t.table_number === String(numTableNumber) ||
+                                t.table_number === numTableNumber
+                            );
+                        }
+
+                        if (table) {
+                            console.log('Table found from URL:', table);
+                            this.selectTable(table);
+                            this.confirmTable();
+                        } else {
+                            console.warn('No matching table found for tableNumber:', tableNumber);
+                            this.$message.warning(`URL 中的桌号 "${tableNumber}" 无效，请手动选择桌号`);
+                        }
+                    }
+                },
+
+                selectTable(table) {
+                    this.tempTableId = table.id;
+                },
+
+                confirmTable() {
+                    console.log('confirmTable called, tempTableId:', this.tempTableId);
+
+                    if (!this.tempTableId) {
+                        this.$message.error('请先选择桌号');
+                        return;
+                    }
+
+                    const table = this.tables.find(t => t.id === this.tempTableId);
+                    if (table) {
+                        this.selectedTable = table;
+                        this.$message.success(`已选择${table.table_number}号桌`);
+                        this.connectWebSocket(table.id);
+                    } else {
+                        console.error('Table not found with id:', this.tempTableId);
+                        this.$message.error('确认桌号失败，请重新选择桌号');
+                    }
+                },
+
+                addToCart(item) {
+                    const cartItem = this.cart.find(c => c.id === item.id);
+                    if (cartItem) {
+                        cartItem.qty++;
+                    } else {
+                        this.cart.push({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            qty: 1,
+                            category_id: item.category_id
+                        });
+                    }
+                },
+
+                removeFromCart(item) {
+                    const index = this.cart.findIndex(c => c.id === item.id);
+                    if (index > -1) {
+                        if (this.cart[index].qty > 1) {
+                            this.cart[index].qty--;
+                        } else {
+                            this.cart.splice(index, 1);
+                        }
+                    }
+                },
+
+                getCartItemQty(item) {
+                    const cartItem = this.cart.find(c => c.id === item.id);
+                    return cartItem ? cartItem.qty : 0;
+                },
+
+                openCartStep1() {
+                    this.showCartStep1 = true;
+                    this.showPaymentModal = false;
+                },
+
+                closeCart() {
+                    this.showCartStep1 = false;
+                    this.showPaymentModal = false;
+                },
+
+                closePaymentModal() {
+                    this.showPaymentModal = false;
+                },
+
+                goToConfirmStep() {
+                    this.showPaymentModal = false;
+                    this.showCartStep1 = true;
+                },
+
+                async submitOrder() {
+                    if (this.cart.length === 0) {
+                        this.$message.warning('请先添加商品到购物车');
+                        return;
+                    }
+
+                    try {
+                        const orderData = {
+                            table_id: this.selectedTable.id,
+                            items: this.cart.map(item => ({
+                                menu_item_id: item.id,
+                                quantity: item.qty,
+                                special_instructions: ''
+                            }))
+                        };
+
+                        console.log('提交订单数据:', orderData);
+
+                        const response = await axios.post('/api/orders/', orderData);
+
+                        console.log('订单提交成功:', response.data);
+
+                        this.currentOrder = {
+                            ...response.data,
+                            status: response.data.status || 'pending',
+                            order_id: response.data.order_number || response.data.id,
+                            created_at: response.data.created_at || new Date().toISOString()
+                        };
+
+                        this.cart = [];
+                        this.showCartStep1 = false;
+                        this.showPaymentModal = true;
+
+                        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+                        savedOrders.unshift(this.currentOrder);
+                        localStorage.setItem('orders', JSON.stringify(savedOrders));
+
+                        this.$message.success(`订单提交成功！订单号：${this.currentOrder.order_id}`);
+
+                    } catch (error) {
+                        console.error('提交订单失败:', error);
+
+                        let errorMsg = '提交订单失败';
+                        if (error.response?.data?.detail) {
+                            errorMsg += ': ' + error.response.data.detail;
+                        } else if (error.message) {
+                            errorMsg += ': ' + error.message;
+                        }
+
+                        this.$message.error(errorMsg);
+                    }
+                },
+
+                async confirmPayment() {
+                    if (!this.currentOrder) {
+                        this.$message.warning('没有订单需要支付');
+                        return;
+                    }
+
+                    if (!this.paymentMethod) {
+                        this.$message.warning('请选择支付方式');
+                        return;
+                    }
+
+                    try {
+                        const response = await axios.post(
+                            `/api/orders/${this.currentOrder.id}/confirm-payment`,
+                            { payment_method: this.paymentMethod }
+                        );
+
+                        console.log('确认支付成功:', response.data);
+
+                        this.currentOrder.payment_method = response.data.payment_method;
+                        this.currentOrder.payment_status = response.data.payment_status;
+
+                        this.closePaymentModal();
+
+                        const paymentText = this.paymentMethod === 'immediate' ? '支付成功' : '已选择餐后柜台支付';
+                        this.$message.success(`${paymentText}！订单号：${this.currentOrder.order_id}`);
+
+                    } catch (error) {
+                        console.error('确认支付失败:', error);
+
+                        let errorMsg = '确认支付失败';
+                        if (error.response?.data?.detail) {
+                            errorMsg += ': ' + error.response.data.detail;
+                        } else if (error.message) {
+                            errorMsg += ': ' + error.message;
+                        }
+
+                        this.$message.error(errorMsg);
+                    }
+                },
+
+                connectWebSocket(tableId) {
+                    if (this.ws) {
+                        this.ws.close();
+                    }
+
+                    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${wsProtocol}//${window.location.host}/ws/orders/table/${tableId}`;
+
+                    console.log('尝试连接 WebSocket:', wsUrl);
+
+                    this.ws = new WebSocket(wsUrl);
+
+                    this.ws.onopen = () => {
+                        this.wsConnected = true;
+                        console.log('WebSocket connected');
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.order_id) {
+                            this.currentOrder = data;
+                            console.log('收到订单更新:', data);
+                        }
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.wsConnected = false;
+                    };
+
+                    this.ws.onclose = () => {
+                        this.wsConnected = false;
+                        console.log('WebSocket closed');
+                    };
+                },
+
+                formatTime(timestamp) {
+                    if (!timestamp) return '-';
+                    const date = new Date(timestamp);
+                    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                }
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>
