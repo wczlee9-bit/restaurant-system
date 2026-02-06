@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 SERVER_IP="129.226.196.76"
 PROJECT_DIR="/opt/restaurant-system"
 BACKUP_DIR="/tmp"
-GITEE_REPO="https://gitee.com/your-username/restaurant-system.git"
+GITEE_REPO="https://gitee.com/lijun75/restaurant.git"
 
 ###############################################################################
 # 函数定义

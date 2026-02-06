@@ -1,0 +1,72 @@
+{
+  "modules": [
+    {
+      "name": "LegacyOrderModule",
+      "module": "modules.legacy.order_module",
+      "enabled": true,
+      "priority": 1
+    },
+    {
+      "name": "LegacyMenuModule",
+      "module": "modules.legacy.menu_module",
+      "enabled": true,
+      "priority": 2
+    },
+    {
+      "name": "LegacyUserModule",
+      "module": "modules.legacy.user_module",
+      "enabled": true,
+      "priority": 3
+    },
+    {
+      "name": "LegacyStockModule",
+      "module": "modules.legacy.stock_module",
+      "enabled": true,
+      "priority": 4
+    },
+    {
+      "name": "LegacyMemberModule",
+      "module": "modules.legacy.member_module",
+      "enabled": true,
+      "priority": 5
+    },
+    {
+      "name": "LegacyPaymentModule",
+      "module": "modules.legacy.payment_module",
+      "enabled": true,
+      "priority": 6
+    },
+    {
+      "name": "LegacyStatsModule",
+      "module": "modules.legacy.stats_module",
+      "enabled": true,
+      "priority": 7
+    },
+    {
+      "name": "LegacyReceiptModule",
+      "module": "modules.legacy.receipt_module",
+      "enabled": true,
+      "priority": 8
+    },
+    {
+      "name": "LegacyWebSocketModule",
+      "module": "modules.legacy.websocket_module",
+      "enabled": true,
+      "priority": 9
+    },
+    {
+      "name": "LegacyWorkflowModule",
+      "module": "modules.legacy.workflow_module",
+      "enabled": true,
+      "priority": 10
+    },
+    {
+      "name": "LegacyPermissionModule",
+      "module": "modules.legacy.permission_module",
+      "enabled": true,
+      "priority": 11
+    }
+  ],
+  "legacy_mode": true,
+  "fallback_to_traditional": true
+}
