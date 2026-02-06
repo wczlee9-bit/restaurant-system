@@ -1,17 +1,69 @@
-node_modules
-dist
-.DS_Store
-*.swp
-.git/*
+# Python
 __pycache__/
-*.pyc
-.venv/*
-*.o
-*.a
-/vendor
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
-/.env
-.env
+.installed.cfg
+*.egg
 
-# 用户凭据（不要提交到公开仓库）
-USER_CREDENTIALS.md*.txt.backup
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Test
+test_restaurant.db
+
+# Node modules (for frontend)
+node_modules/
+
+# Build outputs
+frontend/dist/
+admin/dist/
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
+
+# Config (sensitive)
+config/secrets.yaml
