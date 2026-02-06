@@ -57,6 +57,7 @@ class MenuItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     name = Column(String(100), nullable=False)
+    category = Column(String(50))  # 菜品分类
     description = Column(Text)
     price = Column(Float, nullable=False)
     image_url = Column(String(500))
