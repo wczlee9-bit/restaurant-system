@@ -803,6 +803,60 @@ def generate_qrcode(data: Dict[str, int]):
 
 # ============ 订单管理 ============
 
+@app.get("/api/orders/test")
+def get_orders_test(
+    status: Optional[str] = None,
+    table_id: Optional[int] = None,
+    store_id: Optional[int] = None
+):
+    """获取订单列表 - 测试版本（不带 response_model）"""
+    print(f"DEBUG: get_orders_test called")
+    
+    db = get_session()
+    try:
+        query = db.query(Orders)
+        
+        if store_id:
+            query = query.filter(Orders.store_id == store_id)
+        else:
+            first_store = db.query(Stores).first()
+            if first_store:
+                query = query.filter(Orders.store_id == first_store.id)
+        
+        if status:
+            query = query.filter(Orders.order_status == status)
+        
+        if table_id:
+            query = query.filter(Orders.table_id == table_id)
+        
+        orders = query.order_by(Orders.created_at.desc()).limit(3).all()
+        
+        print(f"DEBUG: Found {len(orders)} orders")
+        
+        result = []
+        for order in orders:
+            order_dict = {
+                "id": order.id,
+                "order_number": order.order_number,
+                "store_id": order.store_id,
+                "table_id": order.table_id,
+                "total_amount": float(order.total_amount),
+                "status": order.order_status,
+                "payment_status": order.payment_status
+            }
+            result.append(order_dict)
+        
+        print(f"DEBUG: Returning {len(result)} orders: {result}")
+        return result
+    except Exception as e:
+        import traceback
+        print(f"ERROR: {e}")
+        traceback.print_exc()
+        return {"error": str(e)}
+    finally:
+        db.close()
+
+
 @app.get("/api/orders/", response_model=List[OrderResponse])
 def get_orders(
     status: Optional[str] = None,
@@ -810,6 +864,8 @@ def get_orders(
     store_id: Optional[int] = None
 ):
     """获取订单列表"""
+    print(f"DEBUG: get_orders called with status={status}, table_id={table_id}, store_id={store_id}")
+    
     db = get_session()
     try:
         query = db.query(Orders)
@@ -829,6 +885,8 @@ def get_orders(
         
         orders = query.order_by(Orders.created_at.desc()).all()
         
+        print(f"DEBUG: Found {len(orders)} orders in database")
+        
         result = []
         for order in orders:
             try:
@@ -847,10 +905,10 @@ def get_orders(
                         quantity=oi.quantity,
                         subtotal=float(oi.subtotal),
                         special_instructions=oi.special_instructions,
-                        item_status=oi.item_status or order.order_status
+                        item_status=oi.status or order.order_status  # 修复：使用 status 而不是 item_status
                     ))
                 
-                result.append(OrderResponse(
+                order_response = OrderResponse(
                     id=order.id,
                     order_number=order.order_number or "",
                     store_id=order.store_id,
@@ -862,13 +920,15 @@ def get_orders(
                     status=order.order_status,
                     created_at=order.created_at.isoformat() if order.created_at else "",
                     items=order_items
-                ))
+                )
+                result.append(order_response)
             except Exception as e:
                 import traceback
                 print(f"Error processing order {order.id}: {e}")
                 traceback.print_exc()
                 continue
         
+        print(f"DEBUG: Returning {len(result)} orders")
         return result
     except Exception as e:
         import traceback
