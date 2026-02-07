@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多店铺扫码点餐系统 - 全流程测试平台</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/element-plus/dist/index.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
@@ -567,7 +567,7 @@
             </div>
         </div>
 
-        <!-- 购物车弹窗 -->
+        <!-- 购物车弹窗 - 步骤1：确认订单 -->
         <div v-if="showCart" class="modal-overlay" @click.self="showCart = false">
             <div class="modal-content">
                 <h3 style="margin-bottom: 20px;">🛒 购物车</h3>
@@ -589,9 +589,44 @@
                     </div>
                 </div>
                 <el-button type="primary" size="large" style="width: 100%; margin-top: 20px;"
-                           @click="submitOrder()">
-                    提交订单
+                           @click="showPaymentSelection = true; showCart = false;">
+                    确认订单
                 </el-button>
+            </div>
+        </div>
+
+        <!-- 支付方式选择弹窗 -->
+        <div v-if="showPaymentSelection" class="modal-overlay" @click.self="showPaymentSelection = false">
+            <div class="modal-content">
+                <h3 style="margin-bottom: 20px;">💳 选择支付方式</h3>
+                <div style="margin-bottom: 20px;">
+                    <el-radio v-model="selectedPaymentMethod" label="immediate" style="display: block; margin-bottom: 15px; padding: 15px; background: #f5f7fa; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 16px;">💳 马上付款</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">在线支付（微信/支付宝）</div>
+                            </div>
+                            <span style="color: #67c23a; font-size: 14px; font-weight: bold;">立即结算</span>
+                        </div>
+                    </el-radio>
+                    <el-radio v-model="selectedPaymentMethod" label="counter" style="display: block; padding: 15px; background: #f5f7fa; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="font-size: 16px;">🏪 餐后付款</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">先用餐，离店时到收银台支付</div>
+                            </div>
+                            <span style="color: #e6a23c; font-size: 14px; font-weight: bold;">灵活便捷</span>
+                        </div>
+                    </el-radio>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <el-button size="large" style="flex: 1;" @click="showPaymentSelection = false">返回</el-button>
+                    <el-button type="primary" size="large" style="flex: 1;"
+                               :disabled="!selectedPaymentMethod"
+                               @click="submitOrder()">
+                        {{ selectedPaymentMethod === 'immediate' ? '马上付款' : '餐后付款' }}
+                    </el-button>
+                </div>
             </div>
         </div>
 
@@ -628,6 +663,7 @@
                 const currentRole = ref('customer');
                 const showCart = ref(false);
                 const showServingConfirm = ref(false);
+                const showPaymentSelection = ref(false);
                 const selectedCategory = ref(null);
                 const selectedTable = ref(null);
                 const tempTableId = ref(null);
@@ -649,33 +685,51 @@
                 const currentOrder = ref(null);
 
                 // API基础URL - 自动检测
-                let API_BASE = 'http://localhost:8000';
+                let API_BASE = '';
                 try {
                     const currentHost = window.location.hostname;
                     const currentPort = window.location.port;
-                    if (currentPort === '8080') {
-                        API_BASE = `http://${currentHost}:8000`;
+                    // 只在本地开发时检测端口
+                    if (currentPort && currentPort !== '80') {
+                        API_BASE = ''; // 使用相对路径
                     }
-                    console.log('自动检测到API地址:', API_BASE);
+                    console.log('使用相对路径访问API');
                 } catch (e) {
-                    console.log('使用默认API地址:', API_BASE);
+                    console.log('使用相对路径访问API');
                 }
 
                 // 初始化
                 onMounted(() => {
-                    // 从URL参数读取桌号
+                    // 从URL参数读取桌号（支持多种参数名：table、table_number、table_id）
                     const urlParams = new URLSearchParams(window.location.search);
-                    const tableParam = urlParams.get('table');
+                    let tableParam = urlParams.get('table') || urlParams.get('table_number') || urlParams.get('table_id');
 
                     loadData().then(() => {
                         // 如果URL中有桌号参数，自动选择该桌号
                         if (tableParam) {
-                            const table = tables.value.find(t => t.table_number === tableParam);
+                            // 尝试多种匹配方式：精确匹配、数字匹配、T前缀匹配
+                            let table = tables.value.find(t => t.table_number === tableParam);
+
+                            // 如果没找到，尝试去掉T前缀后的数字匹配
+                            if (!table && tableParam.toLowerCase().startsWith('t')) {
+                                const numPart = tableParam.substring(1);
+                                table = tables.value.find(t => t.table_number === numPart);
+                            }
+
+                            // 如果还是没找到，尝试数字匹配（例如 tableParam 是 '1'，匹配 '1' 或 'T01'）
+                            if (!table && !isNaN(tableParam)) {
+                                const num = parseInt(tableParam);
+                                table = tables.value.find(t =>
+                                    t.table_number === num.toString() ||
+                                    t.table_number === `T${num.toString().padStart(2, '0')}`
+                                );
+                            }
+
                             if (table) {
                                 selectedTable.value = table;
-                                ElMessage.success(`已自动选择${tableParam}号桌`);
+                                ElMessage.success(`已自动选择${table.table_number}号桌`);
                             } else {
-                                ElMessage.warning(`未找到${tableParam}号桌`);
+                                ElMessage.warning(`未找到桌号: ${tableParam}`);
                             }
                         }
                         startAutoRefresh();
@@ -794,10 +848,10 @@
 
                 // 顾客端功能
                 const selectTable = (table) => {
-                    if (!table.is_occupied) {
-                        tempTableId.value = table.id;
-                    } else {
-                        ElMessage.warning('该桌已被占用');
+                    // 允许选择桌号，即使被占用（模拟新顾客到来）
+                    tempTableId.value = table.id;
+                    if (table.is_occupied) {
+                        ElMessage.warning('该桌当前有进行中的订单，继续将合并订单');
                     }
                 };
 
@@ -806,6 +860,8 @@
                     if (table) {
                         selectedTable.value = table;
                         ElMessage.success(`已选择${table.table_number}号桌`);
+                        // 重新加载订单列表，以便显示该桌号的现有订单
+                        await loadOrders();
                     }
                 };
 
@@ -844,14 +900,19 @@
                             items: cart.value.map(item => ({
                                 menu_item_id: item.id,
                                 quantity: item.quantity
-                            })),
-                            payment_method: 'wechat'
+                            }))
                         };
 
                         const response = await axios.post(`${API_BASE}/api/orders/`, orderData);
                         currentOrder.value = response.data;
+
+                        // 确认支付
+                        await axios.post(`${API_BASE}/api/orders/${response.data.id}/confirm-payment`, {
+                            payment_method: selectedPaymentMethod.value
+                        });
+
                         cart.value = [];
-                        showCart.value = false;
+                        showPaymentSelection.value = false;
                         ElMessage.success('订单提交成功！');
                         showNotification('新订单已提交，厨房正在准备', 'success');
                         await loadOrders();
