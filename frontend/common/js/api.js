@@ -1,5 +1,5 @@
-// API 基础配置
-const API_BASE = 'https://restaurant-system-vzj0.onrender.com/api';
+// API 基础配置 - 本地后端（通过Nginx代理）
+const API_BASE = '/api';
 
 // 通用请求函数
 async function apiRequest(url, options = {}) {

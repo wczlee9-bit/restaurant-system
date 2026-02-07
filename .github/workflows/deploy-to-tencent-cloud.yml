@@ -1,0 +1,138 @@
+name: Auto Deploy to Tencent Cloud
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Package frontend files
+        run: |
+          cd frontend
+          tar -czf ../frontend.tar.gz customer/ admin/ common/
+
+      - name: Upload to server
+        run: |
+          scp -o StrictHostKeyChecking=no \
+            frontend.tar.gz \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/
+
+      - name: Deploy on server
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            bash -s << 'ENDSSH'
+          set -e
+
+          echo "=== 开始部署前端 ==="
+
+          # 创建部署目录
+          sudo mkdir -p /var/www/restaurant-system/frontend
+          cd /var/www/restaurant-system/frontend
+
+          # 备份现有文件
+          if [ -d "customer" ]; then
+            sudo tar -czf /tmp/backup-$(date +%Y%m%d-%H%M%S).tar.gz customer/ admin/ common/
+          fi
+
+          # 删除旧文件
+          sudo rm -rf customer/ admin/ common/
+
+          # 解压新文件
+          sudo tar -xzf /tmp/frontend.tar.gz
+
+          # 设置权限
+          sudo chown -R www-data:www-data /var/www/restaurant-system/frontend
+          sudo chmod -R 755 /var/www/restaurant-system/frontend
+
+          # 配置Nginx
+          sudo tee /etc/nginx/sites-available/restaurant > /dev/null << 'EOF'
+          server {
+              listen 80;
+              server_name _;
+
+              # 前端根目录
+              location / {
+                  root /var/www/restaurant-system/frontend/customer;
+                  index index.html;
+                  try_files $uri $uri/ /index.html;
+              }
+
+              # 管理端
+              location /admin/ {
+                  alias /var/www/restaurant-system/frontend/admin/;
+                  index index.html;
+                  try_files $uri $uri/ /admin/dashboard/index.html;
+              }
+
+              # 通用资源
+              location /common/ {
+                  alias /var/www/restaurant-system/frontend/common/;
+              }
+
+              # API代理到后端
+              location /api/ {
+                  proxy_pass http://localhost:8000/api/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+
+                  # WebSocket支持
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+              }
+
+              # WebSocket支持
+              location /ws/ {
+                  proxy_pass http://localhost:8001/ws/;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+              }
+
+              gzip on;
+              gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+          }
+          EOF
+
+          # 启用站点配置
+          sudo ln -sf /etc/nginx/sites-available/restaurant /etc/nginx/sites-enabled/
+          sudo rm -f /etc/nginx/sites-enabled/default
+
+          # 测试Nginx配置
+          sudo nginx -t
+
+          # 重启Nginx
+          sudo systemctl restart nginx
+
+          # 清理临时文件
+          sudo rm -f /tmp/frontend.tar.gz
+
+          echo "=== 部署完成！==="
+          echo "前端部署到: /var/www/restaurant-system/frontend"
+          echo "访问地址: http://$(curl -s ifconfig.me)"
+          ENDSSH
+
+      - name: Cleanup
+        run: |
+          rm -f frontend.tar.gz
