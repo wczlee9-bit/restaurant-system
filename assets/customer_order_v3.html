@@ -463,8 +463,11 @@
                 async initData() {
                     this.loading = true;
                     try {
+                        // 先加载本地店铺信息（同步操作）
+                        this.loadShopInfo();
+                        
+                        // 并发加载后端数据
                         await Promise.all([
-                            this.loadShopInfo(),
                             this.loadTables(),
                             this.loadCategories(),
                             this.loadMenuItems()

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试页面</title>
+</head>
+<body>
+    <h1>点餐页面测试</h1>
+    <p>这个页面用于测试 customer_order_v3.html 是否能正常加载</p>
+    <iframe id="testFrame" width="100%" height="800px" style="border: 1px solid #ccc;"></iframe>
+
+    <script>
+        // 创建一个模拟的后端API
+        const originalFetch = window.fetch;
+        window.fetch = function(url) {
+            console.log('API请求:', url);
+            
+            if (url.includes('/api/tables/')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve([
+                        {id: 1, table_number: '1', is_occupied: false, seats: 4},
+                        {id: 2, table_number: '2', is_occupied: false, seats: 4},
+                        {id: 3, table_number: '3', is_occupied: false, seats: 4}
+                    ])
+                });
+            }
+            
+            if (url.includes('/api/menu-categories/')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve([
+                        {id: 1, name: '主食'},
+                        {id: 2, name: '饮料'},
+                        {id: 3, name: '小菜'}
+                    ])
+                });
+            }
+            
+            if (url.includes('/api/menu-items/')) {
+                return Promise.resolve({
+                    ok: true,
+                    json: () => Promise.resolve([
+                        {id: 1, name: '宫保鸡丁', price: 28, description: '经典川菜', is_available: true, stock: 20, category_id: 1},
+                        {id: 2, name: '鱼香肉丝', price: 25, description: '酸甜口味', is_available: true, stock: 15, category_id: 1},
+                        {id: 3, name: '可乐', price: 5, description: '冰镇可乐', is_available: true, stock: 50, category_id: 2}
+                    ])
+                });
+            }
+            
+            // 默认返回404
+            return Promise.resolve({
+                ok: false,
+                status: 404,
+                json: () => Promise.resolve({detail: 'Not found'})
+            });
+        };
+
+        // 加载customer_order_v3.html
+        document.getElementById('testFrame').src = 'customer_order_v3.html';
+        
+        // 监听iframe加载完成
+        document.getElementById('testFrame').onload = function() {
+            console.log('页面加载完成');
+            setTimeout(() => {
+                try {
+                    const iframeWindow = document.getElementById('testFrame').contentWindow;
+                    console.log('Vue应用状态:', iframeWindow.app?.$data);
+                    console.log('加载状态:', iframeWindow.app?.$data?.loading);
+                } catch (e) {
+                    console.log('无法访问iframe内容（跨域限制）');
+                }
+            }, 2000);
+        };
+    </script>
+</body>
+</html>
