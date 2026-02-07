@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ 餐饮点餐系统 - v3.1 调试版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; background: #f0f2f5; }
+
+        .mobile-container {
+            max-width: 414px; margin: 0 auto; min-height: 100vh; background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 20px; text-align: center; position: sticky;
+            top: 0; z-index: 100;
+        }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .header-info { font-size: 14px; opacity: 0.9; }
+
+        .table-selector {
+            padding: 40px 20px; text-align: center;
+        }
+        .table-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            margin-top: 20px;
+        }
+        .table-cell {
+            padding: 25px 15px; border: 3px solid #eee; border-radius: 12px;
+            cursor: pointer; transition: all 0.3s; font-size: 20px; font-weight: bold;
+            color: #333;
+        }
+        .table-cell:hover { border-color: #667eea; transform: translateY(-3px); }
+        .table-cell.selected { border-color: #667eea; background: #ecf5ff; }
+        .table-cell.occupied { border-color: #f56c6c; background: #fef0f0; color: #f56c6c; }
+
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9); display: flex; align-items: center;
+            justify-content: center; z-index: 2000;
+        }
+
+        .debug-info {
+            background: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 20px;
+            border-radius: 8px; font-size: 14px;
+        }
+        .debug-info h3 { margin-bottom: 10px; color: #856404; }
+        .debug-info p { margin: 5px 0; color: #856404; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 加载状态 -->
+        <div class="loading-overlay" v-if="loading">
+            <div>
+                <div style="font-size: 48px; margin-bottom: 20px;">🍽️</div>
+                <div style="font-size: 18px; color: #666;">加载中...</div>
+                <div style="font-size: 14px; color: #999; margin-top: 10px;">{{ loadingStatus }}</div>
+            </div>
+        </div>
+
+        <!-- 调试信息 -->
+        <div class="debug-info" v-if="!loading">
+            <h3>🔍 调试信息</h3>
+            <p>桌号数量: {{ tables.length }}</p>
+            <p>分类数量: {{ categories.length }}</p>
+            <p>菜品数量: {{ menuItems.length }}</p>
+            <p>加载状态: {{ loading ? '加载中' : '已完成' }}</p>
+        </div>
+
+        <div class="mobile-container">
+            <!-- 桌号选择器 -->
+            <div v-if="!selectedTable" class="table-selector">
+                <h2 style="margin-bottom: 10px;">欢迎光临！</h2>
+                <p style="color: #909399; margin-bottom: 10px;">请选择您的桌号</p>
+
+                <div class="table-grid">
+                    <div v-for="table in tables" :key="table.id"
+                         class="table-cell"
+                         :class="{selected: tempTableId === table.id, occupied: table.is_occupied}"
+                         @click="selectTable(table)">
+                        {{ table.table_number }}号
+                    </div>
+                </div>
+
+                <el-button type="primary" size="large" style="width: 100%; margin-top: 30px; height: 50px;"
+                           :disabled="!tempTableId" @click="confirmTable()">
+                    确认桌号，开始点餐
+                </el-button>
+            </div>
+
+            <!-- 菜单界面 -->
+            <div v-else>
+                <div class="header">
+                    <h1>{{ selectedTable.table_number }}号桌</h1>
+                    <div class="header-info">请选择菜品</div>
+                </div>
+
+                <div style="padding: 20px; text-align: center;">
+                    <h3>菜单区域</h3>
+                    <p>共 {{ menuItems.length }} 道菜品</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 开始加载脚本...');
+
+        // 检查依赖是否加载
+        if (typeof Vue === 'undefined') {
+            console.error('❌ Vue 未加载');
+            document.body.innerHTML = '<h1 style="color: red; padding: 20px;">Vue 未加载，请检查网络连接</h1>';
+        } else {
+            console.log('✅ Vue 已加载');
+        }
+
+        if (typeof ElementPlus === 'undefined') {
+            console.error('❌ ElementPlus 未加载');
+        } else {
+            console.log('✅ ElementPlus 已加载');
+        }
+
+        if (typeof axios === 'undefined') {
+            console.error('❌ Axios 未加载');
+        } else {
+            console.log('✅ Axios 已加载');
+        }
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                console.log('📦 初始化 data...');
+                return {
+                    loading: true,
+                    loadingStatus: '开始初始化...',
+                    tables: [],
+                    categories: [],
+                    menuItems: [],
+                    selectedTable: null,
+                    tempTableId: null
+                };
+            },
+            async mounted() {
+                console.log('🚀 mounted 开始...');
+                await this.initData();
+            },
+            methods: {
+                async initData() {
+                    console.log('📥 initData 开始...');
+                    this.loadingStatus = '开始加载店铺信息...';
+                    this.loading = true;
+
+                    try {
+                        // 步骤1: 加载店铺信息
+                        this.loadingStatus = '加载店铺信息...';
+                        console.log('📦 加载店铺信息...');
+                        this.loadShopInfo();
+                        console.log('✅ 店铺信息加载完成');
+
+                        // 步骤2: 加载桌号
+                        this.loadingStatus = '加载桌号数据...';
+                        console.log('📦 加载桌号...');
+                        await this.loadTables();
+                        console.log('✅ 桌号加载完成:', this.tables.length, '个');
+
+                        // 步骤3: 加载分类
+                        this.loadingStatus = '加载菜品分类...';
+                        console.log('📦 加载分类...');
+                        await this.loadCategories();
+                        console.log('✅ 分类加载完成:', this.categories.length, '个');
+
+                        // 步骤4: 加载菜品
+                        this.loadingStatus = '加载菜品数据...';
+                        console.log('📦 加载菜品...');
+                        await this.loadMenuItems();
+                        console.log('✅ 菜品加载完成:', this.menuItems.length, '道');
+
+                        this.loadingStatus = '加载完成';
+                        console.log('✅ 所有数据加载完成');
+
+                        // 延迟关闭 loading，确保界面更新
+                        setTimeout(() => {
+                            this.loading = false;
+                            console.log('✅ Loading 已关闭');
+                        }, 500);
+
+                    } catch (error) {
+                        console.error('❌ 初始化失败:', error);
+                        console.error('错误详情:', error.message, error.stack);
+                        this.loadingStatus = '加载失败: ' + error.message;
+                        alert('加载失败: ' + error.message);
+                        this.loading = false;
+                    }
+                },
+
+                loadShopInfo() {
+                    console.log('📝 loadShopInfo 被调用');
+                    // 简化版，不使用 localStorage
+                    console.log('✅ loadShopInfo 完成');
+                },
+
+                async loadTables() {
+                    console.log('📝 loadTables 被调用');
+                    try {
+                        const response = await axios.get('/api/tables/');
+                        this.tables = response.data || [];
+                        console.log('✅ loadTables 完成:', this.tables.length);
+                    } catch (error) {
+                        console.error('❌ loadTables 失败:', error);
+                        throw error;
+                    }
+                },
+
+                async loadCategories() {
+                    console.log('📝 loadCategories 被调用');
+                    try {
+                        const response = await axios.get('/api/menu-categories/');
+                        this.categories = response.data || [];
+                        console.log('✅ loadCategories 完成:', this.categories.length);
+                    } catch (error) {
+                        console.error('❌ loadCategories 失败:', error);
+                        throw error;
+                    }
+                },
+
+                async loadMenuItems() {
+                    console.log('📝 loadMenuItems 被调用');
+                    try {
+                        const response = await axios.get('/api/menu-items/');
+                        this.menuItems = response.data || [];
+                        console.log('✅ loadMenuItems 完成:', this.menuItems.length);
+                    } catch (error) {
+                        console.error('❌ loadMenuItems 失败:', error);
+                        throw error;
+                    }
+                },
+
+                selectTable(table) {
+                    this.tempTableId = table.id;
+                },
+
+                confirmTable() {
+                    if (!this.tempTableId) {
+                        alert('请先选择桌号');
+                        return;
+                    }
+                    const table = this.tables.find(t => t.id === this.tempTableId);
+                    if (table) {
+                        this.selectedTable = table;
+                        alert('已选择' + table.table_number + '号桌');
+                    }
+                }
+            }
+        }).use(ElementPlus).mount('#app');
+
+        console.log('✅ Vue 应用已挂载');
+    </script>
+</body>
+</html>
