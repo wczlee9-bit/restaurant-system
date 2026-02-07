@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 扫码点餐</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .welcome-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .restaurant-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .table-info {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .table-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ff6b35;
+            margin: 10px 0;
+        }
+        
+        .start-btn {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+        }
+        
+        .start-btn:active {
+            transform: translateY(0);
+        }
+        
+        .footer {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            font-size: 14px;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="welcome-container">
+        <div class="welcome-card">
+            <div class="restaurant-icon">🍽️</div>
+            <div class="welcome-title">欢迎使用美味餐厅</div>
+            <div class="table-info">
+                欢迎光临<br>
+                <div class="table-number" id="table-display">--号桌</div>
+            </div>
+            <button class="start-btn" onclick="startOrder()">开始点餐</button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        © 2024 美味餐厅 | 祝您用餐愉快
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let tableNumber = '';
+        
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        // 验证餐桌号
+        async function validateTable(tableNo) {
+            try {
+                // 调用API验证餐桌是否存在
+                const tables = await apiRequest('/api/tables/');
+                const table = tables.find(t => t.table_number === tableNo);
+                return table ? table : null;
+            } catch (error) {
+                console.error('验证餐桌失败:', error);
+                return null;
+            }
+        }
+        
+        // 初始化
+        async function init() {
+            // 从URL获取餐桌号
+            tableNumber = getUrlParam('table');
+            
+            if (!tableNumber) {
+                document.getElementById('welcome-container').innerHTML = `
+                    <div class="welcome-card" style="text-align: center;">
+                        <div class="restaurant-icon">⚠️</div>
+                        <div class="welcome-title">扫码失败</div>
+                        <div class="table-info">请重新扫描桌子上的二维码</div>
+                        <button class="start-btn" onclick="window.location.reload()">重新加载</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 显示加载状态
+            document.getElementById('welcome-container').innerHTML = `
+                <div class="welcome-card loading">
+                    <div class="spinner"></div>
+                    <div class="welcome-title">正在验证餐桌...</div>
+                </div>
+            `;
+            
+            // 验证餐桌
+            const table = await validateTable(tableNumber);
+            
+            if (!table) {
+                document.getElementById('welcome-container').innerHTML = `
+                    <div class="welcome-card" style="text-align: center;">
+                        <div class="restaurant-icon">❌</div>
+                        <div class="welcome-title">餐桌不存在</div>
+                        <div class="table-info">餐桌号: ${tableNumber}<br>请联系服务员</div>
+                        <button class="start-btn" onclick="window.location.reload()">重新加载</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 显示餐桌信息
+            document.getElementById('welcome-container').innerHTML = `
+                <div class="welcome-card">
+                    <div class="restaurant-icon">🍽️</div>
+                    <div class="welcome-title">欢迎使用美味餐厅</div>
+                    <div class="table-info">
+                        欢迎光临<br>
+                        <div class="table-number">${tableNumber}号桌</div>
+                    </div>
+                    <button class="start-btn" onclick="startOrder()">开始点餐</button>
+                </div>
+            `;
+        }
+        
+        // 开始点餐
+        function startOrder() {
+            // 保存餐桌号到本地存储
+            localStorage.setItem('current_table', tableNumber);
+            
+            // 跳转到菜单页面
+            window.location.href = `menu/index.html?table=${tableNumber}`;
+        }
+        
+        // 页面加载时初始化
+        init();
+    </script>
+</body>
+</html>

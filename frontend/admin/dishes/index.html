@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 菜品管理</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #3d566e;
+        }
+        
+        .sidebar-menu {
+            margin-top: 20px;
+        }
+        
+        .sidebar-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-item:hover, .sidebar-item.active {
+            background: #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        
+        .dishes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .dish-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .dish-image {
+            width: 100%;
+            height: 180px;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 40px;
+        }
+        
+        .dish-info {
+            padding: 15px;
+        }
+        
+        .dish-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .dish-price {
+            color: #ff6b35;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .dish-category {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .dish-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .dish-actions button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .form-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">🍽️ 美味餐厅</div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item" onclick="window.location.href='../dashboard/index.html'">
+                📊 仪表盘
+            </div>
+            <div class="sidebar-item active">
+                🍜 菜品管理
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../orders/index.html'">
+                📋 订单管理
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../members/index.html'">
+                👥 会员管理
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="toolbar">
+            <h2>菜品管理</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="搜索菜品名称..." onkeyup="searchDishes()">
+                <button class="btn btn-primary" onclick="openAddModal()">+ 添加菜品</button>
+            </div>
+        </div>
+        
+        <div class="dishes-grid" id="dishes-grid"></div>
+    </div>
+    
+    <!-- 添加/编辑菜品模态框 -->
+    <div class="modal" id="dish-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">添加菜品</div>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="dish-form">
+                <div class="form-group">
+                    <label>菜品名称</label>
+                    <input type="text" id="dish-name" required>
+                </div>
+                <div class="form-group">
+                    <label>价格 (元)</label>
+                    <input type="number" id="dish-price" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>分类</label>
+                    <select id="dish-category" required>
+                        <option value="">请选择分类</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="dish-description"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let dishes = [];
+        let categories = [];
+        
+        // 加载分类
+        async function loadCategories() {
+            try {
+                const data = await apiRequest('/api/menu-categories/');
+                categories = data;
+                renderCategoryOptions();
+            } catch (error) {
+                console.error('加载分类失败:', error);
+            }
+        }
+        
+        // 渲染分类选项
+        function renderCategoryOptions() {
+            const select = document.getElementById('dish-category');
+            select.innerHTML = '<option value="">请选择分类</option>' + 
+                categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+        
+        // 加载菜品
+        async function loadDishes() {
+            const container = document.getElementById('dishes-grid');
+            showLoading(container);
+            
+            try {
+                const data = await apiRequest('/api/menu-items/');
+                dishes = data;
+                renderDishes();
+            } catch (error) {
+                showError(container, '加载菜品失败');
+            }
+        }
+        
+        // 渲染菜品
+        function renderDishes(dishesToRender = dishes) {
+            const container = document.getElementById('dishes-grid');
+            
+            container.innerHTML = dishesToRender.map(dish => {
+                const category = categories.find(c => c.id === dish.category_id);
+                return `
+                    <div class="dish-card">
+                        <div class="dish-image">📷</div>
+                        <div class="dish-info">
+                            <div class="dish-name">${dish.name}</div>
+                            <div class="dish-price">¥${dish.price.toFixed(2)}</div>
+                            <span class="dish-category">${category ? category.name : '未分类'}</span>
+                            <div class="dish-actions">
+                                <button class="btn btn-secondary" onclick="openEditModal(${dish.id})">编辑</button>
+                                <button class="btn btn-danger" onclick="deleteDish(${dish.id})">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 搜索菜品
+        function searchDishes() {
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            const filtered = dishes.filter(d => 
+                d.name.toLowerCase().includes(keyword)
+            );
+            renderDishes(filtered);
+        }
+        
+        // 打开添加模态框
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = '添加菜品';
+            document.getElementById('dish-form').reset();
+            document.getElementById('dish-modal').classList.add('active');
+        }
+        
+        // 打开编辑模态框
+        function openEditModal(dishId) {
+            const dish = dishes.find(d => d.id === dishId);
+            if (!dish) return;
+            
+            document.getElementById('modal-title').textContent = '编辑菜品';
+            document.getElementById('dish-name').value = dish.name;
+            document.getElementById('dish-price').value = dish.price;
+            document.getElementById('dish-category').value = dish.category_id;
+            document.getElementById('dish-description').value = dish.description || '';
+            document.getElementById('dish-modal').classList.add('active');
+        }
+        
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('dish-modal').classList.remove('active');
+        }
+        
+        // 保存菜品
+        async function saveDish(e) {
+            e.preventDefault();
+            
+            const dishData = {
+                name: document.getElementById('dish-name').value,
+                price: parseFloat(document.getElementById('dish-price').value),
+                category_id: parseInt(document.getElementById('dish-category').value),
+                description: document.getElementById('dish-description').value
+            };
+            
+            try {
+                // TODO: 调用添加/编辑菜品 API
+                showMessage('保存成功', 'success');
+                closeModal();
+                loadDishes();
+            } catch (error) {
+                showMessage('保存失败', 'error');
+            }
+        }
+        
+        // 删除菜品
+        async function deleteDish(dishId) {
+            if (!confirm('确定要删除这个菜品吗？')) return;
+            
+            try {
+                // TODO: 调用删除菜品 API
+                showMessage('删除成功', 'success');
+                loadDishes();
+            } catch (error) {
+                showMessage('删除失败', 'error');
+            }
+        }
+        
+        // 表单提交
+        document.getElementById('dish-form').addEventListener('submit', saveDish);
+        
+        // 初始化
+        loadCategories();
+        loadDishes();
+    </script>
+</body>
+</html>

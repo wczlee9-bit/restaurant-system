@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 会员管理</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #3d566e;
+        }
+        
+        .sidebar-menu {
+            margin-top: 20px;
+        }
+        
+        .sidebar-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-item:hover, .sidebar-item.active {
+            background: #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        
+        .members-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .members-table th, .members-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .members-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .members-table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .level-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .points {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .form-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">🍽️ 美味餐厅</div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item" onclick="window.location.href='../dashboard/index.html'">
+                📊 仪表盘
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../dishes/index.html'">
+                🍜 菜品管理
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../orders/index.html'">
+                📋 订单管理
+            </div>
+            <div class="sidebar-item active">
+                👥 会员管理
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="toolbar">
+            <h2>会员管理</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="搜索手机号..." onkeyup="searchMembers()">
+                <button class="btn btn-primary" onclick="openAddModal()">+ 注册会员</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="total-members">0</div>
+                <div class="stat-label">会员总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total-points">0</div>
+                <div class="stat-label">总积分</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="new-today">0</div>
+                <div class="stat-label">今日新增</div>
+            </div>
+        </div>
+        
+        <table class="members-table">
+            <thead>
+                <tr>
+                    <th>会员ID</th>
+                    <th>手机号</th>
+                    <th>会员等级</th>
+                    <th>积分</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="members-list"></tbody>
+        </table>
+    </div>
+    
+    <!-- 添加会员模态框 -->
+    <div class="modal" id="member-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">注册会员</div>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="member-form">
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="tel" id="member-phone" required pattern="[0-9]{11}" placeholder="请输入11位手机号">
+                </div>
+                <div class="form-group">
+                    <label>会员等级</label>
+                    <select id="member-level" required>
+                        <option value="">请选择等级</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">注册</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let members = [];
+        let levels = [];
+        
+        // 加载会员等级
+        async function loadLevels() {
+            try {
+                const data = await apiRequest('/api/member/levels');
+                levels = data;
+                renderLevelOptions();
+            } catch (error) {
+                console.error('加载会员等级失败:', error);
+            }
+        }
+        
+        // 渲染等级选项
+        function renderLevelOptions() {
+            const select = document.getElementById('member-level');
+            select.innerHTML = '<option value="">请选择等级</option>' + 
+                levels.map(l => `<option value="${l.id}">${l.name} (折扣: ${l.discount * 100}%)</option>`).join('');
+        }
+        
+        // 加载会员
+        async function loadMembers() {
+            const container = document.getElementById('members-list');
+            container.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';
+            
+            try {
+                // 暂时只加载一个测试会员
+                const data = await apiRequest('/api/member/1');
+                members = [data];
+                renderMembers();
+                updateStats();
+            } catch (error) {
+                container.innerHTML = '<tr><td colspan="6" class="error">加载会员失败</td></tr>';
+            }
+        }
+        
+        // 渲染会员
+        function renderMembers(membersToRender = members) {
+            const container = document.getElementById('members-list');
+            
+            if (membersToRender.length === 0) {
+                container.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">暂无会员</td></tr>';
+                return;
+            }
+            
+            container.innerHTML = membersToRender.map(member => `
+                <tr>
+                    <td>${member.id}</td>
+                    <td>${member.phone}</td>
+                    <td>
+                        <span class="level-badge">${member.level_name || '普通会员'}</span>
+                    </td>
+                    <td class="points">${member.points}</td>
+                    <td>${formatTime(member.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="showDetail(${member.id})">详情</button>
+                        <button class="btn btn-sm btn-success" onclick="addPoints(${member.id})">充值</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 更新统计
+        function updateStats() {
+            document.getElementById('total-members').textContent = members.length;
+            document.getElementById('total-points').textContent = members.reduce((sum, m) => sum + m.points, 0);
+            document.getElementById('new-today').textContent = '0';
+        }
+        
+        // 格式化时间
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+        
+        // 搜索会员
+        function searchMembers() {
+            const keyword = document.getElementById('search-input').value;
+            // TODO: 实现搜索功能
+        }
+        
+        // 打开添加模态框
+        function openAddModal() {
+            document.getElementById('modal-title').textContent = '注册会员';
+            document.getElementById('member-form').reset();
+            document.getElementById('member-modal').classList.add('active');
+        }
+        
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('member-modal').classList.remove('active');
+        }
+        
+        // 注册会员
+        async function registerMember(e) {
+            e.preventDefault();
+            
+            const phone = document.getElementById('member-phone').value;
+            const levelId = parseInt(document.getElementById('member-level').value);
+            
+            try {
+                await apiRequest('/api/restaurant/register-member', {
+                    method: 'POST',
+                    body: JSON.stringify({ phone, level_id: levelId })
+                });
+                
+                showMessage('注册成功', 'success');
+                closeModal();
+                loadMembers();
+            } catch (error) {
+                showMessage('注册失败', 'error');
+            }
+        }
+        
+        // 显示详情
+        function showDetail(memberId) {
+            const member = members.find(m => m.id === memberId);
+            alert(`会员信息\n\n手机号: ${member.phone}\n等级: ${member.level_name}\n积分: ${member.points}\n折扣: ${(member.discount * 100).toFixed(0)}%`);
+        }
+        
+        // 充值积分
+        function addPoints(memberId) {
+            const points = prompt('请输入充值积分数：');
+            if (!points) return;
+            
+            const pointsNum = parseInt(points);
+            if (isNaN(pointsNum) || pointsNum <= 0) {
+                showMessage('请输入有效的积分值', 'error');
+                return;
+            }
+            
+            // TODO: 调用充值积分 API
+            showMessage('充值成功', 'success');
+            loadMembers();
+        }
+        
+        // 表单提交
+        document.getElementById('member-form').addEventListener('submit', registerMember);
+        
+        // 初始化
+        loadLevels();
+        loadMembers();
+    </script>
+</body>
+</html>

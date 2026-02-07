@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 个人中心</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        .profile-header {
+            background: linear-gradient(135deg, #ff6b35, #ff8c61);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        
+        .member-info {
+            margin-bottom: 10px;
+        }
+        
+        .member-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .member-phone {
+            opacity: 0.9;
+        }
+        
+        .member-level {
+            display: inline-block;
+            background: rgba(255,255,255,0.3);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .points-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            text-align: center;
+        }
+        
+        .points-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .menu-list {
+            margin: 20px;
+        }
+        
+        .menu-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .menu-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .menu-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .menu-text {
+            flex: 1;
+        }
+        
+        .menu-arrow {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>👤 我的</h1>
+        <div class="nav">
+            <a href="menu/index.html">🍽️ 菜单</a>
+            <a href="cart.html">🛒 购物车</a>
+            <a href="order.html">📋 订单</a>
+        </div>
+    </div>
+    
+    <div id="profile-content">
+        <div class="profile-header">
+            <div class="avatar">👤</div>
+            <div class="member-info">
+                <div class="member-name">登录</div>
+                <div class="member-phone">请先登录</div>
+            </div>
+        </div>
+        
+        <div class="points-card">
+            <div>我的积分</div>
+            <div class="points-value">0</div>
+            <div style="font-size: 12px; opacity: 0.8;">1积分 = 1元</div>
+        </div>
+        
+        <div class="menu-list">
+            <div class="menu-item" onclick="showMessage('功能开发中', 'info')">
+                <div class="menu-icon">🎁</div>
+                <div class="menu-text">积分兑换</div>
+                <div class="menu-arrow">›</div>
+            </div>
+            <div class="menu-item" onclick="showMessage('功能开发中', 'info')">
+                <div class="menu-icon">🎫</div>
+                <div class="menu-text">优惠券</div>
+                <div class="menu-arrow">›</div>
+            </div>
+            <div class="menu-item" onclick="showMessage('功能开发中', 'info')">
+                <div class="menu-icon">⭐</div>
+                <div class="menu-text">收藏</div>
+                <div class="menu-arrow">›</div>
+            </div>
+            <div class="menu-item" onclick="showMessage('功能开发中', 'info')">
+                <div class="menu-icon">⚙️</div>
+                <div class="menu-text">设置</div>
+                <div class="menu-arrow">›</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        // TODO: 从登录信息获取会员ID
+        // 加载会员信息
+        async function loadMemberInfo() {
+            try {
+                const member = await apiRequest('/api/member/1');
+                
+                document.querySelector('.profile-header').innerHTML = `
+                    <div class="avatar">👤</div>
+                    <div class="member-info">
+                        <div class="member-name">${member.member.name || '会员'}</div>
+                        <div class="member-phone">${member.member.phone}</div>
+                        <div class="member-level">${member.member.level_name}</div>
+                    </div>
+                `;
+                
+                document.querySelector('.points-card').innerHTML = `
+                    <div>我的积分</div>
+                    <div class="points-value">${member.member.points}</div>
+                    <div style="font-size: 12px; opacity: 0.8;">1积分 = 1元</div>
+                `;
+            } catch (error) {
+                console.error('加载会员信息失败:', error);
+            }
+        }
+        
+        // 初始化
+        loadMemberInfo();
+    </script>
+</body>
+</html>

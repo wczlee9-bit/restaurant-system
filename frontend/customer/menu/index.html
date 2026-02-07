@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 菜单</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        .menu-categories {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 15px 0;
+            margin-bottom: 20px;
+        }
+        
+        .category-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .category-btn.active {
+            background: #ff6b35;
+            color: white;
+            border-color: #ff6b35;
+        }
+        
+        .menu-item {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .menu-item-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            background: #eee;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        .menu-item-info {
+            flex: 1;
+            margin-left: 15px;
+        }
+        
+        .menu-item-name {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .menu-item-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .menu-item-price {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+        
+        .menu-item-action {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .qty-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qty-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .cart-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff6b35;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(255,107,53,0.4);
+            cursor: pointer;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🍽️ 美味餐厅</h1>
+        <div class="table-info" id="current-table"></div>
+        <div class="nav">
+            <a href="cart.html">🛒 购物车</a>
+            <a href="order.html">📋 订单</a>
+            <a href="profile.html">👤 我的</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div id="categories" class="menu-categories"></div>
+        <div id="menu-items"></div>
+    </div>
+    
+    <div class="cart-badge" onclick="window.location.href='cart.html'">
+        🛒 <span id="cart-count">0</span> 件
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let cart = getStorage('cart', []);
+        let menuItems = [];
+        let categories = [];
+        let activeCategory = null;
+        let tableNumber = '';
+        
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        // 初始化餐桌号
+        function initTableNumber() {
+            // 从URL获取餐桌号
+            tableNumber = getUrlParam('table');
+            
+            // 如果URL中没有，从本地存储获取
+            if (!tableNumber) {
+                tableNumber = getStorage('current_table', '');
+            }
+            
+            // 显示餐桌号
+            const tableInfo = document.getElementById('current-table');
+            if (tableNumber) {
+                tableInfo.textContent = `${tableNumber}号桌`;
+            } else {
+                tableInfo.textContent = '未选择餐桌';
+            }
+        }
+        
+        // 加载分类
+        async function loadCategories() {
+            try {
+                const data = await apiRequest('/api/menu-categories/');
+                categories = data;
+                renderCategories();
+            } catch (error) {
+                showMessage('加载分类失败', 'error');
+            }
+        }
+        
+        // 加载菜品
+        async function loadMenuItems() {
+            const container = document.getElementById('menu-items');
+            showLoading(container);
+            
+            try {
+                const data = await apiRequest('/api/menu-items/');
+                menuItems = data;
+                filterMenuItems();
+            } catch (error) {
+                showError(container, '加载菜品失败');
+            }
+        }
+        
+        // 渲染分类
+        function renderCategories() {
+            const container = document.getElementById('categories');
+            container.innerHTML = `
+                <button class="category-btn ${activeCategory === null ? 'active' : ''}" 
+                        onclick="selectCategory(null)">全部</button>
+                ${categories.map(c => `
+                    <button class="category-btn ${activeCategory === c.id ? 'active' : ''}" 
+                            onclick="selectCategory(${c.id})">${c.name}</button>
+                `).join('')}
+            `;
+        }
+        
+        // 选择分类
+        function selectCategory(categoryId) {
+            activeCategory = categoryId;
+            renderCategories();
+            filterMenuItems();
+        }
+        
+        // 过滤菜品
+        function filterMenuItems() {
+            const container = document.getElementById('menu-items');
+            const filtered = activeCategory === null 
+                ? menuItems 
+                : menuItems.filter(item => item.category_id === activeCategory);
+            
+            container.innerHTML = filtered.map(item => {
+                const cartItem = cart.find(c => c.menu_item_id === item.id);
+                const qty = cartItem ? cartItem.quantity : 0;
+                
+                return `
+                    <div class="menu-item">
+                        <div class="menu-item-image">📷</div>
+                        <div class="menu-item-info">
+                            <div class="menu-item-name">${item.name}</div>
+                            <div class="menu-item-desc">${item.description || ''}</div>
+                            <div class="flex-between">
+                                <div class="menu-item-price">${formatPrice(item.price)}</div>
+                                <div class="menu-item-action">
+                                    <button class="qty-btn" ${qty === 0 ? 'disabled' : ''} 
+                                            onclick="updateQty(${item.id}, -1)">-</button>
+                                    <span>${qty}</span>
+                                    <button class="qty-btn" 
+                                            onclick="updateQty(${item.id}, 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 更新数量
+        function updateQty(itemId, delta) {
+            const cartItem = cart.find(c => c.menu_item_id === itemId);
+            
+            if (cartItem) {
+                cartItem.quantity += delta;
+                if (cartItem.quantity <= 0) {
+                    cart = cart.filter(c => c.menu_item_id !== itemId);
+                }
+            } else if (delta > 0) {
+                const item = menuItems.find(m => m.id === itemId);
+                cart.push({
+                    menu_item_id: itemId,
+                    name: item.name,
+                    price: item.price,
+                    quantity: 1
+                });
+            }
+            
+            setStorage('cart', cart);
+            updateCartCount();
+            filterMenuItems();
+        }
+        
+        // 更新购物车数量
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+        }
+        
+        // 初始化
+        initTableNumber();
+        loadCategories();
+        loadMenuItems();
+        updateCartCount();
+    </script>
+</body>
+</html>

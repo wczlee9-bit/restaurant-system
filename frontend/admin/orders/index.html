@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 订单管理</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #3d566e;
+        }
+        
+        .sidebar-menu {
+            margin-top: 20px;
+        }
+        
+        .sidebar-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-item:hover, .sidebar-item.active {
+            background: #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .filters select, .filters input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .orders-table th, .orders-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .orders-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .orders-table tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .order-status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .order-detail {
+            display: none;
+            background: #f9f9f9;
+            padding: 15px;
+        }
+        
+        .order-detail.active {
+            display: block;
+        }
+        
+        .order-items-list {
+            margin: 10px 0;
+        }
+        
+        .order-items-list li {
+            padding: 5px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">🍽️ 美味餐厅</div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item" onclick="window.location.href='../dashboard/index.html'">
+                📊 仪表盘
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../dishes/index.html'">
+                🍜 菜品管理
+            </div>
+            <div class="sidebar-item active">
+                📋 订单管理
+            </div>
+            <div class="sidebar-item" onclick="window.location.href='../members/index.html'">
+                👥 会员管理
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="toolbar">
+            <h2>订单管理</h2>
+            <div class="filters">
+                <select id="status-filter" onchange="filterOrders()">
+                    <option value="">全部状态</option>
+                    <option value="pending">待确认</option>
+                    <option value="confirmed">已确认</option>
+                    <option value="completed">已完成</option>
+                    <option value="cancelled">已取消</option>
+                </select>
+                <input type="text" id="search-input" placeholder="搜索订单号..." onkeyup="filterOrders()">
+            </div>
+        </div>
+        
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>订单号</th>
+                    <th>餐桌</th>
+                    <th>金额</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="orders-list"></tbody>
+        </table>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let orders = [];
+        
+        // 加载订单
+        async function loadOrders() {
+            const container = document.getElementById('orders-list');
+            container.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';
+            
+            try {
+                const data = await apiRequest('/api/orders/');
+                orders = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                renderOrders();
+            } catch (error) {
+                container.innerHTML = '<tr><td colspan="6" class="error">加载订单失败</td></tr>';
+            }
+        }
+        
+        // 渲染订单
+        function renderOrders(ordersToRender = orders) {
+            const container = document.getElementById('orders-list');
+            
+            if (ordersToRender.length === 0) {
+                container.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;">暂无订单</td></tr>';
+                return;
+            }
+            
+            container.innerHTML = ordersToRender.map(order => `
+                <tr>
+                    <td>
+                        <strong>${order.order_number}</strong>
+                        <div class="order-detail" id="detail-${order.id}">
+                            <strong>订单明细：</strong>
+                            <ul class="order-items-list">
+                                ${order.items.map(item => `
+                                    <li>${item.menu_item_name} x${item.quantity} = ¥${(item.price * item.quantity).toFixed(2)}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </td>
+                    <td>${order.table_number}</td>
+                    <td><strong>¥${order.total_amount.toFixed(2)}</strong></td>
+                    <td>
+                        <span class="order-status status-${order.status}">
+                            ${getStatusText(order.status)}
+                        </span>
+                    </td>
+                    <td>${formatTime(order.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="toggleDetail(${order.id})">详情</button>
+                        ${order.status === 'pending' ? `
+                            <button class="btn btn-sm btn-success" onclick="updateStatus(${order.id}, 'confirmed')">确认</button>
+                        ` : ''}
+                        ${order.status === 'confirmed' ? `
+                            <button class="btn btn-sm btn-primary" onclick="updateStatus(${order.id}, 'completed')">完成</button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待确认',
+                'confirmed': '已确认',
+                'completed': '已完成',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // 格式化时间
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // 切换详情显示
+        function toggleDetail(orderId) {
+            const detail = document.getElementById(`detail-${orderId}`);
+            detail.classList.toggle('active');
+        }
+        
+        // 过滤订单
+        function filterOrders() {
+            const status = document.getElementById('status-filter').value;
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            
+            let filtered = orders;
+            
+            if (status) {
+                filtered = filtered.filter(o => o.status === status);
+            }
+            
+            if (keyword) {
+                filtered = filtered.filter(o => o.order_number.toLowerCase().includes(keyword));
+            }
+            
+            renderOrders(filtered);
+        }
+        
+        // 更新状态
+        async function updateStatus(orderId, newStatus) {
+            try {
+                await apiRequest(`/api/orders/${orderId}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                showMessage('状态更新成功', 'success');
+                loadOrders();
+            } catch (error) {
+                showMessage('状态更新失败', 'error');
+            }
+        }
+        
+        // 初始化
+        loadOrders();
+    </script>
+</body>
+</html>

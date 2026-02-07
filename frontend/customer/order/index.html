@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 我的订单</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        .order-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-number {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .order-status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-cancelled { background: #f8d7da; color: #721c24; }
+        
+        .order-items {
+            margin-bottom: 10px;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .order-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+        }
+        
+        .order-total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+        
+        .empty-orders {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 我的订单</h1>
+        <div class="nav">
+            <a href="menu/index.html">🍽️ 菜单</a>
+            <a href="cart.html">🛒 购物车</a>
+            <a href="profile.html">👤 我的</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div id="orders"></div>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        // 加载订单列表
+        async function loadOrders() {
+            const container = document.getElementById('orders');
+            showLoading(container);
+            
+            try {
+                // TODO: 从登录信息获取会员ID
+                const orders = await apiRequest('/api/orders/');
+                
+                if (orders.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-orders">
+                            <div style="font-size: 60px; margin-bottom: 20px;">📋</div>
+                            <p>暂无订单</p>
+                            <button class="btn btn-primary" onclick="window.location.href='menu/index.html'" style="margin-top: 20px;">
+                                去点餐
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = orders.map(order => `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div class="order-number">${order.order_number}</div>
+                            <div class="order-status status-${order.status}">
+                                ${getStatusText(order.status)}
+                            </div>
+                        </div>
+                        <div class="order-items">
+                            ${order.items.map(item => `
+                                <div class="order-item">
+                                    <span>${item.menu_item_name} x${item.quantity}</span>
+                                    <span>¥${(item.price * item.quantity).toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="order-footer">
+                            <span>${formatTime(order.created_at)}</span>
+                            <div class="order-total">¥${order.total_amount.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                showError(container, '加载订单失败');
+            }
+        }
+        
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待确认',
+                'confirmed': '已确认',
+                'completed': '已完成',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // 格式化时间
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return '刚刚';
+            if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+            
+            return date.toLocaleDateString();
+        }
+        
+        // 初始化
+        loadOrders();
+    </script>
+</body>
+</html>

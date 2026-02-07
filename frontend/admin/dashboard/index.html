@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 管理后台</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+        
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: bold;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #3d566e;
+        }
+        
+        .sidebar-menu {
+            margin-top: 20px;
+        }
+        
+        .sidebar-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sidebar-item:hover, .sidebar-item.active {
+            background: #34495e;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-trend {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .trend-up { color: #28a745; }
+        .trend-down { color: #dc3545; }
+        
+        .recent-orders {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff6b35;
+        }
+        
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .order-table th, .order-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        .order-status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">🍽️ 美味餐厅</div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item active" onclick="navigate('dashboard')">
+                📊 仪表盘
+            </div>
+            <div class="sidebar-item" onclick="navigate('dishes')">
+                🍜 菜品管理
+            </div>
+            <div class="sidebar-item" onclick="navigate('orders')">
+                📋 订单管理
+            </div>
+            <div class="sidebar-item" onclick="navigate('members')">
+                👥 会员管理
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">仪表盘</div>
+            <div>
+                <span>管理员</span>
+                <button class="btn btn-secondary" style="margin-left: 10px;">退出</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">今日订单</div>
+                <div class="stat-value" id="today-orders">0</div>
+                <div class="stat-trend trend-up">↑ 12% 较昨日</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">今日营收</div>
+                <div class="stat-value" id="today-revenue">¥0</div>
+                <div class="stat-trend trend-up">↑ 8% 较昨日</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">会员总数</div>
+                <div class="stat-value" id="total-members">0</div>
+                <div class="stat-trend trend-up">↑ 5 新增</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">待处理订单</div>
+                <div class="stat-value" id="pending-orders">0</div>
+                <div class="stat-trend">需要处理</div>
+            </div>
+        </div>
+        
+        <div class="recent-orders">
+            <div class="section-title">最近订单</div>
+            <table class="order-table">
+                <thead>
+                    <tr>
+                        <th>订单号</th>
+                        <th>餐桌</th>
+                        <th>金额</th>
+                        <th>状态</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-orders-list">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        // 导航
+        function navigate(page) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            // TODO: 实现页面切换
+            showMessage('功能开发中', 'info');
+        }
+        
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const orders = await apiRequest('/api/orders/');
+                
+                // 今日订单
+                const today = new Date().toDateString();
+                const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today);
+                document.getElementById('today-orders').textContent = todayOrders.length;
+                
+                // 今日营收
+                const todayRevenue = todayOrders.reduce((sum, o) => sum + o.total_amount, 0);
+                document.getElementById('today-revenue').textContent = `¥${todayRevenue.toFixed(2)}`;
+                
+                // 待处理订单
+                const pendingOrders = orders.filter(o => o.status === 'pending');
+                document.getElementById('pending-orders').textContent = pendingOrders.length;
+                
+                // 最近订单
+                const recentOrders = orders.slice(-5).reverse();
+                document.getElementById('recent-orders-list').innerHTML = recentOrders.map(order => `
+                    <tr>
+                        <td>${order.order_number}</td>
+                        <td>${order.table_number}</td>
+                        <td>¥${order.total_amount.toFixed(2)}</td>
+                        <td>
+                            <span class="order-status status-${order.status}">
+                                ${getStatusText(order.status)}
+                            </span>
+                        </td>
+                        <td>${formatTime(order.created_at)}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+            
+            // 加载会员数
+            try {
+                const member = await apiRequest('/api/member/1');
+                document.getElementById('total-members').textContent = '1';
+            } catch (error) {
+                console.error('加载会员数失败:', error);
+            }
+        }
+        
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待确认',
+                'confirmed': '已确认',
+                'completed': '已完成',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // 初始化
+        loadStats();
+    </script>
+</body>
+</html>
