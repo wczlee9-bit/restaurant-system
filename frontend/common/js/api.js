@@ -1,5 +1,5 @@
 // API 基础配置
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://restaurant-system-vzj0.onrender.com/api';
 
 // 通用请求函数
 async function apiRequest(url, options = {}) {
