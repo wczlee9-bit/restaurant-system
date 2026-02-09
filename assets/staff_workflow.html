@@ -86,6 +86,7 @@
         .order-item.preparing { border-left-color: #e6a23c; background: #fdf6ec; }
         .order-item.ready { border-left-color: #409eff; background: #ecf5ff; }
         .order-item.served { border-left-color: #67c23a; background: #f0f9eb; opacity: 0.6; }
+        .order-item.cancelled { border-left-color: #909399; background: #f5f5f5; opacity: 0.4; text-decoration: line-through; }
         
         .order-item-info { flex: 1; }
         .order-item-name { font-weight: bold; font-size: 14px; }
@@ -301,6 +302,13 @@
                                            v-show="item.item_status === 'preparing'">
                                     完成制作 {{ item.menu_item_name }}
                                 </el-button>
+                                <el-button type="danger" size="small"
+                                           @click="cancelItem(order.id, item.id)"
+                                           v-for="item in order.items"
+                                           :key="'cancel-'+item.id"
+                                           v-show="item.item_status === 'preparing' || item.item_status === 'pending'">
+                                    ❌ 缺货取消 {{ item.menu_item_name }}
+                                </el-button>
                                 <el-button type="success" size="default"
                                            @click="markOrderReady(order.id)"
                                            v-if="allItemsReady(order)">
@@ -314,6 +322,11 @@
                                            @click="printWaiterOrder(order)"
                                            style="margin-right: 10px;">
                                     🖨️ 打印订单
+                                </el-button>
+                                <el-button type="warning" size="small"
+                                           @click="showCancelledItems(order)"
+                                           v-if="hasCancelledItems(order)">
+                                    ⚠️ 已取消菜品
                                 </el-button>
                                 <el-button type="primary" size="small"
                                            @click="deliverDish(order.id, item.id)"
@@ -749,35 +762,50 @@
                 getItemClass(item) {
                     return item.item_status || 'pending';
                 },
-                
+
                 getItemStatusType(item) {
                     const statusMap = {
                         'pending': 'danger',
                         'preparing': 'warning',
                         'ready': 'success',
-                        'served': 'info'
+                        'served': 'info',
+                        'cancelled': ''
                     };
                     return statusMap[item.item_status] || 'info';
                 },
-                
+
                 getItemStatusText(item) {
                     const textMap = {
                         'pending': '待制作',
                         'preparing': '制作中',
                         'ready': '待传菜',
-                        'served': '已上菜'
+                        'served': '已上菜',
+                        'cancelled': '已取消'
                     };
                     return textMap[item.item_status] || item.item_status;
                 },
-                
+
                 allItemsReady(order) {
                     return order.items.every(item => item.item_status === 'ready');
                 },
-                
+
                 allItemsServed(order) {
                     return order.items.every(item => item.item_status === 'served');
                 },
-                
+
+                hasCancelledItems(order) {
+                    return order.items.some(item => item.item_status === 'cancelled');
+                },
+
+                showCancelledItems(order) {
+                    const cancelledItems = order.items.filter(item => item.item_status === 'cancelled');
+                    const itemsList = cancelledItems.map(item => `• ${item.menu_item_name} (x${item.quantity})`).join('\n');
+                    this.$alert(`以下菜品已取消，请通知顾客：\n\n${itemsList}`, '已取消菜品', {
+                        confirmButtonText: '已通知',
+                        type: 'warning'
+                    });
+                },
+
                 async startCooking(orderId, itemId) {
                     try {
                         await axios.patch(`/restaurant/api/orders/${orderId}/items/${itemId}/status`, {
@@ -801,7 +829,27 @@
                         this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
                     }
                 },
-                
+
+                async cancelItem(orderId, itemId) {
+                    try {
+                        await this.$confirm('确定要取消这道菜吗？取消后将通知传菜员和顾客。', '取消菜品', {
+                            confirmButtonText: '确定取消',
+                            cancelButtonText: '再想想',
+                            type: 'warning'
+                        });
+
+                        await axios.patch(`/restaurant/api/orders/${orderId}/items/${itemId}/status`, {
+                            item_status: 'cancelled'
+                        });
+                        this.$message.success('菜品已取消');
+                        this.loadOrders();
+                    } catch (error) {
+                        if (error !== 'cancel') {
+                            this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
+                        }
+                    }
+                },
+
                 async markOrderReady(orderId) {
                     try {
                         await axios.patch(`/restaurant/api/orders/${orderId}/status`, {

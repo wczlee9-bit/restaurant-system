@@ -1245,10 +1245,11 @@ async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemS
         
         # 验证状态流转是否合法
         valid_transitions = {
-            'pending': ['preparing'],
-            'preparing': ['ready'],
+            'pending': ['preparing', 'cancelled'],
+            'preparing': ['ready', 'cancelled'],
             'ready': ['served'],
-            'served': []
+            'served': [],
+            'cancelled': []
         }
         
         current_status = order_item.status or 'pending'
@@ -1262,6 +1263,20 @@ async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemS
         
         order_item.status = new_status
         db.commit()
+
+        # 如果菜品被取消，重新计算订单金额
+        if new_status == 'cancelled':
+            # 查询该订单的所有菜品
+            all_items = db.query(OrderItems).filter(OrderItems.order_id == order_id).all()
+            # 只计算未取消的菜品金额
+            new_total_amount = sum(item.subtotal for item in all_items if item.status != 'cancelled')
+            # 更新订单金额
+            order = db.query(Orders).filter(Orders.id == order_id).first()
+            if order:
+                order.total_amount = new_total_amount
+                order.final_amount = new_total_amount  # 同时更新实付金额
+                db.commit()
+                logger.info(f"订单 {order.order_number} 取消菜品，金额重新计算为 {new_total_amount}")
 
         # 检查是否所有菜品都已上菜，如果是则更新订单状态为 completed
         if new_status == 'served':
@@ -1277,6 +1292,18 @@ async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemS
                     order.order_status = 'completed'
                     db.commit()
                     logger.info(f"订单 {order.order_number} 所有菜品已上菜，订单状态更新为 completed")
+
+        # 检查订单是否可以完成（所有菜品都是served或cancelled状态）
+        all_items = db.query(OrderItems).filter(OrderItems.order_id == order_id).all()
+        all_finished = all(item.status in ['served', 'cancelled'] for item in all_items)
+
+        if all_finished:
+            # 更新订单状态为 completed，但不设置支付状态
+            order = db.query(Orders).filter(Orders.id == order_id).first()
+            if order and order.order_status != 'completed':
+                order.order_status = 'completed'
+                db.commit()
+                logger.info(f"订单 {order.order_number} 所有菜品已处理（上菜或取消），订单状态更新为 completed")
 
         # 广播订单项状态更新（WebSocket通知）
         try:

@@ -283,11 +283,14 @@
         // 渲染订单菜品
         function renderOrderItems() {
             const itemsContainer = document.getElementById('order-items');
-            
+
             itemsContainer.innerHTML = currentOrder.items.map(item => {
                 const itemStatus = getItemStatusText(item.item_status);
+                const isCancelled = item.item_status === 'cancelled';
+                const cancelledStyle = isCancelled ? 'text-decoration: line-through; opacity: 0.5; color: #999;' : '';
+
                 return `
-                    <div class="order-item">
+                    <div class="order-item" style="${cancelledStyle}">
                         <div class="order-item-name">${item.menu_item_name}</div>
                         <div class="order-item-qty">x${item.quantity}</div>
                         <div class="order-item-price">¥${item.subtotal.toFixed(2)}</div>
@@ -336,7 +339,8 @@
                 'preparing': '制作中',
                 'ready': '待传菜',
                 'serving': '上菜中',
-                'served': '已上菜'
+                'served': '已上菜',
+                'cancelled': '已取消（缺货）'
             };
             return statusMap[status] || status;
         }
