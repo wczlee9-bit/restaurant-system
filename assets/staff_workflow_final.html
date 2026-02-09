@@ -996,6 +996,8 @@
             <span>合计</span>
             <span>¥${receipt.total_amount.toFixed(2)}</span>
         </div>
+        <div class="payment-info">实收金额：¥${receipt.received_amount ? receipt.received_amount.toFixed(2) : receipt.total_amount.toFixed(2)}</div>
+        <div class="payment-info">找零：¥${receipt.change_amount ? receipt.change_amount.toFixed(2) : '0.00'}</div>
         <div class="payment-info">支付方式：${receipt.payment_method === 'counter' ? '柜台支付' : receipt.payment_method}</div>
         <div class="payment-info">支付状态：${receipt.payment_status === 'paid' ? '已支付' : '未支付'}</div>
         ${receipt.payment_time ? `<div class="payment-info">支付时间：${receipt.payment_time}</div>` : ''}
