@@ -484,10 +484,15 @@
                             o.items.some(i => ['pending', 'preparing'].includes(i.item_status))
                         );
                     } else if (this.currentRole === 'waiter') {
-                        // 传菜员看到待传菜和上菜中的订单
-                        result = result.filter(o => 
+                        // 传菜员看到所有订单
+                        // 但按照优先级排序：有ready或serving状态菜品的订单优先显示
+                        const hasPendingItems = result.filter(o => 
                             o.items.some(i => ['ready', 'serving'].includes(i.item_status))
                         );
+                        const otherOrders = result.filter(o => 
+                            !o.items.some(i => ['ready', 'serving'].includes(i.item_status))
+                        );
+                        result = [...hasPendingItems, ...otherOrders];
                     } else if (this.currentRole === 'cashier') {
                         // 收银员看到待支付的订单
                         // 1. 状态为'serving'的订单（上菜中）
