@@ -755,13 +755,27 @@
                 },
                 
                 async processPayment(orderId) {
-                    try {
-                        await axios.post(`/restaurant/api/orders/${orderId}/process-payment`, {});
-                        this.$message.success('支付处理成功');
-                        this.loadOrders();
-                    } catch (error) {
-                        this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
-                    }
+                    // 显示确认对话框
+                    this.$confirm('确认处理该订单的支付吗？', '支付确认', {
+                        confirmButtonText: '确认支付',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(async () => {
+                        try {
+                            await axios.post(`/restaurant/api/orders/${orderId}/process-payment`, {});
+                            this.$message.success('支付处理成功');
+
+                            // 支付成功后自动弹出小票
+                            this.printReceipt(orderId);
+
+                            this.loadOrders();
+                        } catch (error) {
+                            this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
+                        }
+                    }).catch(() => {
+                        // 用户取消
+                        this.$message.info('已取消支付');
+                    });
                 },
 
                 async printReceipt(orderId) {
@@ -769,18 +783,27 @@
                         // 获取小票数据
                         const response = await axios.get(`/restaurant/api/orders/${orderId}/receipt`);
                         const receipt = response.data;
-                        
+
+                        // 提示用户将允许弹出窗口
+                        this.$message.info('正在准备小票，请允许浏览器打开打印窗口...');
+
                         // 创建打印窗口
                         const printWindow = window.open('', '_blank');
+
+                        if (!printWindow) {
+                            this.$message.error('打印窗口被浏览器阻止，请在浏览器设置中允许弹出窗口');
+                            return;
+                        }
+
                         const doc = printWindow.document;
-                        
+
                         // 生成小票 HTML
                         doc.write(`
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>小票</title>
+    <title>小票 - ${receipt.order_number}</title>
     <style>
         * {
             margin: 0;
@@ -791,6 +814,7 @@
             padding: 20px;
             background: white;
             width: 300px;
+            margin: 0 auto;
         }
         .header {
             text-align: center;
@@ -850,6 +874,11 @@
         @media print {
             body {
                 padding: 0;
+                width: 100%;
+            }
+            @page {
+                size: 80mm auto;
+                margin: 0;
             }
         }
     </style>
@@ -860,11 +889,11 @@
         <div class="info">${receipt.address}</div>
         <div class="info">电话：${receipt.phone}</div>
     </div>
-    
+
     <div class="info">订单号：${receipt.order_number}</div>
     <div class="info">桌号：${receipt.table_number}</div>
     <div class="info">时间：${receipt.created_at}</div>
-    
+
     <div class="items">
         ${receipt.items.map(item => `
             <div class="item">
@@ -873,7 +902,7 @@
             </div>
         `).join('')}
     </div>
-    
+
     <div class="footer">
         <div class="total">
             <span>合计</span>
@@ -883,7 +912,7 @@
         <div class="payment-info">支付状态：${receipt.payment_status === 'paid' ? '已支付' : '未支付'}</div>
         ${receipt.payment_time ? `<div class="payment-info">支付时间：${receipt.payment_time}</div>` : ''}
     </div>
-    
+
     <div class="center">
         <div>谢谢光临！</div>
         <div>欢迎下次再来！</div>
@@ -891,15 +920,14 @@
 </body>
 </html>
                         `);
-                        
+
                         doc.close();
-                        
+
                         // 延迟后调用打印
                         setTimeout(() => {
                             printWindow.print();
-                        }, 100);
-                        
-                        this.$message.success('小票打印中...');
+                        }, 300);
+
                     } catch (error) {
                         this.$message.error('打印小票失败: ' + (error.response?.data?.detail || error.message));
                     }
