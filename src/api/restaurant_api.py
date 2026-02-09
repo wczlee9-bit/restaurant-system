@@ -2101,3 +2101,51 @@ def get_revenue(
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+# ============ 收银员支付处理 API ============
+@app.post("/api/orders/{order_id}/process-payment")
+async def process_payment(order_id: int, req: dict = None):
+    """
+    收银员处理支付（柜台支付）
+    将柜台支付的订单标记为已支付
+    """
+    db = get_session()
+    try:
+        order = db.query(Orders).filter(Orders.id == order_id).first()
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
+        
+        # 检查订单是否已支付
+        if order.payment_status == "paid":
+            raise HTTPException(status_code=400, detail="订单已支付")
+        
+        # 更新支付状态
+        order.payment_status = "paid"
+        order.payment_method = order.payment_method or "counter"
+        order.payment_time = datetime.now()
+        
+        # 更新订单状态为已完成
+        order.order_status = "completed"
+        
+        db.commit()
+        
+        # 广播支付状态更新
+        try:
+            payment_data = {
+                "id": order.id,
+                "order_number": order.order_number,
+                "store_id": order.store_id,
+                "table_id": order.table_id,
+                "total_amount": float(order.total_amount),
+                "payment_status": "paid",
+                "payment_method": order.payment_method,
+                "payment_time": order.payment_time.isoformat() if order.payment_time else ""
+            }
+            await manager.broadcast_payment_status(order_id, payment_data)
+        except Exception as ws_error:
+            logger.error(f"WebSocket通知失败: {str(ws_error)}")
+        
+        return {"message": "支付处理成功", "order_status": "completed", "payment_status": "paid"}
+    finally:
+        db.close()

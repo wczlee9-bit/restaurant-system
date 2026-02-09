@@ -503,7 +503,7 @@
                 
                 async loadOrders() {
                     try {
-                        const response = await axios.get('/api/orders/');
+                        const response = await axios.get('/api/api/orders/');
                         this.orders = response.data;
                     } catch (error) {
                         console.error('加载订单失败:', error);
@@ -696,7 +696,7 @@
                 
                 async startCooking(orderId, itemId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/items/${itemId}/status`, {
+                        await axios.patch(`/api/api/orders/${orderId}/items/${itemId}/status`, {
                             item_status: 'preparing'
                         });
                         this.$message.success('开始制作');
@@ -708,7 +708,7 @@
                 
                 async finishCooking(orderId, itemId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/items/${itemId}/status`, {
+                        await axios.patch(`/api/api/orders/${orderId}/items/${itemId}/status`, {
                             item_status: 'ready'
                         });
                         this.$message.success('完成制作');
@@ -720,7 +720,7 @@
                 
                 async markOrderReady(orderId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/status`, {
+                        await axios.patch(`/api/api/orders/${orderId}/status`, {
                             status: 'ready'
                         });
                         this.$message.success('订单已准备完毕');
@@ -732,7 +732,7 @@
                 
                 async deliverDish(orderId, itemId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/items/${itemId}/status`, {
+                        await axios.patch(`/api/api/orders/${orderId}/items/${itemId}/status`, {
                             item_status: 'served'
                         });
                         this.$message.success('上菜成功');
@@ -744,7 +744,7 @@
                 
                 async markOrderCompleted(orderId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/status`, {
+                        await axios.patch(`/api/api/orders/${orderId}/status`, {
                             status: 'completed'
                         });
                         this.$message.success('传菜完成');
@@ -756,9 +756,7 @@
                 
                 async processPayment(orderId) {
                     try {
-                        await axios.patch(`/api/orders/${orderId}/status`, {
-                            status: 'completed'
-                        });
+                        await axios.post(`/api/api/orders/${orderId}/process-payment`, {});
                         this.$message.success('支付处理成功');
                         this.loadOrders();
                     } catch (error) {
@@ -1028,7 +1026,7 @@
                         type: 'warning'
                     }).then(async () => {
                         try {
-                            await axios.patch(`/api/orders/${orderId}/status`, {
+                            await axios.patch(`/api/api/orders/${orderId}/status`, {
                                 status: 'cancelled'
                             });
                             this.$message.success('订单已取消');
