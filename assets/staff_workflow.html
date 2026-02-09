@@ -422,12 +422,15 @@
                 
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; font-size: 14px; color: #606266; margin-bottom: 8px; font-weight: bold;">支付方式</label>
-                    <el-radio-group v-model="paymentMethod" style="width: 100%;">
+                    <el-radio-group v-model="paymentMethod" style="width: 100%; display: flex; flex-wrap: wrap; gap: 5px;">
                         <el-radio-button label="cash">💵 现金</el-radio-button>
                         <el-radio-button label="wechat">💚 微信</el-radio-button>
                         <el-radio-button label="alipay">💙 支付宝</el-radio-button>
                         <el-radio-button label="credit_card">💳 信用卡</el-radio-button>
                         <el-radio-button label="debit_card">💳 借记卡</el-radio-button>
+                        <el-radio-button label="e-wallet">📱 电子钱包</el-radio-button>
+                        <el-radio-button label="tg">💎 T&G</el-radio-button>
+                        <el-radio-button label="voucher">🎫 购券兑换</el-radio-button>
                         <el-radio-button label="other">📦 其他</el-radio-button>
                     </el-radio-group>
                 </div>
