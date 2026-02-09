@@ -2105,31 +2105,46 @@ if __name__ == "__main__":
 
 # ============ 收银员支付处理 API ============
 @app.post("/api/orders/{order_id}/process-payment")
-async def process_payment(order_id: int, req: dict = None):
+async def process_payment(order_id: int, req: dict = Body(default=None)):
     """
     收银员处理支付（柜台支付）
     将柜台支付的订单标记为已支付
+    支持实收金额和找零计算
     """
     db = get_session()
     try:
         order = db.query(Orders).filter(Orders.id == order_id).first()
         if not order:
             raise HTTPException(status_code=404, detail="订单不存在")
-        
+
         # 检查订单是否已支付
         if order.payment_status == "paid":
             raise HTTPException(status_code=400, detail="订单已支付")
-        
+
+        # 获取实收金额和找零
+        received_amount = req.get("received_amount", order.final_amount) if req else order.final_amount
+        change_amount = req.get("change_amount", 0) if req else 0
+
+        # 如果没有提供实收金额，使用订单金额
+        if not received_amount or received_amount <= 0:
+            received_amount = order.final_amount
+
         # 更新支付状态
         order.payment_status = "paid"
         order.payment_method = order.payment_method or "counter"
         order.payment_time = datetime.now()
-        
+
         # 更新订单状态为已完成
         order.order_status = "completed"
-        
+
+        # 添加备注信息（存储实收和找零）
+        if order.special_instructions:
+            order.special_instructions += f"\n实收：¥{received_amount:.2f}，找零：¥{change_amount:.2f}"
+        else:
+            order.special_instructions = f"实收：¥{received_amount:.2f}，找零：¥{change_amount:.2f}"
+
         db.commit()
-        
+
         # 广播支付状态更新
         try:
             payment_data = {
@@ -2138,6 +2153,9 @@ async def process_payment(order_id: int, req: dict = None):
                 "store_id": order.store_id,
                 "table_id": order.table_id,
                 "total_amount": float(order.total_amount),
+                "final_amount": float(order.final_amount),
+                "received_amount": float(received_amount),
+                "change_amount": float(change_amount),
                 "payment_status": "paid",
                 "payment_method": order.payment_method,
                 "payment_time": order.payment_time.isoformat() if order.payment_time else ""
@@ -2145,8 +2163,14 @@ async def process_payment(order_id: int, req: dict = None):
             await manager.broadcast_payment_status(order_id, payment_data)
         except Exception as ws_error:
             logger.error(f"WebSocket通知失败: {str(ws_error)}")
-        
-        return {"message": "支付处理成功", "order_status": "completed", "payment_status": "paid"}
+
+        return {
+            "message": "支付处理成功",
+            "order_status": "completed",
+            "payment_status": "paid",
+            "received_amount": received_amount,
+            "change_amount": change_amount
+        }
     finally:
         db.close()
 
@@ -2160,11 +2184,11 @@ def get_order_receipt(order_id: int):
         order = db.query(Orders).filter(Orders.id == order_id).first()
         if not order:
             raise HTTPException(status_code=404, detail="订单不存在")
-        
+
         # 获取桌号
         table = db.query(Tables).filter(Tables.id == order.table_id).first()
         table_number = table.table_number if table else ""
-        
+
         # 获取订单项
         items = []
         for oi in order.order_items:
@@ -2174,13 +2198,29 @@ def get_order_receipt(order_id: int):
                 "price": float(oi.menu_item_price),
                 "subtotal": float(oi.subtotal)
             })
-        
+
+        # 解析实收和找零信息（从 special_instructions 中）
+        received_amount = float(order.final_amount)  # 默认使用实付金额
+        change_amount = 0.0
+
+        if order.special_instructions:
+            # 尝试从备注中提取实收和找零
+            import re
+            match = re.search(r'实收：¥([\d.]+)，找零：¥([\d.]+)', order.special_instructions)
+            if match:
+                received_amount = float(match.group(1))
+                change_amount = float(match.group(2))
+
         # 构建小票数据
         receipt_data = {
             "order_number": order.order_number,
             "table_number": table_number,
             "items": items,
             "total_amount": float(order.total_amount),
+            "final_amount": float(order.final_amount),
+            "received_amount": received_amount,
+            "change_amount": change_amount,
+            "discount_amount": float(order.discount_amount),
             "payment_method": order.payment_method or "现金",
             "payment_status": order.payment_status,
             "payment_time": order.payment_time.isoformat() if order.payment_time else "",
@@ -2189,7 +2229,7 @@ def get_order_receipt(order_id: int):
             "address": "北京市朝阳区xxx路xxx号",
             "phone": "010-12345678"
         }
-        
+
         return receipt_data
     finally:
         db.close()

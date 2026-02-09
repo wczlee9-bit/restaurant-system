@@ -755,22 +755,133 @@
                 },
                 
                 async processPayment(orderId) {
-                    // 显示确认对话框
-                    this.$confirm('确认处理该订单的支付吗？', '支付确认', {
+                    // 获取订单信息
+                    const order = this.orders.find(o => o.id === orderId);
+                    if (!order) {
+                        this.$message.error('订单不存在');
+                        return;
+                    }
+
+                    const totalAmount = order.final_amount || order.total_amount;
+
+                    // 使用 h 函数创建自定义对话框内容
+                    const h = this.$createElement;
+
+                    // 创建对话框内容
+                    const VNode = h('div', { style: 'padding: 20px;' }, [
+                        h('div', { style: 'margin-bottom: 20px;' }, [
+                            h('label', { style: 'display: block; font-weight: bold; margin-bottom: 8px;' }, '订单金额：'),
+                            h('span', { style: 'font-size: 24px; color: #f56c6c; font-weight: bold;' }, `¥${totalAmount.toFixed(2)}`)
+                        ]),
+                        h('div', { style: 'margin-bottom: 20px;' }, [
+                            h('label', { style: 'display: block; font-weight: bold; margin-bottom: 8px;' }, '实收金额：'),
+                            h('input', {
+                                attrs: {
+                                    type: 'number',
+                                    step: '0.01',
+                                    min: totalAmount,
+                                    placeholder: '请输入实收金额',
+                                    id: 'receivedAmount',
+                                    style: 'width: 100%; padding: 10px; font-size: 18px; border: 1px solid #dcdfe6; border-radius: 4px;'
+                                },
+                                on: {
+                                    input: (e) => {
+                                        const received = parseFloat(e.target.value) || 0;
+                                        const change = received - totalAmount;
+                                        const changeEl = document.getElementById('changeAmount');
+                                        if (changeEl) {
+                                            changeEl.textContent = `¥${change.toFixed(2)}`;
+                                            changeEl.style.color = change >= 0 ? '#67c23a' : '#f56c6c';
+                                        }
+                                    }
+                                }
+                            })
+                        ]),
+                        h('div', { style: 'margin-bottom: 10px;' }, [
+                            h('label', { style: 'display: block; font-weight: bold; margin-bottom: 8px;' }, '找零：'),
+                            h('span', {
+                                attrs: { id: 'changeAmount' },
+                                style: 'font-size: 24px; color: #67c23a; font-weight: bold;'
+                            }, `¥0.00`)
+                        ]),
+                        h('div', { style: 'margin-top: 15px; padding: 10px; background: #f0f9eb; border-radius: 4px;' }, [
+                            h('span', { style: 'font-size: 12px; color: #67c23a;' }, '💡 快捷输入：'),
+                            h('div', { style: 'display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;' }, [
+                                h('button', {
+                                    attrs: { class: 'quick-pay-btn' },
+                                    style: 'padding: 6px 12px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer;',
+                                    on: {
+                                        click: () => {
+                                            document.getElementById('receivedAmount').value = totalAmount;
+                                            document.getElementById('receivedAmount').dispatchEvent(new Event('input'));
+                                        }
+                                    }
+                                }, '等额'),
+                                h('button', {
+                                    attrs: { class: 'quick-pay-btn' },
+                                    style: 'padding: 6px 12px; background: #67c23a; color: white; border: none; border-radius: 4px; cursor: pointer;',
+                                    on: {
+                                        click: () => {
+                                            const rounded = Math.ceil(totalAmount / 10) * 10;
+                                            document.getElementById('receivedAmount').value = rounded;
+                                            document.getElementById('receivedAmount').dispatchEvent(new Event('input'));
+                                        }
+                                    }
+                                }, '整十'),
+                                h('button', {
+                                    attrs: { class: 'quick-pay-btn' },
+                                    style: 'padding: 6px 12px; background: #e6a23c; color: white; border: none; border-radius: 4px; cursor: pointer;',
+                                    on: {
+                                        click: () => {
+                                            const rounded = Math.ceil(totalAmount / 100) * 100;
+                                            document.getElementById('receivedAmount').value = rounded;
+                                            document.getElementById('receivedAmount').dispatchEvent(new Event('input'));
+                                        }
+                                    }
+                                }, '整百')
+                            ])
+                        ])
+                    ]);
+
+                    this.$msgbox({
+                        title: '💰 收银台',
+                        message: VNode,
+                        showCancelButton: true,
                         confirmButtonText: '确认支付',
                         cancelButtonText: '取消',
-                        type: 'warning'
-                    }).then(async () => {
-                        try {
-                            await axios.post(`/restaurant/api/orders/${orderId}/process-payment`, {});
-                            this.$message.success('支付处理成功');
+                        beforeClose: async (action, instance, done) => {
+                            if (action === 'confirm') {
+                                const receivedAmountInput = document.getElementById('receivedAmount');
+                                const receivedAmount = parseFloat(receivedAmountInput.value) || 0;
 
-                            // 支付成功后自动弹出小票
-                            this.printReceipt(orderId);
+                                if (receivedAmount < totalAmount) {
+                                    this.$message.error('实收金额不能小于订单金额！');
+                                    return;
+                                }
 
-                            this.loadOrders();
-                        } catch (error) {
-                            this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
+                                instance.confirmButtonLoading = true;
+
+                                try {
+                                    await axios.post(`/restaurant/api/orders/${orderId}/process-payment`, {
+                                        received_amount: receivedAmount,
+                                        change_amount: receivedAmount - totalAmount
+                                    });
+
+                                    this.$message.success('支付处理成功');
+
+                                    // 支付成功后自动弹出小票
+                                    this.printReceipt(orderId);
+
+                                    this.loadOrders();
+                                    done();
+                                } catch (error) {
+                                    this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
+                                } finally {
+                                    instance.confirmButtonLoading = false;
+                                }
+                            } else {
+                                done();
+                            }
                         }
                     }).catch(() => {
                         // 用户取消
@@ -908,6 +1019,28 @@
             <span>合计</span>
             <span>¥${receipt.total_amount.toFixed(2)}</span>
         </div>
+        ${receipt.discount_amount > 0 ? `
+        <div class="payment-info" style="color: #e6a23c;">
+            <span>优惠</span>
+            <span>-¥${receipt.discount_amount.toFixed(2)}</span>
+        </div>
+        ` : ''}
+        ${receipt.final_amount && receipt.final_amount !== receipt.total_amount ? `
+        <div class="total">
+            <span>应收</span>
+            <span>¥${receipt.final_amount.toFixed(2)}</span>
+        </div>
+        ` : ''}
+        <div class="total" style="font-size: 16px; margin-top: 8px;">
+            <span>实收</span>
+            <span>¥${(receipt.received_amount || receipt.final_amount || receipt.total_amount).toFixed(2)}</span>
+        </div>
+        ${receipt.change_amount !== undefined && receipt.change_amount > 0 ? `
+        <div class="total" style="color: #67c23a; margin-top: 5px;">
+            <span>找零</span>
+            <span>¥${receipt.change_amount.toFixed(2)}</span>
+        </div>
+        ` : ''}
         <div class="payment-info">支付方式：${receipt.payment_method === 'counter' ? '柜台支付' : receipt.payment_method}</div>
         <div class="payment-info">支付状态：${receipt.payment_status === 'paid' ? '已支付' : '未支付'}</div>
         ${receipt.payment_time ? `<div class="payment-info">支付时间：${receipt.payment_time}</div>` : ''}
