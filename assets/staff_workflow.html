@@ -426,6 +426,9 @@
                         <el-radio-button label="cash">💵 现金</el-radio-button>
                         <el-radio-button label="wechat">💚 微信</el-radio-button>
                         <el-radio-button label="alipay">💙 支付宝</el-radio-button>
+                        <el-radio-button label="credit_card">💳 信用卡</el-radio-button>
+                        <el-radio-button label="debit_card">💳 借记卡</el-radio-button>
+                        <el-radio-button label="other">📦 其他</el-radio-button>
                     </el-radio-group>
                 </div>
             </div>
@@ -484,7 +487,14 @@
                         );
                     } else if (this.currentRole === 'cashier') {
                         // 收银员看到待支付的订单
-                        result = result.filter(o => o.status === 'serving');
+                        // 1. 状态为'serving'的订单（上菜中）
+                        // 2. 状态为'ready'的订单（待传菜）
+                        // 3. 状态为'completed'但支付状态为'unpaid'的订单（已完成但未支付）
+                        result = result.filter(o => 
+                            o.status === 'serving' || 
+                            o.status === 'ready' ||
+                            (o.status === 'completed' && o.payment_status === 'unpaid')
+                        );
                     }
                     
                     // 根据状态筛选
