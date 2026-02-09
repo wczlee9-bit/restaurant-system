@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味餐厅 - 订单详情</title>
+    <link rel="stylesheet" href="../../common/css/style.css">
+    <style>
+        .order-status-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .order-status-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        .order-status-text {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .order-status-desc {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .order-info-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .order-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .order-info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .order-items-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff6b35;
+        }
+        
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .order-item-name {
+            flex: 1;
+            font-weight: bold;
+        }
+        
+        .order-item-qty {
+            color: #666;
+            margin: 0 10px;
+        }
+        
+        .order-item-price {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .order-total-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 16px;
+        }
+        
+        .total-final {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+        
+        .action-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .btn-add {
+            background: #ff6b35;
+            color: white;
+        }
+        
+        .btn-back {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .status-pending { color: #ff6b35; }
+        .status-confirmed { color: #667eea; }
+        .status-preparing { color: #33d5ff; }
+        .status-ready { color: #33e891; }
+        .status-serving { color: #7a67ff; }
+        .status-completed { color: #10b981; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 订单详情</h1>
+        <div class="nav">
+            <a href="../menu/index.html">🍽️ 菜单</a>
+            <a href="../cart/index.html">🛒 购物车</a>
+            <a href="index.html">📋 我的订单</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 订单状态 -->
+        <div class="order-status-card" id="order-status">
+            <div class="order-status-icon">⏳</div>
+            <div class="order-status-text">加载中...</div>
+            <div class="order-status-desc">正在获取订单信息</div>
+        </div>
+        
+        <!-- 订单信息 -->
+        <div class="order-info-card">
+            <div class="section-title">订单信息</div>
+            <div id="order-info"></div>
+        </div>
+        
+        <!-- 订单菜品 -->
+        <div class="order-items-section">
+            <div class="section-title">已点菜品</div>
+            <div id="order-items"></div>
+        </div>
+        
+        <!-- 订单金额 -->
+        <div class="order-total-section">
+            <div class="section-title">订单金额</div>
+            <div id="order-total"></div>
+        </div>
+        
+        <!-- 底部留白 -->
+        <div style="height: 80px;"></div>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="action-buttons">
+        <button class="btn btn-back" onclick="goBack()">返回</button>
+        <button class="btn btn-add" onclick="addItems()">继续点餐</button>
+    </div>
+    
+    <script src="../../common/js/api.js"></script>
+    <script>
+        let currentOrder = null;
+        let orderId = null;
+        
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        
+        // 初始化
+        async function init() {
+            orderId = getUrlParam('order_id');
+            
+            if (!orderId) {
+                showError('订单ID不存在');
+                return;
+            }
+            
+            await loadOrderDetail();
+        }
+        
+        // 加载订单详情
+        async function loadOrderDetail() {
+            try {
+                currentOrder = await apiRequest(`/api/orders/${orderId}/`);
+                renderOrder();
+            } catch (error) {
+                showError('加载订单失败');
+            }
+        }
+        
+        // 渲染订单
+        function renderOrder() {
+            // 渲染状态
+            renderStatus();
+            
+            // 渲染订单信息
+            renderOrderInfo();
+            
+            // 渲染订单菜品
+            renderOrderItems();
+            
+            // 渲染订单金额
+            renderOrderTotal();
+        }
+        
+        // 渲染状态
+        function renderStatus() {
+            const statusContainer = document.getElementById('order-status');
+            const statusInfo = getStatusInfo(currentOrder.status);
+            
+            statusContainer.innerHTML = `
+                <div class="order-status-icon">${statusInfo.icon}</div>
+                <div class="order-status-text status-${currentOrder.status}">${statusInfo.text}</div>
+                <div class="order-status-desc">${statusInfo.desc}</div>
+            `;
+        }
+        
+        // 渲染订单信息
+        function renderOrderInfo() {
+            const infoContainer = document.getElementById('order-info');
+            
+            infoContainer.innerHTML = `
+                <div class="order-info-row">
+                    <span>订单号</span>
+                    <span style="font-weight: bold;">${currentOrder.order_number}</span>
+                </div>
+                <div class="order-info-row">
+                    <span>桌号</span>
+                    <span style="font-weight: bold; color: #ff6b35;">${currentOrder.table_number}号桌</span>
+                </div>
+                <div class="order-info-row">
+                    <span>下单时间</span>
+                    <span>${formatTime(currentOrder.created_at)}</span>
+                </div>
+                <div class="order-info-row">
+                    <span>支付方式</span>
+                    <span>${getPaymentMethodText(currentOrder.payment_method)}</span>
+                </div>
+            `;
+        }
+        
+        // 渲染订单菜品
+        function renderOrderItems() {
+            const itemsContainer = document.getElementById('order-items');
+            
+            itemsContainer.innerHTML = currentOrder.items.map(item => {
+                const itemStatus = getItemStatusText(item.item_status);
+                return `
+                    <div class="order-item">
+                        <div class="order-item-name">${item.menu_item_name}</div>
+                        <div class="order-item-qty">x${item.quantity}</div>
+                        <div class="order-item-price">¥${item.subtotal.toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 渲染订单金额
+        function renderOrderTotal() {
+            const totalContainer = document.getElementById('order-total');
+            
+            totalContainer.innerHTML = `
+                <div class="total-row">
+                    <span>小计</span>
+                    <span>¥${currentOrder.total_amount.toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                    <span>优惠</span>
+                    <span>-¥${currentOrder.discount_amount.toFixed(2)}</span>
+                </div>
+                <div class="total-row total-final">
+                    <span>合计</span>
+                    <span>¥${currentOrder.final_amount.toFixed(2)}</span>
+                </div>
+            `;
+        }
+        
+        // 获取状态信息
+        function getStatusInfo(status) {
+            const statusMap = {
+                'pending': { icon: '⏳', text: '待确认', desc: '餐厅正在处理您的订单' },
+                'confirmed': { icon: '✅', text: '已确认', desc: '您的订单已确认，正在准备中' },
+                'preparing': { icon: '👨‍🍳', text: '制作中', desc: '厨师正在制作您的菜品' },
+                'ready': { icon: '🔔', text: '待传菜', desc: '菜品已制作完成，准备上菜' },
+                'serving': { icon: '🍽️', text: '上菜中', desc: '菜品正在陆续上桌' },
+                'completed': { icon: '✨', text: '已完成', desc: '菜品已全部上完，请慢用' }
+            };
+            return statusMap[status] || { icon: '❓', text: status, desc: '' };
+        }
+        
+        // 获取菜品状态文本
+        function getItemStatusText(status) {
+            const statusMap = {
+                'pending': '待制作',
+                'preparing': '制作中',
+                'ready': '待传菜',
+                'serving': '上菜中',
+                'served': '已上菜'
+            };
+            return statusMap[status] || status;
+        }
+        
+        // 获取支付方式文本
+        function getPaymentMethodText(method) {
+            const methodMap = {
+                'cash': '现金支付',
+                'wechat': '微信支付',
+                'alipay': '支付宝',
+                'counter': '柜台支付',
+                'immediate': '在线支付'
+            };
+            return methodMap[method] || method || '未支付';
+        }
+        
+        // 格式化时间
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // 显示错误
+        function showError(message) {
+            document.getElementById('order-status').innerHTML = `
+                <div class="order-status-icon">❌</div>
+                <div class="order-status-text">出错了</div>
+                <div class="order-status-desc">${message}</div>
+            `;
+        }
+        
+        // 返回
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+        
+        // 继续点餐（加菜）
+        function addItems() {
+            // 保存当前订单ID，用于后续加菜
+            localStorage.setItem('current_order_id', orderId);
+            
+            // 跳转到菜单页面
+            window.location.href = '../menu/index.html?mode=add_dish&order_id=' + orderId;
+        }
+        
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

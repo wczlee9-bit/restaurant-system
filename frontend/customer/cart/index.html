@@ -208,9 +208,9 @@
                 cart = [];
                 setStorage('cart', cart);
                 
-                // 跳转到订单页
+                // 跳转到订单详情页
                 setTimeout(() => {
-                    window.location.href = `order.html?order_id=${result.id}`;
+                    window.location.href = `order/order-detail.html?order_id=${result.id}`;
                 }, 1000);
             } catch (error) {
                 showMessage('下单失败，请重试', 'error');
