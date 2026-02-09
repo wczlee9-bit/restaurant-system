@@ -166,10 +166,8 @@ def update_order_status(order_id: int, new_status: str, operator_id: Optional[in
             )
             db.add(log)
             
-            # 如果订单状态变为completed，更新支付状态
-            if new_status == "completed" and order.payment_status == "unpaid":
-                order.payment_status = "paid"
-                order.payment_time = datetime.now()
+            # 订单状态更新，但不自动设置支付状态
+            # 支付状态应该由收银员在支付操作时设置
             
             db.commit()
             db.refresh(order)
