@@ -979,17 +979,17 @@ async def create_order(order: CreateOrderRequest):
             final_amount=total_amount,
             payment_method="",  # 支付方式将在第二步设置
             payment_status="unpaid",  # 初始状态为未支付
-            order_status="pending"  # 厨师可以开始制作
+            order_status="preparing"  # 直接进入制作流程
         )
-        
+
         db.add(db_order)
         db.flush()
-        
+
         # 创建订单项
         for item_data in order_items_data:
             order_item = OrderItems(
                 order_id=db_order.id,
-                status="pending",
+                status="preparing",  # 菜品直接进入制作状态
                 **item_data
             )
             db.add(order_item)
@@ -1262,7 +1262,22 @@ async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemS
         
         order_item.status = new_status
         db.commit()
-        
+
+        # 检查是否所有菜品都已上菜，如果是则更新订单状态为 completed
+        if new_status == 'served':
+            # 查询该订单的所有菜品
+            all_items = db.query(OrderItems).filter(OrderItems.order_id == order_id).all()
+            # 检查是否所有菜品都是 served 状态
+            all_served = all(item.status == 'served' for item in all_items)
+
+            if all_served:
+                # 更新订单状态为 completed，但不设置支付状态
+                order = db.query(Orders).filter(Orders.id == order_id).first()
+                if order:
+                    order.order_status = 'completed'
+                    db.commit()
+                    logger.info(f"订单 {order.order_number} 所有菜品已上菜，订单状态更新为 completed")
+
         # 广播订单项状态更新（WebSocket通知）
         try:
             import asyncio
@@ -1283,7 +1298,7 @@ async def update_order_item_status(order_id: int, item_id: int, req: UpdateItemS
                 await manager.broadcast_order_status(order_id, order_data)
         except Exception as ws_error:
             logger.error(f"WebSocket通知失败: {str(ws_error)}")
-        
+
         return {"message": "菜品状态更新成功", "item_status": new_status}
     finally:
         db.close()
