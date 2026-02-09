@@ -380,6 +380,65 @@
         <div class="audio-hint" v-if="notification">
             🔔 新订单提醒
         </div>
+        
+        <!-- 支付对话框 -->
+        <el-dialog v-model="paymentDialogVisible" title="💰 收银台" width="500px" :close-on-click-modal="false">
+            <div style="padding: 10px;">
+                <div style="margin-bottom: 20px; padding: 15px; background: #f0f9eb; border-radius: 8px;">
+                    <div style="font-size: 14px; color: #606266; margin-bottom: 5px;">订单金额</div>
+                    <div style="font-size: 28px; color: #f56c6c; font-weight: bold;">¥{{ paymentTotalAmount.toFixed(2) }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 14px; color: #606266; margin-bottom: 8px; font-weight: bold;">实收金额</label>
+                    <el-input 
+                        v-model.number="paymentReceivedAmount" 
+                        type="number" 
+                        placeholder="请输入实收金额" 
+                        size="large"
+                        :min="paymentTotalAmount"
+                        step="0.01"
+                        @input="paymentReceivedAmount = paymentReceivedAmount || 0"
+                    >
+                        <template #prefix>¥</template>
+                    </el-input>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 14px; color: #606266; margin-bottom: 8px; font-weight: bold;">快捷输入</div>
+                    <el-button-group style="width: 100%;">
+                        <el-button @click="paymentReceivedAmount = paymentTotalAmount" style="flex: 1;">等额</el-button>
+                        <el-button @click="paymentReceivedAmount = Math.ceil(paymentTotalAmount / 10) * 10" style="flex: 1;">整十</el-button>
+                        <el-button @click="paymentReceivedAmount = Math.ceil(paymentTotalAmount / 100) * 100" style="flex: 1;">整百</el-button>
+                    </el-button-group>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: #f4f4f5; border-radius: 8px;">
+                    <div style="font-size: 14px; color: #606266; margin-bottom: 5px;">找零</div>
+                    <div style="font-size: 28px; font-weight: bold;" :style="{color: paymentChange >= 0 ? '#67c23a' : '#f56c6c'}">
+                        ¥{{ paymentChange.toFixed(2) }}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 14px; color: #606266; margin-bottom: 8px; font-weight: bold;">支付方式</label>
+                    <el-radio-group v-model="paymentMethod" style="width: 100%;">
+                        <el-radio-button label="cash">💵 现金</el-radio-button>
+                        <el-radio-button label="wechat">💚 微信</el-radio-button>
+                        <el-radio-button label="alipay">💙 支付宝</el-radio-button>
+                    </el-radio-group>
+                </div>
+            </div>
+            
+            <template #footer>
+                <div style="display: flex; justify-content: space-between; gap: 10px;">
+                    <el-button @click="paymentDialogVisible = false" style="flex: 1;">取消</el-button>
+                    <el-button type="primary" @click="confirmPayment" style="flex: 1;" :disabled="paymentReceivedAmount < paymentTotalAmount">
+                        确认支付 (¥{{ paymentReceivedAmount.toFixed(2) }})
+                    </el-button>
+                </div>
+            </template>
+        </el-dialog>
     </div>
 
     <script>
@@ -397,7 +456,14 @@
                     notification: null,
                     notificationTimer: null,
                     statusFilter: 'all',
-                    audioContext: null
+                    audioContext: null,
+                    // 支付对话框状态
+                    paymentDialogVisible: false,
+                    currentPaymentOrder: null,
+                    paymentTotalAmount: 0,
+                    paymentReceivedAmount: 0,
+                    paymentChange: 0,
+                    paymentMethod: 'cash'
                 };
             },
             computed: {
@@ -761,53 +827,51 @@
                         return;
                     }
 
-                    const totalAmount = order.final_amount || order.total_amount;
+                    // 初始化支付对话框数据
+                    this.currentPaymentOrder = order;
+                    this.paymentTotalAmount = order.final_amount || order.total_amount;
+                    this.paymentReceivedAmount = this.paymentTotalAmount;
+                    this.paymentChange = 0;
+                    this.paymentMethod = 'cash';
+
+                    // 显示支付对话框
+                    this.paymentDialogVisible = true;
+                },
+
+                async confirmPayment() {
+                    if (!this.currentPaymentOrder) {
+                        this.$message.error('订单不存在');
+                        return;
+                    }
+
+                    // 验证实收金额
+                    if (this.paymentReceivedAmount < this.paymentTotalAmount) {
+                        this.$message.error('实收金额不能小于订单金额！');
+                        return;
+                    }
+
+                    const loading = this.$loading({
+                        lock: true,
+                        text: '正在处理支付...',
+                        background: 'rgba(0, 0, 0, 0.7)'
+                    });
 
                     try {
-                        // 使用 Element Plus 的 prompt 对话框
-                        const input = await this.$prompt(`订单金额：¥${totalAmount.toFixed(2)}\n请输入实收金额`, '💰 收银台', {
-                            confirmButtonText: '确认支付',
-                            cancelButtonText: '取消',
-                            inputType: 'number',
-                            inputPattern: /^\d+(\.\d{1,2})?$/,
-                            inputErrorMessage: '请输入有效的金额',
-                            inputValue: totalAmount.toFixed(2),
-                            inputPlaceholder: '请输入实收金额'
+                        await axios.post(`/restaurant/api/orders/${this.currentPaymentOrder.id}/process-payment`, {
+                            received_amount: this.paymentReceivedAmount,
+                            change_amount: this.paymentChange,
+                            payment_method: this.paymentMethod
                         });
 
-                        if (input.action === 'confirm') {
-                            const receivedAmount = parseFloat(input.value);
-                            const change = receivedAmount - totalAmount;
+                        loading.close();
+                        this.paymentDialogVisible = false;
 
-                            if (receivedAmount < totalAmount) {
-                                this.$message.error('实收金额不能小于订单金额！');
-                                return;
-                            }
-
-                            const loading = this.$loading({
-                                lock: true,
-                                text: '正在处理支付...',
-                                background: 'rgba(0, 0, 0, 0.7)'
-                            });
-
-                            try {
-                                await axios.post(`/restaurant/api/orders/${orderId}/process-payment`, {
-                                    received_amount: receivedAmount,
-                                    change_amount: change
-                                });
-
-                                loading.close();
-
-                                this.$message.success(`支付处理成功！找零：¥${change.toFixed(2)}`);
-                                this.printReceipt(orderId);
-                                this.loadOrders();
-                            } catch (error) {
-                                loading.close();
-                                this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
-                            }
-                        }
+                        this.$message.success(`支付处理成功！找零：¥${this.paymentChange.toFixed(2)}`);
+                        this.printReceipt(this.currentPaymentOrder.id);
+                        this.loadOrders();
                     } catch (error) {
-                        // 用户点击取消，不需要提示
+                        loading.close();
+                        this.$message.error('操作失败: ' + (error.response?.data?.detail || error.message));
                     }
                 },
 
@@ -1251,6 +1315,13 @@
                     }).catch(() => {
                         // 用户取消
                     });
+                }
+            },
+
+            // 监听实收金额变化，自动计算找零
+            watch: {
+                paymentReceivedAmount(newVal) {
+                    this.paymentChange = newVal - this.paymentTotalAmount;
                 }
             }
         }).use(ElementPlus).mount('#app');
