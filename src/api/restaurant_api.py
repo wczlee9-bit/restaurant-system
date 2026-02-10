@@ -2266,6 +2266,12 @@ def get_order_receipt(order_id: int):
         db.close()
 
 
+# ============ FastAPI 应用实例 ============
+# 创建 FastAPI 应用，挂载 APIRouter
+fastapi_app = FastAPI(title="餐饮系统 API", version="1.0.0")
+fastapi_app.include_router(app)
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8000)
