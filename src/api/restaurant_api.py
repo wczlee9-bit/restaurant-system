@@ -2140,10 +2140,6 @@ def get_revenue(
         db.close()
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
 
 # ============ 收银员支付处理 API ============
 @app.post("/api/orders/{order_id}/process-payment")
@@ -2258,20 +2254,18 @@ def get_order_receipt(order_id: int):
             "order_number": order.order_number,
             "table_number": table_number,
             "items": items,
-            "total_amount": float(order.total_amount),
-            "final_amount": float(order.final_amount),
+            "subtotal": float(order.final_amount),
             "received_amount": received_amount,
             "change_amount": change_amount,
-            "discount_amount": float(order.discount_amount),
-            "payment_method": order.payment_method or "现金",
-            "payment_status": order.payment_status,
-            "payment_time": order.payment_time.isoformat() if order.payment_time else "",
-            "created_at": order.created_at.isoformat() if order.created_at else "",
-            "store_name": "美味餐厅",
-            "address": "北京市朝阳区xxx路xxx号",
-            "phone": "010-12345678"
+            "order_time": order.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "payment_method": order.payment_method or "未支付"
         }
 
         return receipt_data
     finally:
         db.close()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
