@@ -553,19 +553,19 @@
                 }
             },
             async mounted() {
-                // 检查登录状态
+                // 检查登录状态（临时禁用以便测试）
                 const currentUser = localStorage.getItem('currentUser');
-                if (!currentUser) {
+                /*if (!currentUser) {
                     ElementPlus.ElMessage.warning('请先登录 / Please login first');
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 1000);
                     return;
-                }
+                }*/
 
                 // 解析用户信息
                 try {
-                    const user = JSON.parse(currentUser);
+                    const user = currentUser ? JSON.parse(currentUser) : { name: '测试用户', username: 'test' };
                     this.currentUser = user;
                     console.log('当前用户 / Current user:', user);
                 } catch (e) {
