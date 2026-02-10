@@ -508,12 +508,10 @@
                         result = [...hasPendingItems, ...otherOrders];
                     } else if (this.currentRole === 'cashier') {
                         // 收银员看到待支付的订单
-                        // 1. 状态为'serving'的订单（上菜中）
-                        // 2. 状态为'ready'的订单（待传菜）
-                        // 3. 状态为'completed'但支付状态为'unpaid'的订单（已完成但未支付）
+                        // 1. 状态为'preparing'的订单（制作中，上菜后）
+                        // 2. 状态为'completed'但支付状态为'unpaid'的订单（已完成但未支付）
                         result = result.filter(o => 
-                            o.status === 'serving' || 
-                            o.status === 'ready' ||
+                            o.status === 'preparing' || 
                             (o.status === 'completed' && o.payment_status === 'unpaid')
                         );
                     }
@@ -1162,12 +1160,15 @@
                     `;
                     
                     order.items.forEach(item => {
-                        html += `
-                            <div class="item">
-                                <div class="item-name">${item.menu_item_name}</div>
-                                <div class="item-qty">x${item.quantity}</div>
-                            </div>
-                        `;
+                        // 过滤掉已取消的菜品，只打印需要传菜的菜品
+                        if (item.item_status !== 'cancelled') {
+                            html += `
+                                <div class="item">
+                                    <div class="item-name">${item.menu_item_name}</div>
+                                    <div class="item-qty">x${item.quantity}</div>
+                                </div>
+                            `;
+                        }
                     });
                     
                     html += `
@@ -1279,12 +1280,15 @@
                     `;
                     
                     order.items.forEach(item => {
-                        html += `
-                            <div class="item">
-                                <div class="item-name">${item.menu_item_name}</div>
-                                <div class="item-qty">x${item.quantity}</div>
-                            </div>
-                        `;
+                        // 过滤掉已取消的菜品，只打印需要传菜的菜品
+                        if (item.item_status !== 'cancelled') {
+                            html += `
+                                <div class="item">
+                                    <div class="item-name">${item.menu_item_name}</div>
+                                    <div class="item-qty">x${item.quantity}</div>
+                                </div>
+                            `;
+                        }
                     });
                     
                     html += `
